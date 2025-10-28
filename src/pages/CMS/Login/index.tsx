@@ -1,4 +1,5 @@
 import React, { useState, useEffect } from 'react';
+import { useNavigate } from 'react-router-dom';
 import styled from 'styled-components';
 import { toast } from 'react-toastify';
 import { AppColors } from '../../../styles/colors';
@@ -61,6 +62,7 @@ const HelpText = styled.p`
 `;
 
 const CMSLogin: React.FC = () => {
+  const navigate = useNavigate();
   const [userId, setUserId] = useState('');
   const [password, setPassword] = useState('');
   const [idError, setIdError] = useState<string | null>(null);
@@ -74,9 +76,9 @@ const CMSLogin: React.FC = () => {
     // Context가 완전히 초기화되고, 이미 로그인되어 있고, 현재 로그인 시도 중이 아닐 때만 리다이렉트
     if (ready && isLoggedIn && !isLoading) {
       console.log('이미 로그인되어 있음, CMS 페이지로 이동');
-      window.location.href = '/cms/member/search';
+      navigate('/cms/member/search');
     }
-  }, [ready, isLoggedIn, isLoading]);
+  }, [ready, isLoggedIn, isLoading, navigate]);
 
   useEffect(() => {
     // 시스템 상태 확인
@@ -228,7 +230,7 @@ const CMSLogin: React.FC = () => {
       const accessToken = `staff_${staff.id}_${Date.now()}`;
       login(userId, accessToken);
       toast.success("로그인되었습니다.");
-      window.location.href = '/cms/member/search';
+      navigate('/cms/member/search');
 
     } catch (error) {
       console.error('로그인 처리 중 오류:', error);

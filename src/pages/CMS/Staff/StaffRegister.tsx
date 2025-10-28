@@ -1,4 +1,5 @@
 import React, { useState, useEffect, useCallback } from 'react';
+import { useNavigate } from 'react-router-dom';
 import styled from 'styled-components';
 import { toast } from 'react-toastify';
 import { Visibility, VisibilityOff } from '@mui/icons-material';
@@ -187,6 +188,7 @@ interface FormErrors {
 }
 
 const StaffRegister: React.FC = () => {
+  const navigate = useNavigate();
   const [formData, setFormData] = useState<StaffFormData>({
     name: '',
     loginId: '',
@@ -267,11 +269,11 @@ const StaffRegister: React.FC = () => {
     if (currentUserInfo && currentUserInfo.permission === 'VIEWER') {
       alert('접근 권한이 없습니다. VIEWER 권한은 조회만 가능합니다.');
       // StaffSearch 페이지로 리다이렉트
-      window.location.href = '/cms/staff/search';
+      navigate('/cms/staff/search');
       return false;
     }
     return true;
-  }, [currentUserInfo]);
+  }, [currentUserInfo, navigate]);
 
   // 컴포넌트 마운트 시 권한 체크
   useEffect(() => {
