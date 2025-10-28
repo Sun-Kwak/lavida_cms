@@ -247,7 +247,7 @@ const CMSLogin: React.FC = () => {
     <Container className="cms-layout">
       <LoginFormContainer>
         <LogoContainer>
-          <Logo src="/logo192.png" alt="Lavida Logo" />
+          <Logo src={`${process.env.PUBLIC_URL}/logo192.png`} alt="Lavida Logo" />
         </LogoContainer>
         
         <FormTitle>로그인</FormTitle>
