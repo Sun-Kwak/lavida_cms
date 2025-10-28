@@ -1,0 +1,443 @@
+import React, { useCallback, useEffect, useState } from "react";
+import { Editor } from "@tiptap/core";
+
+import {
+  MdFormatBold,
+  MdFormatItalic,
+  MdFormatUnderlined,
+  MdStrikethroughS,
+  MdHighlight,
+  MdLink,
+  MdLinkOff,
+  MdFormatAlignLeft,
+  MdFormatAlignCenter,
+  MdFormatAlignRight,
+  MdFormatListBulleted,
+  MdFormatListNumbered,
+  MdFormatQuote,
+  MdInsertPhoto,
+  MdFormatLineSpacing,
+  MdSpaceBar,
+} from "react-icons/md";
+import styled from "styled-components";
+
+interface MenuBarProps {
+  editor: Editor | null;
+}
+
+const MenuBarContainer = styled.div`
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  padding: 8px;
+  background-color: white;
+  border-bottom: 1px solid #ddd;
+`;
+
+const MenuRow = styled.div`
+  display: flex;
+  align-items: center;
+  gap: 8px;
+`;
+
+const MenuButton = styled.button<{ $isActive?: boolean }>`
+  padding: 4px 8px;
+  border: none;
+  background-color: ${({ $isActive }) => ($isActive ? "#f5f5f5" : "transparent")};
+  color: ${({ $isActive }) => ($isActive ? "#887E67" : "#666")};
+  border-radius: 4px;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  font-size: 14px;
+
+  &:hover {
+    background-color: #f5f5f5;
+  }
+
+  svg {
+    width: 18px;
+    height: 18px;
+    color: ${({ $isActive }) => ($isActive ? "#887E67" : "#666")};
+  }
+`;
+
+const Divider = styled.div`
+  width: 1px;
+  height: 24px;
+  background-color: #ddd;
+  margin: 0 4px;
+`;
+
+const SelectWrapper = styled.div`
+  position: relative;
+  display: inline-block;
+`;
+
+const StyledSelect = styled.select`
+  padding: 8px 12px;
+  height: 36px;
+  border: 1px solid #ddd;
+  border-radius: 4px;
+  background-color: white;
+  color: #666;
+  font-size: 14px;
+  cursor: pointer;
+  appearance: none;
+  background-image: url("data:image/svg+xml;charset=UTF-8,%3csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='%23887E67' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'%3e%3cpolyline points='6 9 12 15 18 9'%3e%3c/polyline%3e%3c/svg%3e");
+  background-repeat: no-repeat;
+  background-position: right 8px center;
+  background-size: 16px;
+  padding-right: 32px;
+  width: 100%;
+
+  &:focus {
+    outline: none;
+    border-color: #887e67;
+  }
+
+  &:hover {
+    border-color: #887e67;
+  }
+
+  option {
+    padding: 12px;
+    background-color: white;
+    color: #666;
+    font-size: 14px;
+
+    &:hover,
+    &:focus,
+    &:active {
+      background-color: #f5f5f5;
+      color: #887e67;
+    }
+
+    &:checked {
+      background-color: #f5f5f5;
+      color: #887e67;
+    }
+  }
+`;
+
+const FontSizeSelect = styled(StyledSelect)`
+  min-width: 100px;
+`;
+
+const FontFamilySelect = styled(StyledSelect)`
+  min-width: 120px;
+`;
+
+
+const SpacingControl = styled.div`
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 0 10px;
+  border-left: 1px solid #ddd;
+
+  span {
+    display: flex;
+    align-items: center;
+    gap: 4px;
+    font-size: 12px;
+    color: #000000;
+    white-space: nowrap;
+  }
+
+  input[type="range"] {
+    width: 100px;
+    height: 4px;
+    background: #e9ecef;
+    border-radius: 2px;
+    appearance: none;
+    -webkit-appearance: none;
+
+    &::-webkit-slider-thumb {
+      -webkit-appearance: none;
+      width: 12px;
+      height: 12px;
+      background: #887e67;
+      border-radius: 50%;
+      cursor: pointer;
+    }
+
+    &::-moz-range-thumb {
+      width: 12px;
+      height: 12px;
+      background: #887e67;
+      border: none;
+      border-radius: 50%;
+      cursor: pointer;
+    }
+  }
+`;
+
+const MenuBar = ({ editor }: MenuBarProps) => {
+  // Move all hooks to the top level, before any early return
+  const [lineHeight, setLineHeight] = useState(
+    parseFloat(editor?.getAttributes("textStyle").lineHeight || "1.2") // 기본값 설정 또는 에디터 상태 반영
+  );
+  const [letterSpacing, setLetterSpacing] = useState(
+    parseFloat(editor?.getAttributes("textStyle").letterSpacing || "0") // 기본값 설정 또는 에디터 상태 반영
+  );
+
+  const handleImageUpload = useCallback(() => {
+    if (!editor) return;
+    // 파일 input 요소 생성
+    const fileInput = document.createElement("input");
+    fileInput.type = "file";
+    fileInput.accept = "image/*"; // 이미지 파일만 선택 가능
+    fileInput.click();
+
+    // 파일이 선택되면 실행되는 이벤트 핸들러
+    fileInput.onchange = () => {
+      const file = fileInput.files?.[0];
+      if (file) {
+        // 이미지 파일을 로컬 URL로 변환하여 미리보기 삽입
+        const imageUrl = URL.createObjectURL(file); // 로컬 이미지 URL 생성
+        editor.chain().focus().setImage{}.run(); // 에디터에 삽입
+      }
+    };
+  }, [editor]);
+
+  const setLink = useCallback(() => {
+    if (!editor) return;
+    const previousUrl = editor.getAttributes("link").href;
+    const url = window.prompt("URL을 입력하세요", previousUrl);
+
+    // cancelled
+    if (url === null) {
+      return;
+    }
+
+    // empty
+    if (url === "") {
+      editor.chain().focus().extendMarkRange("link").unsetLink().run();
+      return;
+    }
+
+    // update link
+    editor.chain().focus().extendMarkRange("link").setLink{}.run();
+  }, [editor]);
+
+  // Always call hooks before any early return
+  useEffect(() => {
+    if (!editor) return;
+
+    const updateStates = () => {
+      const textStyleAttrs = editor.getAttributes("textStyle");
+
+      // 행간 값 가져오기
+      const currentLineHeight = textStyleAttrs.lineHeight ? parseFloat(textStyleAttrs.lineHeight) : 1.2;
+
+      // 자간 값 가져오기 (px 단위 제거)
+      const currentLetterSpacing = textStyleAttrs.letterSpacing ? parseFloat(textStyleAttrs.letterSpacing) : 0;
+
+      if (lineHeight !== currentLineHeight) {
+        setLineHeight(currentLineHeight);
+      }
+      if (letterSpacing !== currentLetterSpacing) {
+        setLetterSpacing(currentLetterSpacing);
+      }
+    };
+
+    editor.on("transaction", updateStates);
+    editor.on("selectionUpdate", updateStates);
+
+    return () => {
+      editor.off("transaction", updateStates);
+      editor.off("selectionUpdate", updateStates);
+    };
+  }, [editor, lineHeight, letterSpacing]);
+
+  if (!editor) {
+    return null;
+  }
+
+  const handleLineHeightChange = (value: number) => {
+    setLineHeight(value);
+    if (!editor) return;
+    editor.commands.setMark("textStyle", { lineHeight: String(value) });
+  };
+
+  const handleLetterSpacingChange = (value: number) => {
+    setLetterSpacing(value);
+    if (!editor) return;
+    editor.commands.setMark("textStyle", { letterSpacing: `${value}px` });
+  };
+
+  const FONT_FAMILIES = [
+    { name: "기본체", value: "" }, // 브라우저 기본 폰트 또는 CSS 기본값
+    { name: "나눔고딕", value: "Nanum Gothic" },
+    { name: "나눔명조", value: "Nanum Myeongjo" },
+    { name: "Noto Sans KR", value: "Noto Sans KR" },
+    { name: "Pretendard", value: "Pretendard" },
+    // { name: 'D2Coding', value: 'D2Coding' }, // D2Coding 폰트 설정 필요
+  ];
+
+  const FONT_SIZES = ["12px", "14px", "16px", "18px", "20px", "24px", "28px", "32px", "36px", "48px", "64px"];
+
+  return (
+    <MenuBarContainer>
+      <MenuRow>
+        {/* 정렬 - 문단 작성시 가장 먼저 선택하는 옵션이므로 왼쪽에 배치 */}
+        <MenuButton
+          onClick={() => editor.chain().focus().setTextAlign("left").run()}
+          $isActive={editor.isActive{}}>
+          {MdFormatAlignLeft{}}
+        </MenuButton>
+        <MenuButton
+          onClick={() => editor.chain().focus().setTextAlign("center").run()}
+          $isActive={editor.isActive{}}>
+          {MdFormatAlignCenter{}}
+        </MenuButton>
+        <MenuButton
+          onClick={() => editor.chain().focus().setTextAlign("right").run()}
+          $isActive={editor.isActive{}}>
+          {}})
+        </MenuButton>
+
+        <Divider />
+
+        {/* 목록 - 정렬 다음으로 자주 사용되는 기능 */}
+        <MenuButton
+          onClick={() => editor.chain().focus().toggleBulletList().run()}
+          $isActive={editor.isActive("bulletList")}>
+          {}})
+        </MenuButton>
+        <MenuButton
+          onClick={() => editor.chain().focus().toggleOrderedList().run()}
+          $isActive={editor.isActive("orderedList")}>
+          {}})
+        </MenuButton>
+
+        {/* 인용 */}
+        <MenuButton
+          onClick={() => editor.chain().focus().toggleBlockquote().run()}
+          $isActive={editor.isActive("blockquote")}>
+          {}})
+        </MenuButton>
+
+        <Divider />
+
+        {/* 기본 서식 - 자주 사용되는 텍스트 스타일링 */}
+        <MenuButton
+          onClick={() => editor.chain().focus().toggleBold().run()}
+          disabled={!editor.can().chain().focus().toggleBold().run()}
+          $isActive={editor.isActive("bold")}>
+          {}})
+        </MenuButton>
+        <MenuButton
+          onClick={() => editor.chain().focus().toggleItalic().run()}
+          disabled={!editor.can().chain().focus().toggleItalic().run()}
+          $isActive={editor.isActive("italic")}>
+          {}})
+        </MenuButton>
+        <MenuButton
+          onClick={() => editor.chain().focus().toggleUnderline().run()}
+          disabled={!editor.can().chain().focus().toggleUnderline().run()}
+          $isActive={editor.isActive("underline")}>
+          {}})
+        </MenuButton>
+        <MenuButton
+          onClick={() => editor.chain().focus().toggleStrike().run()}
+          disabled={!editor.can().chain().focus().toggleStrike().run()}
+          $isActive={editor.isActive("strike")}>
+          {}})
+        </MenuButton>
+        <MenuButton
+          onClick={() => editor.chain().focus().toggleHighlight().run()}
+          disabled={!editor.can().chain().focus().toggleHighlight().run()}
+          $isActive={editor.isActive("highlight")}>
+          {}})
+        </MenuButton>
+
+        <Divider />
+
+        {/* 링크와 이미지 - 특수 기능은 오른쪽에 배치 */}
+        <MenuButton onClick={setLink} $isActive={editor.isActive("link")}>
+          {}})
+        </MenuButton>
+        <MenuButton onClick={() => editor.chain().focus().unsetLink().run()} disabled={!editor.isActive("link")}>
+          {}})
+        </MenuButton>
+        <MenuButton onClick={handleImageUpload}>
+          {}})
+        </MenuButton>
+      </MenuRow>
+
+      <MenuRow>
+        {/* 글꼴 관련 설정을 한 줄에 모아서 배치 */}
+        <SelectWrapper>
+          <FontFamilySelect
+            value={FONT_FAMILIES.find((font) => editor.isActive("textStyle", { fontFamily: font.value }))?.value || ""}
+            onChange={(e: React.ChangeEvent<HTMLSelectElement>) =>
+              editor.chain().focus().setFontFamily(e.target.value).run()
+            }>
+            {FONT_FAMILIES.map((font) => (
+              <option key={font.name} value={font.value}>
+                {font.name}
+              </option>
+            ))}
+          </FontFamilySelect>
+        </SelectWrapper>
+
+        <SelectWrapper>
+          <FontSizeSelect
+            value={editor.getAttributes("textStyle").fontSize || "12px"}
+            onChange={(e: React.ChangeEvent<HTMLSelectElement>) =>
+              editor.chain().focus().setMark("textStyle", { fontSize: e.target.value }).run()
+            }>
+            <option value="">기본 크기</option>
+            {FONT_SIZES.map((size) => (
+              <option key={size} value={size}>
+                {size}
+              </option>
+            ))}
+          </FontSizeSelect>
+        </SelectWrapper>
+
+        {/* 간격 조절은 글꼴 설정 다음에 배치 */}
+        <SpacingControl>
+          <span>
+            {}}) 행간
+          </span>
+          <input
+            type="range"
+            min="1.2"
+            max="3"
+            step="0.1"
+            value={lineHeight}
+            onChange={(e) => handleLineHeightChange(Number(e.target.value))}
+          />
+          <span>{lineHeight.toFixed(1)}</span>
+        </SpacingControl>
+
+        <SpacingControl>
+          <span>
+            {}}) 자간
+          </span>
+          <input
+            type="range"
+            min="-2"
+            max="10"
+            step="0.5"
+            value={letterSpacing}
+            onChange={(e) => handleLetterSpacingChange(Number(e.target.value))}
+          />
+          <span>{letterSpacing.toFixed(1)}</span>
+        </SpacingControl>
+      </MenuRow>
+    </MenuBarContainer>
+  );
+};
+
+
+// Restored styled-components
+
+
+// Restored styled-components
+
+export default MenuBar;

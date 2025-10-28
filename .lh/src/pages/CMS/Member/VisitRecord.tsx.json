@@ -1,0 +1,18 @@
+{
+    "sourceFile": "src/pages/CMS/Member/VisitRecord.tsx",
+    "activeCommit": 0,
+    "commits": [
+        {
+            "activePatchIndex": 0,
+            "patches": [
+                {
+                    "date": 1759105835944,
+                    "content": "Index: \n===================================================================\n--- \n+++ \n"
+                }
+            ],
+            "date": 1759105835944,
+            "name": "Commit-0",
+            "content": "import React from 'react';\nimport styled from 'styled-components';\nimport CMSLayout from '../../../components/CMSLayout';\nimport { AppColors } from '../../../styles/colors';\nimport { AppTextStyles } from '../../../styles/textStyles';\n\nconst PageContainer = styled.div`\n  width: 100%;\n  max-width: 1000px;\n  margin: 0 auto;\n`;\n\nconst ComingSoonContainer = styled.div`\n  display: flex;\n  flex-direction: column;\n  align-items: center;\n  justify-content: center;\n  min-height: 400px;\n  text-align: center;\n  background: ${AppColors.surface};\n  border: 1px solid ${AppColors.borderLight};\n  border-radius: 16px;\n  padding: 60px 40px;\n`;\n\nconst ComingSoonIcon = styled.div`\n  font-size: 64px;\n  margin-bottom: 20px;\n`;\n\nconst ComingSoonTitle = styled.h2`\n  font-size: ${AppTextStyles.title2.fontSize};\n  font-weight: 700;\n  color: ${AppColors.onSurface};\n  margin: 0 0 12px 0;\n`;\n\nconst ComingSoonDescription = styled.p`\n  font-size: ${AppTextStyles.body1.fontSize};\n  color: ${AppColors.onInput1};\n  margin: 0 0 24px 0;\n  max-width: 400px;\n  line-height: 1.5;\n`;\n\nconst FeatureList = styled.ul`\n  list-style: none;\n  padding: 0;\n  margin: 0;\n  text-align: left;\n  color: ${AppColors.onInput1};\n  font-size: ${AppTextStyles.body2.fontSize};\n  \n  li {\n    margin-bottom: 8px;\n    \n    &:before {\n      content: \"✓ \";\n      color: ${AppColors.primary};\n      font-weight: bold;\n      margin-right: 8px;\n    }\n  }\n`;\n\nconst VisitRecord: React.FC = () => {\n  return (\n    <CMSLayout currentPath=\"/cms/member/visit-record\">\n      <PageContainer>\n        <ComingSoonContainer>\n          <ComingSoonIcon>📋</ComingSoonIcon>\n          <ComingSoonTitle>내원 기록 관리</ComingSoonTitle>\n          <ComingSoonDescription>\n            회원들의 내원 기록을 상세하게 관리하고 추적할 수 있는 기능입니다.\n          </ComingSoonDescription>\n          <FeatureList>\n            <li>회원별 내원 이력 조회</li>\n            <li>프로그램별 이용 현황</li>\n            <li>내원 패턴 분석</li>\n            <li>출석률 통계</li>\n            <li>내원 기록 수정/삭제</li>\n          </FeatureList>\n        </ComingSoonContainer>\n      </PageContainer>\n    </CMSLayout>\n  );\n};\n\nexport default VisitRecord;\n"
+        }
+    ]
+}

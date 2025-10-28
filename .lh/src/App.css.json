@@ -1,0 +1,26 @@
+{
+    "sourceFile": "src/App.css",
+    "activeCommit": 0,
+    "commits": [
+        {
+            "activePatchIndex": 2,
+            "patches": [
+                {
+                    "date": 1759895795272,
+                    "content": "Index: \n===================================================================\n--- \n+++ \n"
+                },
+                {
+                    "date": 1759896032697,
+                    "content": "Index: \n===================================================================\n--- \n+++ \n@@ -2,21 +2,31 @@\n * {\n   box-sizing: border-box;\n }\n \n-html, body {\n+html {\n   margin: 0;\n   padding: 0;\n-  overflow-x: auto; /* 전역적으로 가로 스크롤 허용 */\n+  overflow-x: auto; /* html에 가로 스크롤 허용 */\n+  overflow-y: auto; /* 세로 스크롤도 허용 */\n }\n \n+body {\n+  margin: 0;\n+  padding: 0;\n+  min-width: 1200px; /* body에 최소 너비 강제 적용 */\n+  width: max-content; /* 콘텐츠 크기에 맞춰 너비 설정 */\n+}\n+\n #root {\n   min-width: 1200px; /* root 요소 최소 너비 유지 */\n+  width: 100%;\n }\n \n .App {\n   text-align: center;\n   min-width: 1200px; /* App 컨테이너 최소 너비 */\n+  width: 100%;\n }\n \n .App-logo {\n   height: 40vmin;\n"
+                },
+                {
+                    "date": 1759896244164,
+                    "content": "Index: \n===================================================================\n--- \n+++ \n@@ -12,10 +12,9 @@\n \n body {\n   margin: 0;\n   padding: 0;\n-  min-width: 1200px; /* body에 최소 너비 강제 적용 */\n-  width: max-content; /* 콘텐츠 크기에 맞춰 너비 설정 */\n+  min-width: 1200px; /* body에 최소 너비만 설정 */\n }\n \n #root {\n   min-width: 1200px; /* root 요소 최소 너비 유지 */\n"
+                }
+            ],
+            "date": 1759895795272,
+            "name": "Commit-0",
+            "content": "/* 전체 앱 기본 스타일 */\n* {\n  box-sizing: border-box;\n}\n\nhtml, body {\n  margin: 0;\n  padding: 0;\n  overflow-x: auto; /* 전역적으로 가로 스크롤 허용 */\n}\n\n#root {\n  min-width: 1200px; /* root 요소 최소 너비 유지 */\n}\n\n.App {\n  text-align: center;\n  min-width: 1200px; /* App 컨테이너 최소 너비 */\n}\n\n.App-logo {\n  height: 40vmin;\n  pointer-events: none;\n}\n\n@media (prefers-reduced-motion: no-preference) {\n  .App-logo {\n    animation: App-logo-spin infinite 20s linear;\n  }\n}\n\n.App-header {\n  background-color: #282c34;\n  min-height: 100vh;\n  display: flex;\n  flex-direction: column;\n  align-items: center;\n  justify-content: center;\n  font-size: calc(10px + 2vmin);\n  color: white;\n}\n\n.App-link {\n  color: #61dafb;\n}\n\n@keyframes App-logo-spin {\n  from {\n    transform: rotate(0deg);\n  }\n  to {\n    transform: rotate(360deg);\n  }\n}\n"
+        }
+    ]
+}

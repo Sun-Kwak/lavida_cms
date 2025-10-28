@@ -1,5 +1,30 @@
+/* 전체 앱 기본 스타일 */
+* {
+  box-sizing: border-box;
+}
+
+html {
+  margin: 0;
+  padding: 0;
+  overflow-x: auto; /* html에 가로 스크롤 허용 */
+  overflow-y: auto; /* 세로 스크롤도 허용 */
+}
+
+body {
+  margin: 0;
+  padding: 0;
+  min-width: 1200px; /* body에 최소 너비만 설정 */
+}
+
+#root {
+  min-width: 1200px; /* root 요소 최소 너비 유지 */
+  width: 100%;
+}
+
 .App {
   text-align: center;
+  min-width: 1200px; /* App 컨테이너 최소 너비 */
+  width: 100%;
 }
 
 .App-logo {

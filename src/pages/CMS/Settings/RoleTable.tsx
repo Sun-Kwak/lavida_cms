@@ -1,0 +1,64 @@
+import React from 'react';
+import styled from 'styled-components';
+import { AppColors } from '../../../styles/colors';
+import { AppTextStyles } from '../../../styles/textStyles';
+
+const Table = styled.div`
+  border: 1px solid ${AppColors.borderLight};
+  border-radius: 8px;
+  overflow: hidden;
+`;
+
+const TableHeader = styled.div`
+  background-color: ${AppColors.background};
+  padding: 12px 16px;
+  border-bottom: 1px solid ${AppColors.borderLight};
+  font-weight: 600;
+  font-size: ${AppTextStyles.body2.fontSize};
+  color: ${AppColors.onSurface};
+`;
+
+const TableRow = styled.div`
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 12px 16px;
+  border-bottom: 1px solid ${AppColors.borderLight};
+  font-size: ${AppTextStyles.body2.fontSize};
+  color: ${AppColors.onSurface};
+
+  &:last-child {
+    border-bottom: none;
+  }
+
+  &:hover {
+    background-color: ${AppColors.background};
+  }
+`;
+
+const RoleName = styled.span`
+  flex: 1;
+`;
+
+const roles = [
+  '센터장',
+  '팀장',
+  '코치',
+  '본부장',
+  '실장'
+];
+
+const RoleTable: React.FC = () => {
+  return (
+    <Table>
+      <TableHeader>직책 목록</TableHeader>
+      {roles.map((role, index) => (
+        <TableRow key={index}>
+          <RoleName>{role}</RoleName>
+        </TableRow>
+      ))}
+    </Table>
+  );
+};
+
+export default RoleTable;

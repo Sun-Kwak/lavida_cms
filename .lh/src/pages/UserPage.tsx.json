@@ -1,0 +1,22 @@
+{
+    "sourceFile": "src/pages/UserPage.tsx",
+    "activeCommit": 0,
+    "commits": [
+        {
+            "activePatchIndex": 1,
+            "patches": [
+                {
+                    "date": 1757827860790,
+                    "content": "Index: \n===================================================================\n--- \n+++ \n"
+                },
+                {
+                    "date": 1760504010823,
+                    "content": "Index: \n===================================================================\n--- \n+++ \n@@ -1,28 +1,37 @@\n import React from 'react';\n import styled from 'styled-components';\n+import {\n+  HeroSection,\n+  ServicesSection,\n+  AboutSection,\n+  ContactSection,\n+  Footer\n+} from '../components/Landing';\n \n-const Container = styled.div`\n+// 전체 컨테이너\n+const PageContainer = styled.div`\n+  min-height: 100vh;\n   display: flex;\n-  justify-content: center;\n-  align-items: center;\n-  height: 100vh;\n-  background-color: #f5f5f5;\n+  flex-direction: column;\n `;\n \n-const Message = styled.h1`\n-  font-size: 2.5rem;\n-  color: #333;\n-  text-align: center;\n-  font-weight: 600;\n-  letter-spacing: -0.02em;\n+// 메인 콘텐츠 영역\n+const MainContent = styled.main`\n+  flex: 1;\n `;\n \n const UserPage: React.FC = () => {\n   return (\n-    <Container>\n-      <Message>사용자화면 개발 예정</Message>\n-    </Container>\n+    <PageContainer>\n+      <MainContent>\n+        <HeroSection />\n+        <ServicesSection />\n+        <AboutSection />\n+        <ContactSection />\n+      </MainContent>\n+      <Footer />\n+    </PageContainer>\n   );\n };\n \n export default UserPage;\n"
+                }
+            ],
+            "date": 1757827860790,
+            "name": "Commit-0",
+            "content": "import React from 'react';\nimport styled from 'styled-components';\n\nconst Container = styled.div`\n  display: flex;\n  justify-content: center;\n  align-items: center;\n  height: 100vh;\n  background-color: #f5f5f5;\n`;\n\nconst Message = styled.h1`\n  font-size: 2.5rem;\n  color: #333;\n  text-align: center;\n  font-weight: 600;\n  letter-spacing: -0.02em;\n`;\n\nconst UserPage: React.FC = () => {\n  return (\n    <Container>\n      <Message>사용자화면 개발 예정</Message>\n    </Container>\n  );\n};\n\nexport default UserPage;\n"
+        }
+    ]
+}

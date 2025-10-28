@@ -1,0 +1,18 @@
+{
+    "sourceFile": "src/pages/CMS/Staff/index.tsx",
+    "activeCommit": 0,
+    "commits": [
+        {
+            "activePatchIndex": 0,
+            "patches": [
+                {
+                    "date": 1759900871595,
+                    "content": "Index: \n===================================================================\n--- \n+++ \n"
+                }
+            ],
+            "date": 1759900871595,
+            "name": "Commit-0",
+            "content": "import React from 'react';\nimport { useParams } from 'react-router-dom';\nimport StaffRegister from './StaffRegister';\nimport StaffSearch from './StaffSearch';\n\nconst StaffPage: React.FC = () => {\n  const { action } = useParams<{ action: string }>();\n\n  switch (action) {\n    case 'register':\n      return <StaffRegister />;\n    case 'search':\n      return <StaffSearch />;\n    default:\n      return <StaffSearch />; // 기본적으로 검색 페이지 표시\n  }\n};\n\nexport default StaffPage;\n"
+        }
+    ]
+}

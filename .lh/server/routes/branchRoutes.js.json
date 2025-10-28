@@ -1,0 +1,18 @@
+{
+    "sourceFile": "server/routes/branchRoutes.js",
+    "activeCommit": 0,
+    "commits": [
+        {
+            "activePatchIndex": 0,
+            "patches": [
+                {
+                    "date": 1761125384190,
+                    "content": "Index: \n===================================================================\n--- \n+++ \n"
+                }
+            ],
+            "date": 1761125384190,
+            "name": "Commit-0",
+            "content": "const express = require('express');\nconst router = express.Router();\nconst {\n  getAllBranches,\n  getActiveBranches,\n  getBranchById,\n  searchBranchesByName,\n  createBranch,\n  updateBranch,\n  deleteBranch,\n  toggleBranchStatus,\n  getBranchStats\n} = require('../controllers/branchController');\n\nconst { validateBranch, validateBranchUpdate } = require('../middlewares/validation');\nconst auth = require('../middlewares/auth');\n\n// 모든 라우트에 인증 미들웨어 적용 (실제 환경에서)\n// router.use(auth);\n\n/**\n * @route   GET /api/branches\n * @desc    모든 지점 조회 (페이지네이션, 필터링, 정렬 지원)\n * @query   isActive, sortBy, sortOrder, page, limit\n */\nrouter.get('/', getAllBranches);\n\n/**\n * @route   GET /api/branches/stats\n * @desc    지점 통계 조회\n */\nrouter.get('/stats', getBranchStats);\n\n/**\n * @route   GET /api/branches/active\n * @desc    활성 지점만 조회\n */\nrouter.get('/active', getActiveBranches);\n\n/**\n * @route   GET /api/branches/search/:name\n * @desc    지점명으로 검색\n * @query   isActive\n */\nrouter.get('/search/:name', searchBranchesByName);\n\n/**\n * @route   GET /api/branches/:id\n * @desc    ID로 지점 조회\n */\nrouter.get('/:id', getBranchById);\n\n/**\n * @route   POST /api/branches\n * @desc    새 지점 생성\n * @body    name(required), address, phone, isActive\n */\nrouter.post('/', validateBranch, createBranch);\n\n/**\n * @route   PUT /api/branches/:id\n * @desc    지점 정보 수정\n * @body    name, address, phone, isActive\n */\nrouter.put('/:id', validateBranchUpdate, updateBranch);\n\n/**\n * @route   PATCH /api/branches/:id/toggle-status\n * @desc    지점 활성/비활성 상태 토글\n */\nrouter.patch('/:id/toggle-status', toggleBranchStatus);\n\n/**\n * @route   DELETE /api/branches/:id\n * @desc    지점 삭제\n */\nrouter.delete('/:id', deleteBranch);\n\nmodule.exports = router;"
+        }
+    ]
+}

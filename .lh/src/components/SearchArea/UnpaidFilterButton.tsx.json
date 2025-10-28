@@ -1,0 +1,22 @@
+{
+    "sourceFile": "src/components/SearchArea/UnpaidFilterButton.tsx",
+    "activeCommit": 0,
+    "commits": [
+        {
+            "activePatchIndex": 1,
+            "patches": [
+                {
+                    "date": 1760760936032,
+                    "content": "Index: \n===================================================================\n--- \n+++ \n"
+                },
+                {
+                    "date": 1760761178337,
+                    "content": "Index: \n===================================================================\n--- \n+++ \n@@ -10,25 +10,31 @@\n   onClick: () => void;\n }\n \n const FilterButton = styled.button<{ $active: boolean; $hasUnpaid: boolean }>`\n-  padding: 10px 16px;\n+  padding: 12px 18px;\n   border: 1px solid ${props => props.$active ? '#dc2626' : (props.$hasUnpaid ? '#fca5a5' : AppColors.borderLight)};\n   border-radius: 8px;\n   background: ${props => props.$active ? '#dc2626' : (props.$hasUnpaid ? '#fef2f2' : AppColors.surface)};\n   color: ${props => props.$active ? '#ffffff' : (props.$hasUnpaid ? '#dc2626' : AppColors.onInput1)};\n-  font-size: ${AppTextStyles.body2.fontSize};\n+  font-size: ${AppTextStyles.body1.fontSize};\n   font-weight: 600;\n   cursor: ${props => props.$hasUnpaid ? 'pointer' : 'not-allowed'};\n   opacity: ${props => props.$hasUnpaid ? 1 : 0.5};\n   transition: all 0.2s;\n   \n   &:hover {\n     ${props => props.$hasUnpaid && `\n-      border-color: #dc2626;\n-      background: ${props.$active ? '#b91c1c' : '#fca5a5'};\n+      opacity: 0.9;\n+      transform: translateY(-1px);\n     `}\n   }\n+  \n+  &:disabled {\n+    opacity: 0.5;\n+    cursor: not-allowed;\n+    transform: none;\n+  }\n `;\n \n const UnpaidFilterButton: React.FC<UnpaidFilterButtonProps> = ({\n   active,\n"
+                }
+            ],
+            "date": 1760760936032,
+            "name": "Commit-0",
+            "content": "import React from 'react';\nimport styled from 'styled-components';\nimport { AppColors } from '../../styles/colors';\nimport { AppTextStyles } from '../../styles/textStyles';\n\ninterface UnpaidFilterButtonProps {\n  active: boolean;\n  unpaidCount: number;\n  totalAmount: number;\n  onClick: () => void;\n}\n\nconst FilterButton = styled.button<{ $active: boolean; $hasUnpaid: boolean }>`\n  padding: 10px 16px;\n  border: 1px solid ${props => props.$active ? '#dc2626' : (props.$hasUnpaid ? '#fca5a5' : AppColors.borderLight)};\n  border-radius: 8px;\n  background: ${props => props.$active ? '#dc2626' : (props.$hasUnpaid ? '#fef2f2' : AppColors.surface)};\n  color: ${props => props.$active ? '#ffffff' : (props.$hasUnpaid ? '#dc2626' : AppColors.onInput1)};\n  font-size: ${AppTextStyles.body2.fontSize};\n  font-weight: 600;\n  cursor: ${props => props.$hasUnpaid ? 'pointer' : 'not-allowed'};\n  opacity: ${props => props.$hasUnpaid ? 1 : 0.5};\n  transition: all 0.2s;\n  \n  &:hover {\n    ${props => props.$hasUnpaid && `\n      border-color: #dc2626;\n      background: ${props.$active ? '#b91c1c' : '#fca5a5'};\n    `}\n  }\n`;\n\nconst UnpaidFilterButton: React.FC<UnpaidFilterButtonProps> = ({\n  active,\n  unpaidCount,\n  totalAmount,\n  onClick\n}) => {\n  const hasUnpaid = unpaidCount > 0;\n\n  return (\n    <FilterButton\n      $active={active}\n      $hasUnpaid={hasUnpaid}\n      onClick={() => {\n        if (hasUnpaid) {\n          onClick();\n        }\n      }}\n      title={unpaidCount === 0 ? '미수 고객이 없습니다' : ''}\n    >\n      미수 {unpaidCount}건\n      {totalAmount > 0 && (\n        <div style={{ fontSize: '11px', marginTop: '2px' }}>\n          (총 {totalAmount.toLocaleString()}원)\n        </div>\n      )}\n    </FilterButton>\n  );\n};\n\nexport default UnpaidFilterButton;\n"
+        }
+    ]
+}

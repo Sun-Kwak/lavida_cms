@@ -1,0 +1,250 @@
+/* Google Fonts Import (CSS에서 로드할 경우) */
+@import url("https://fonts.googleapis.com/css2?family=Nanum+Gothic&family=Nanum+Myeongjo&family=Noto+Sans+KR&display=swap");
+@import url("https://cdn.jsdelivr.net/gh/orioncactus/pretendard@v1.3.9/dist/web/static/pretendard.min.css");
+
+/* D2Coding 폰트는 별도 설정 필요 */
+/* @font-face { ... } */
+
+.tiptap-editor-container {
+  border: 1px solid #ccc;
+  border-radius: 4px;
+  min-height: 300px;
+  overflow: hidden; /* 컨테이너 경계를 벗어나는 내용 숨김 */
+  cursor: text;
+}
+
+.editor-container {
+  border: 1px solid #ccc;
+  border-radius: 4px;
+  min-height: 300px;
+  overflow: hidden;
+  cursor: text;
+  display: flex;
+  flex-direction: column;
+}
+
+/* 보더 숨김 클래스 */
+.editor-container.hide-border {
+  border: none !important;
+  outline: none !important;
+}
+
+.tiptap-editor-content.hide-border {
+  border: none !important;
+  outline: none !important;
+}
+
+.tiptap-editor-content {
+  flex: 1;
+  min-height: 250px;
+  cursor: text;
+}
+
+.tiptap-menu-bar {
+  display: flex;
+  flex-wrap: wrap; /* 메뉴가 많을 경우 다음 줄로 넘김 */
+  align-items: center;
+  padding: 8px;
+  border-bottom: 1px solid #ccc;
+  background-color: #080808;
+  overflow-x: auto;
+
+  overflow-y: auto;
+}
+
+.tiptap-menu-bar button,
+.tiptap-menu-bar select {
+  background: none;
+  border: none;
+  padding: 6px 10px;
+  cursor: pointer;
+  border-radius: 4px;
+  font-size: 14px; /* 메뉴 아이콘/텍스트 크기 */
+  transition: background-color 0.2s;
+}
+
+.tiptap-menu-bar button:hover,
+.tiptap-menu-bar select:hover {
+  background-color: #3581ce;
+}
+
+.tiptap-menu-bar button.is-active,
+.tiptap-menu-bar select.is-active {
+  background-color: #dee2e6;
+  font-weight: bold;
+  color: #000000;
+}
+
+.tiptap-menu-bar button:disabled {
+  color: #070808;
+  cursor: not-allowed;
+}
+
+/* Tiptap Editor Content 기본 스타일 */
+.tiptap-editor-content .ProseMirror {
+  padding: 15px;
+  min-height: 250px;
+  outline: none; /* 포커스 시 외곽선 제거 */
+  line-height: 1.2; /* 기본 줄 간격 */
+  color: #000000;
+  cursor: text;
+}
+
+.ProseMirror p {
+  margin-top: 0.2em;
+  margin-bottom: 0.2em;
+}
+
+/* 글씨 크기에 따른 가독성 향상 (예시) */
+/* .tiptap-editor-content .ProseMirror p[style*="font-size: 12px"] {
+  line-height: 1.5;
+}
+.tiptap-editor-content .ProseMirror p[style*="font-size: 14px"] {
+  line-height: 1.6;
+}
+.tiptap-editor-content .ProseMirror p[style*="font-size: 16px"] {
+  line-height: 1.7;
+}
+.tiptap-editor-content .ProseMirror p[style*="font-size: 18px"] {
+  line-height: 1.75;
+}
+.tiptap-editor-content .ProseMirror p[style*="font-size: 20px"] {
+  line-height: 1.8;
+}
+.tiptap-editor-content .ProseMirror p[style*="font-size: 24px"] {
+  line-height: 1.8;
+  padding: 5px 0;
+}
+.tiptap-editor-content .ProseMirror p[style*="font-size: 28px"] {
+  line-height: 1.8;
+  padding: 8px 0;
+} */
+
+/* Tiptap 기본 스타일 (필요시 추가 또는 커스텀) */
+.ProseMirror p.is-editor-empty:first-child::before {
+  content: attr(data-placeholder);
+  float: left;
+  color: #adb5bd;
+  pointer-events: none;
+  height: 0;
+}
+
+.ProseMirror h1,
+.ProseMirror h2,
+.ProseMirror h3 {
+  line-height: 1.2; /* 제목 줄 간격 */
+  margin-bottom: 0.5em;
+}
+
+.ProseMirror ul,
+.ProseMirror ol {
+  padding-left: 1.5em;
+  margin: 1em 0;
+}
+
+.ProseMirror blockquote {
+  border-left: 3px solid #ccc;
+  margin-left: 0;
+  margin-right: 0;
+  padding-left: 1em;
+  font-style: italic;
+  color: #6c757d;
+}
+
+.ProseMirror a {
+  color: #0d6efd;
+  text-decoration: none;
+  cursor: pointer;
+}
+.ProseMirror a:hover {
+  text-decoration: underline;
+}
+
+.ProseMirror mark {
+  background-color: #fff3cd; /* 형광펜 색상 */
+  padding: 0.1em 0;
+}
+.ProseMirror img {
+  max-width: 100%; /* 에디터 너비에 맞춰 자동 조절 */
+  height: auto; /* 비율 유지하며 자동 조절 */
+  resize: both;
+  overflow: hidden;
+  cursor: pointer;
+  display: block;
+}
+
+/* 이미지를 포함하는 paragraph 스타일 수정 */
+.ProseMirror p:has(> img) {
+  display: inline-block;
+  margin: 0;
+  padding: 0;
+  width: auto;
+  max-width: 100%; /* 제한 해제 */
+}
+
+/* drag handle 관련 스타일 */
+.ProseMirror .ProseMirror-selectednode {
+  outline: none;
+  border: none;
+  width: auto;
+  max-width: 100%; /* 제한 해제 */
+}
+
+/* 이미지 선택 시 스타일 */
+.ProseMirror img.ProseMirror-selectednode {
+  outline: 2px solid #4dabf7;
+  width: auto;
+  max-width: 100%; /* 제한 해제 */
+}
+
+/* 이미지 컨테이너 스타일 추가 */
+.ProseMirror .image-container {
+  display: inline-block;
+  max-width: 100%; /* 제한 해제 */
+  width: fit-content;
+  margin: 0;
+  padding: 0;
+}
+
+/* 이미지 드래그 & 드롭 영역 스타일 */
+.ProseMirror p:has(img) {
+  margin: 0;
+  padding: 0;
+  display: inline-block;
+  max-width: 100%; /* 제한 해제 */
+  width: fit-content;
+}
+
+/* YouTube 비디오 컨테이너 스타일 */
+.youtube-video-container {
+  position: relative;
+  width: 40%;
+  padding-bottom: calc(40% * 0.5625); /* 16:9 비율 유지하면서 40% 너비에 맞춤 */
+  height: 0;
+  overflow: hidden;
+  margin: 1em 0; /* 왼쪽 정렬을 위해 auto 제거 */
+}
+
+.youtube-video-container iframe {
+  position: absolute;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 100%;
+  border-radius: 8px;
+}
+
+/* 드롭다운 메뉴 스타일 */
+select option {
+  background-color: white;
+  color: #666;
+  padding: 12px;
+}
+
+select option:hover,
+select option:focus,
+select option:active,
+select option:checked {
+  background: #f5f5f5 linear-gradient(0deg, #f5f5f5 0%, #f5f5f5 100%);
+  color: #887e67;
+}

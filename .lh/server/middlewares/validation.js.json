@@ -1,0 +1,18 @@
+{
+    "sourceFile": "server/middlewares/validation.js",
+    "activeCommit": 0,
+    "commits": [
+        {
+            "activePatchIndex": 0,
+            "patches": [
+                {
+                    "date": 1761125384213,
+                    "content": "Index: \n===================================================================\n--- \n+++ \n"
+                }
+            ],
+            "date": 1761125384213,
+            "name": "Commit-0",
+            "content": "const { body, param, query } = require('express-validator');\n\n/**\n * 지점 생성 시 유효성 검사\n */\nconst validateBranch = [\n  body('name')\n    .notEmpty()\n    .withMessage('지점명은 필수입니다')\n    .isLength({ min: 1, max: 100 })\n    .withMessage('지점명은 1자 이상 100자 이하여야 합니다')\n    .trim(),\n    \n  body('address')\n    .optional()\n    .isLength({ max: 500 })\n    .withMessage('주소는 500자를 초과할 수 없습니다')\n    .trim(),\n    \n  body('phone')\n    .optional()\n    .matches(/^[\\d-+().\\s]+$/)\n    .withMessage('올바른 전화번호 형식이 아닙니다')\n    .trim(),\n    \n  body('isActive')\n    .optional()\n    .isBoolean()\n    .withMessage('isActive는 boolean 값이어야 합니다')\n];\n\n/**\n * 지점 수정 시 유효성 검사\n */\nconst validateBranchUpdate = [\n  body('name')\n    .optional()\n    .notEmpty()\n    .withMessage('지점명은 빈 값일 수 없습니다')\n    .isLength({ min: 1, max: 100 })\n    .withMessage('지점명은 1자 이상 100자 이하여야 합니다')\n    .trim(),\n    \n  body('address')\n    .optional()\n    .isLength({ max: 500 })\n    .withMessage('주소는 500자를 초과할 수 없습니다')\n    .trim(),\n    \n  body('phone')\n    .optional()\n    .matches(/^[\\d-+().\\s]+$/)\n    .withMessage('올바른 전화번호 형식이 아닙니다')\n    .trim(),\n    \n  body('isActive')\n    .optional()\n    .isBoolean()\n    .withMessage('isActive는 boolean 값이어야 합니다')\n];\n\n/**\n * MongoDB ObjectId 유효성 검사\n */\nconst validateObjectId = [\n  param('id')\n    .isMongoId()\n    .withMessage('올바른 ID 형식이 아닙니다')\n];\n\n/**\n * 쿼리 파라미터 유효성 검사\n */\nconst validateQuery = [\n  query('page')\n    .optional()\n    .isInt({ min: 1 })\n    .withMessage('페이지는 1 이상의 정수여야 합니다'),\n    \n  query('limit')\n    .optional()\n    .isInt({ min: 1, max: 100 })\n    .withMessage('limit은 1 이상 100 이하의 정수여야 합니다'),\n    \n  query('sortBy')\n    .optional()\n    .isIn(['name', 'createdAt', 'updatedAt', 'isActive'])\n    .withMessage('정렬 기준이 유효하지 않습니다'),\n    \n  query('sortOrder')\n    .optional()\n    .isIn(['asc', 'desc'])\n    .withMessage('정렬 순서는 asc 또는 desc여야 합니다'),\n    \n  query('isActive')\n    .optional()\n    .isIn(['true', 'false'])\n    .withMessage('isActive는 true 또는 false여야 합니다')\n];\n\n/**\n * 검색어 유효성 검사\n */\nconst validateSearch = [\n  param('name')\n    .notEmpty()\n    .withMessage('검색어는 필수입니다')\n    .isLength({ min: 1, max: 100 })\n    .withMessage('검색어는 1자 이상 100자 이하여야 합니다')\n    .trim()\n];\n\nmodule.exports = {\n  validateBranch,\n  validateBranchUpdate,\n  validateObjectId,\n  validateQuery,\n  validateSearch\n};"
+        }
+    ]
+}

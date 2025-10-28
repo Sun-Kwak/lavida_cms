@@ -1,0 +1,18 @@
+{
+    "sourceFile": "server/utils/AppError.js",
+    "activeCommit": 0,
+    "commits": [
+        {
+            "activePatchIndex": 0,
+            "patches": [
+                {
+                    "date": 1761125384293,
+                    "content": "Index: \n===================================================================\n--- \n+++ \n"
+                }
+            ],
+            "date": 1761125384293,
+            "name": "Commit-0",
+            "content": "/**\n * 커스텀 에러 클래스\n * Express 에러 핸들링을 위한 표준화된 에러 객체\n */\nclass AppError extends Error {\n  constructor(message, statusCode, validationErrors = null) {\n    super(message);\n    \n    this.statusCode = statusCode;\n    this.status = `${statusCode}`.startsWith('4') ? 'fail' : 'error';\n    this.isOperational = true;\n    this.validationErrors = validationErrors;\n\n    Error.captureStackTrace(this, this.constructor);\n  }\n}\n\nmodule.exports = AppError;"
+        }
+    ]
+}

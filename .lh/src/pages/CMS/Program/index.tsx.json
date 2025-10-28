@@ -1,0 +1,18 @@
+{
+    "sourceFile": "src/pages/CMS/Program/index.tsx",
+    "activeCommit": 0,
+    "commits": [
+        {
+            "activePatchIndex": 0,
+            "patches": [
+                {
+                    "date": 1760076906195,
+                    "content": "Index: \n===================================================================\n--- \n+++ \n"
+                }
+            ],
+            "date": 1760076906195,
+            "name": "Commit-0",
+            "content": "import React from 'react';\nimport { Routes, Route } from 'react-router-dom';\nimport ProgramManagement from './ProgramManagement';\nimport ProductManagement from './ProductManagement';\n\nconst ProgramPage: React.FC = () => {\n  return (\n    <Routes>\n      <Route path=\"/management\" element={<ProgramManagement />} />\n      <Route path=\"/product\" element={<ProductManagement />} />\n    </Routes>\n  );\n};\n\nexport default ProgramPage;\n"
+        }
+    ]
+}

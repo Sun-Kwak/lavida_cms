@@ -1,0 +1,35 @@
+/* BubbleMenu.css */
+.tiptap-bubble-menu {
+  display: flex;
+  background-color: #333; /* 어두운 배경 */
+  padding: 4px 8px;
+  border-radius: 6px;
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
+  overflow: hidden; /* 내부 요소가 넘치지 않도록 */
+}
+
+.tiptap-bubble-menu button {
+  background: none;
+  border: none;
+  color: #fff; /* 밝은 글자색 */
+  font-size: 14px;
+  font-weight: bold;
+  padding: 6px 8px;
+  margin: 0 2px; /* 버튼 사이 간격 */
+  cursor: pointer;
+  border-radius: 4px;
+  transition: background-color 0.2s;
+}
+
+.tiptap-bubble-menu button:hover {
+  background-color: #555; /* 호버 시 배경색 */
+}
+
+.tiptap-bubble-menu button.is-active {
+  background-color: #777; /* 활성 상태 배경색 */
+}
+
+/* Tippy.js 화살표 (선택 사항) */
+.tippy-box[data-theme~="tiptap-bubble"] .tippy-arrow {
+  color: #333;
+}

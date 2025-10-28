@@ -1,0 +1,18 @@
+{
+    "sourceFile": "server/index.js",
+    "activeCommit": 0,
+    "commits": [
+        {
+            "activePatchIndex": 0,
+            "patches": [
+                {
+                    "date": 1761125384079,
+                    "content": "Index: \n===================================================================\n--- \n+++ \n"
+                }
+            ],
+            "date": 1761125384079,
+            "name": "Commit-0",
+            "content": "const express = require('express');\nconst cors = require('cors');\nconst helmet = require('helmet');\nconst morgan = require('morgan');\nrequire('dotenv').config();\n\nconst connectDB = require('./config/database');\nconst branchRoutes = require('./routes/branchRoutes');\nconst errorHandler = require('./middlewares/errorHandler');\n\nconst app = express();\nconst PORT = process.env.PORT || 3001;\n\n// 데이터베이스 연결\nconnectDB();\n\n// 미들웨어\napp.use(helmet());\napp.use(cors());\napp.use(morgan('combined'));\napp.use(express.json());\napp.use(express.urlencoded({ extended: true }));\n\n// 라우트\napp.use('/api/branches', branchRoutes);\n\n// 기본 라우트\napp.get('/', (req, res) => {\n  res.json({\n    message: 'Lavida 백엔드 서버가 실행 중입니다.',\n    version: '1.0.0',\n    timestamp: new Date().toISOString()\n  });\n});\n\n// 에러 핸들링 미들웨어\napp.use(errorHandler);\n\n// 404 핸들러\napp.use((req, res) => {\n  res.status(404).json({\n    success: false,\n    message: '요청하신 경로를 찾을 수 없습니다.'\n  });\n});\n\napp.listen(PORT, () => {\n  console.log(`서버가 포트 ${PORT}에서 실행 중입니다.`);\n});\n\nmodule.exports = app;"
+        }
+    ]
+}
