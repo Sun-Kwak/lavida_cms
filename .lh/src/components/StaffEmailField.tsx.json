@@ -1,0 +1,18 @@
+{
+    "sourceFile": "src/components/StaffEmailField.tsx",
+    "activeCommit": 0,
+    "commits": [
+        {
+            "activePatchIndex": 0,
+            "patches": [
+                {
+                    "date": 1759904790071,
+                    "content": "Index: \n===================================================================\n--- \n+++ \n"
+                }
+            ],
+            "date": 1759904790071,
+            "name": "Commit-0",
+            "content": "import React from 'react';\nimport { StaffTextField, StaffTextFieldProps } from './StaffTextField';\n\nexport interface StaffEmailFieldProps extends Omit<StaffTextFieldProps, 'type' | 'inputMode' | 'onChange'> {\n  onChange: (value: string) => void;\n}\n\nexport const StaffEmailField: React.FC<StaffEmailFieldProps> = ({\n  value,\n  onChange,\n  label = '이메일',\n  placeholder = 'example@email.com',\n  required = true,\n  ...props\n}) => {\n  const handleChange = (inputValue: string) => {\n    // 한글 입력 방지 (한글 유니코드 범위: \\u3130-\\u318F, \\uAC00-\\uD7AF)\n    const filteredValue = inputValue.replace(/[\\u3130-\\u318F\\uAC00-\\uD7AF]/g, '');\n    onChange(filteredValue);\n  };\n\n  return (\n    <StaffTextField\n      {...props}\n      type=\"email\"\n      inputMode=\"email\"\n      value={value}\n      onChange={handleChange}\n      label={label}\n      placeholder={placeholder}\n      required={required}\n      autoComplete=\"email\"\n    />\n  );\n};\n"
+        }
+    ]
+}

@@ -1,0 +1,18 @@
+{
+    "sourceFile": "src/components/ActionButton.tsx",
+    "activeCommit": 0,
+    "commits": [
+        {
+            "activePatchIndex": 0,
+            "patches": [
+                {
+                    "date": 1757830071421,
+                    "content": "Index: \n===================================================================\n--- \n+++ \n"
+                }
+            ],
+            "date": 1757830071421,
+            "name": "Commit-0",
+            "content": "import styled from 'styled-components';\nimport { AppColors } from '../styles/colors';\nimport { ThemeMode } from '../styles/theme_colors';\n\nconst ActionButton = styled.button<{ $themeMode: ThemeMode }>`\n  padding: 8px 15px;\n  height: 36px;\n  border-radius: 6px;\n  border: 1px solid ${AppColors.borderPrimary};\n  background-color: ${({ $themeMode }) => ($themeMode === \"light\" ? \"#FFFFFF\" : AppColors.primary)};\n  color: ${({ $themeMode }) => ($themeMode === \"light\" ? AppColors.primary : AppColors.onPrimary)};\n  font-weight: 500;\n  font-size: 14px;\n  cursor: pointer;\n  white-space: nowrap;\n  transition: all 0.2s ease;\n\n  &:hover:not(:disabled) {\n    background-color: ${({ $themeMode }) => ($themeMode === \"light\" ? AppColors.primary : AppColors.secondary)};\n    color: ${AppColors.onPrimary};\n    border-color: ${AppColors.secondary};\n  }\n\n  &:disabled {\n    opacity: 0.6;\n    cursor: not-allowed;\n    background-color: ${AppColors.buttonDisabled};\n    color: #999;\n    border-color: ${AppColors.borderLight};\n  }\n`;\n\nexport default ActionButton;"
+        }
+    ]
+}

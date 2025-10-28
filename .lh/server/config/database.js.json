@@ -1,0 +1,18 @@
+{
+    "sourceFile": "server/config/database.js",
+    "activeCommit": 0,
+    "commits": [
+        {
+            "activePatchIndex": 0,
+            "patches": [
+                {
+                    "date": 1761125384112,
+                    "content": "Index: \n===================================================================\n--- \n+++ \n"
+                }
+            ],
+            "date": 1761125384112,
+            "name": "Commit-0",
+            "content": "const mongoose = require('mongoose');\n\nconst connectDB = async () => {\n  try {\n    const conn = await mongoose.connect(process.env.MONGODB_URI || 'mongodb://localhost:27017/lavida', {\n      useNewUrlParser: true,\n      useUnifiedTopology: true,\n    });\n\n    console.log(`MongoDB 연결 성공: ${conn.connection.host}`);\n  } catch (error) {\n    console.error('MongoDB 연결 실패:', error.message);\n    process.exit(1);\n  }\n};\n\nmodule.exports = connectDB;"
+        }
+    ]
+}

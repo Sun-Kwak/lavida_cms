@@ -1,0 +1,22 @@
+{
+    "sourceFile": "src/pages/CMS/Settings/EmploymentTypeTable.tsx",
+    "activeCommit": 0,
+    "commits": [
+        {
+            "activePatchIndex": 1,
+            "patches": [
+                {
+                    "date": 1759897448276,
+                    "content": "Index: \n===================================================================\n--- \n+++ \n"
+                },
+                {
+                    "date": 1759897877467,
+                    "content": "Index: \n===================================================================\n--- \n+++ \n@@ -39,17 +39,8 @@\n const EmploymentTypeName = styled.span`\n   flex: 1;\n `;\n \n-const FixedBadge = styled.span`\n-  padding: 4px 8px;\n-  border-radius: 4px;\n-  background-color: ${AppColors.warning}15;\n-  color: ${AppColors.warning};\n-  font-size: ${AppTextStyles.label3.fontSize};\n-  font-weight: 500;\n-`;\n-\n const employmentTypes = [\n   '정규직',\n   '계약직',\n   '프리랜서'\n@@ -61,9 +52,8 @@\n       <TableHeader>고용형태 목록</TableHeader>\n       {employmentTypes.map((type, index) => (\n         <TableRow key={index}>\n           <EmploymentTypeName>{type}</EmploymentTypeName>\n-          <FixedBadge>고정</FixedBadge>\n         </TableRow>\n       ))}\n     </Table>\n   );\n"
+                }
+            ],
+            "date": 1759897448276,
+            "name": "Commit-0",
+            "content": "import React from 'react';\nimport styled from 'styled-components';\nimport { AppColors } from '../../../styles/colors';\nimport { AppTextStyles } from '../../../styles/textStyles';\n\nconst Table = styled.div`\n  border: 1px solid ${AppColors.borderLight};\n  border-radius: 8px;\n  overflow: hidden;\n`;\n\nconst TableHeader = styled.div`\n  background-color: ${AppColors.background};\n  padding: 12px 16px;\n  border-bottom: 1px solid ${AppColors.borderLight};\n  font-weight: 600;\n  font-size: ${AppTextStyles.body2.fontSize};\n  color: ${AppColors.onSurface};\n`;\n\nconst TableRow = styled.div`\n  display: flex;\n  align-items: center;\n  justify-content: space-between;\n  padding: 12px 16px;\n  border-bottom: 1px solid ${AppColors.borderLight};\n  font-size: ${AppTextStyles.body2.fontSize};\n  color: ${AppColors.onSurface};\n\n  &:last-child {\n    border-bottom: none;\n  }\n\n  &:hover {\n    background-color: ${AppColors.background};\n  }\n`;\n\nconst EmploymentTypeName = styled.span`\n  flex: 1;\n`;\n\nconst FixedBadge = styled.span`\n  padding: 4px 8px;\n  border-radius: 4px;\n  background-color: ${AppColors.warning}15;\n  color: ${AppColors.warning};\n  font-size: ${AppTextStyles.label3.fontSize};\n  font-weight: 500;\n`;\n\nconst employmentTypes = [\n  '정규직',\n  '계약직',\n  '프리랜서'\n];\n\nconst EmploymentTypeTable: React.FC = () => {\n  return (\n    <Table>\n      <TableHeader>고용형태 목록</TableHeader>\n      {employmentTypes.map((type, index) => (\n        <TableRow key={index}>\n          <EmploymentTypeName>{type}</EmploymentTypeName>\n          <FixedBadge>고정</FixedBadge>\n        </TableRow>\n      ))}\n    </Table>\n  );\n};\n\nexport default EmploymentTypeTable;\n"
+        }
+    ]
+}

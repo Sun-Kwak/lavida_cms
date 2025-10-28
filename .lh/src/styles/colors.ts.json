@@ -1,0 +1,18 @@
+{
+    "sourceFile": "src/styles/colors.ts",
+    "activeCommit": 0,
+    "commits": [
+        {
+            "activePatchIndex": 0,
+            "patches": [
+                {
+                    "date": 1757830071420,
+                    "content": "Index: \n===================================================================\n--- \n+++ \n"
+                }
+            ],
+            "date": 1757830071420,
+            "name": "Commit-0",
+            "content": "export const AppColors = {\n\n  // 기본색상 - 브랜드 컬러 기반\n  // Base Colors\n  primary: \"#37bbd6\", // 브랜드 컬러\n  secondary: \"#2a9bb5\", // 조금 더 어두운 청록색\n  tertiary: \"#4dc8dd\", // 조금 더 밝은 청록색\n  background: \"#ffffff\",\n  surface: \"#FFFFFF\",\n\n  // 텍스트 또는 any on 기본색상\n  // Text or any content on base colors\n  onPrimary: \"#ffffff\", // 브랜드 컬러 위의 텍스트는 흰색\n  onSecondary: \"#FFFFFF\",\n  onTertiary: \"#000000\",\n  onBackground: \"#000000\",\n  onSurface: \"#000000\",\n\n  // 상태\n  // Status Colors\n  disabled: \"#AEa9A6\",\n  error: \"#f75226\",\n  success: \"#25c800\",\n  warning: \"#e79E00\",\n  info: \"#37bbd6\", // 브랜드 컬러를 info 색상으로도 사용\n\n  // 버튼 - 브랜드 컬러 기반\n  // Button Colors\n  buttonPrimary: \"#37bbd6\", // 브랜드 컬러\n  buttonPrimaryHover: \"#2a9bb5\", // 호버 시 더 어두운 색\n  buttonPrimaryActive: \"#1e7a8a\", // 클릭 시 가장 어두운 색\n  buttonSecondary: \"#4dc8dd\", // 보조 버튼\n  buttonSecondaryHover: \"#37bbd6\", // 보조 버튼 호버\n  buttonSecondaryActive: \"#2a9bb5\", // 보조 버튼 클릭\n  buttonDisabled: \"#E0E0E0\",\n\n  // 테그 - 브랜드 컬러 톤 적용\n  // Tag Colors\n  tagPrimary: \"#37bbd6\",\n  tagSuccess: \"#4CAF50\",\n  tagWarning: \"#FFC107\",\n  tagError: \"#B00020\",\n  tagInfo: \"#4dc8dd\",\n  tagActive: \"#2a9bb5\",\n  tagDisabled: \"#9E9E9E\",\n\n  // 네비게이션 - 브랜드 컬러\n  // Navigation\n  navigationBackground: \"#37bbd6\",\n  navigationText: \"#FFFFFF\",\n\n  // 아이콘 - 브랜드 컬러 톤\n  // Icon Colors\n  iconPrimary: \"#37bbd6\",\n  iconSecondary: \"#2a9bb5\",\n  iconTertiary: \"#4dc8dd\",\n  iconSuccess: \"#4CAF50\",\n  iconWarning: \"#FFC107\",\n  iconError: \"#B00020\",\n  iconDisabled: \"#9E9E9E\",\n\n  // 보더 - 브랜드 컬러와 조화\n  // Border Colors\n  borderLight: \"#E0E0E0\",\n  borderDark: \"#9E9E9E\",\n  borderError: \"#B00020\",\n  borderPrimary: \"#37bbd6\", // 브랜드 컬러 보더 추가\n\n  // 기타\n  // Others / Miscellaneous\n  divider: \"#E0E0E0\",\n  overlay: \"#000000\",\n  shadowLight: \"#E0E0E0\",\n  shadowMedium: \"#B0BEC5\",\n  shadowDark: \"#78909C\",\n\n  link: \"#37bbd6\", // 브랜드 컬러로 링크 색상\n  linkHover: \"#2a9bb5\",\n  linkActive: \"#1e7a8a\",\n  linkDisabled: \"#9E9E9E\",\n\n  hoverText: '#2a9bb5', // 브랜드 컬러 톤\n  border: '#b8e6f0', // 브랜드 컬러의 밝은 톤\n  \n  input: '#ffffff',\n  onInput1 : '#B3B3B3',\n  onInput2: '#666666',\n  onInput3: '#262626',\n  onInput4: '#ED2424',\n  onInput5: '#949494',\n\n  // 브랜드 컬러 기반 버튼들\n  btnA : '#37bbd6', // 브랜드 컬러\n  btnAHover: '#2a9bb5',\n  btnAActive: '#1e7a8a',\n  onBtnA: '#FFFFFF',\n\n  btnC : '#f3f3f3',\n  onBtnC: '#949494',\n  btnCEmphasis: '#f0fbfc', // 브랜드 컬러의 매우 밝은 톤\n  onBtnCEmphasis: '#2a9bb5',\n\n  btnE : '#b8e6f0', // 브랜드 컬러의 밝은 톤\n  onBtnE: '#1e7a8a', // 브랜드 컬러의 어두운 톤\n  btnE_Disabled: '#CCCCCC',\n  onBtnE_Disabled: '#949494',\n  btnE_Hover: '#37bbd6', // 브랜드 컬러\n  onBtnE_Hover: '#FFFFFF',\n\n  onPopup: '#f3f3f3',\n\n} as const;\n"
+        }
+    ]
+}

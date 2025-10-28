@@ -1,0 +1,18 @@
+{
+    "sourceFile": "server/middlewares/errorHandler.js",
+    "activeCommit": 0,
+    "commits": [
+        {
+            "activePatchIndex": 0,
+            "patches": [
+                {
+                    "date": 1761125384232,
+                    "content": "Index: \n===================================================================\n--- \n+++ \n"
+                }
+            ],
+            "date": 1761125384232,
+            "name": "Commit-0",
+            "content": "const AppError = require('../utils/AppError');\n\nconst errorHandler = (err, req, res, next) => {\n  let error = { ...err };\n  error.message = err.message;\n\n  // 콘솔에 에러 로그 출력\n  console.error('Error:', err);\n\n  // Mongoose 잘못된 ObjectId 에러\n  if (err.name === 'CastError') {\n    const message = '잘못된 리소스 ID입니다';\n    error = new AppError(message, 400);\n  }\n\n  // Mongoose 중복 키 에러\n  if (err.code === 11000) {\n    const field = Object.keys(err.keyValue)[0];\n    let message = '';\n    \n    switch (field) {\n      case 'name':\n        message = '이미 존재하는 지점명입니다';\n        break;\n      default:\n        message = '중복된 데이터입니다';\n    }\n    \n    error = new AppError(message, 400);\n  }\n\n  // Mongoose 유효성 검사 에러\n  if (err.name === 'ValidationError') {\n    const messages = Object.values(err.errors).map(val => val.message);\n    const message = messages.join(', ');\n    error = new AppError(message, 400);\n  }\n\n  // JWT 에러\n  if (err.name === 'JsonWebTokenError') {\n    const message = '유효하지 않은 토큰입니다';\n    error = new AppError(message, 401);\n  }\n\n  // JWT 만료 에러\n  if (err.name === 'TokenExpiredError') {\n    const message = '토큰이 만료되었습니다';\n    error = new AppError(message, 401);\n  }\n\n  // 응답 구조\n  const response = {\n    success: false,\n    message: error.message || '서버 내부 오류가 발생했습니다',\n    ...(process.env.NODE_ENV === 'development' && {\n      stack: err.stack,\n      error: err\n    })\n  };\n\n  // 유효성 검사 에러의 경우 상세 정보 추가\n  if (error.validationErrors) {\n    response.validationErrors = error.validationErrors;\n  }\n\n  res.status(error.statusCode || 500).json(response);\n};\n\nmodule.exports = errorHandler;"
+        }
+    ]
+}

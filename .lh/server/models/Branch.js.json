@@ -1,0 +1,18 @@
+{
+    "sourceFile": "server/models/Branch.js",
+    "activeCommit": 0,
+    "commits": [
+        {
+            "activePatchIndex": 0,
+            "patches": [
+                {
+                    "date": 1761125384143,
+                    "content": "Index: \n===================================================================\n--- \n+++ \n"
+                }
+            ],
+            "date": 1761125384143,
+            "name": "Commit-0",
+            "content": "const mongoose = require('mongoose');\n\nconst branchSchema = new mongoose.Schema({\n  name: {\n    type: String,\n    required: [true, '지점명은 필수입니다'],\n    trim: true,\n    unique: true,\n    maxlength: [100, '지점명은 100자를 초과할 수 없습니다']\n  },\n  address: {\n    type: String,\n    trim: true,\n    maxlength: [500, '주소는 500자를 초과할 수 없습니다']\n  },\n  phone: {\n    type: String,\n    trim: true,\n    match: [/^[\\d-+().\\s]+$/, '올바른 전화번호 형식이 아닙니다']\n  },\n  isActive: {\n    type: Boolean,\n    default: true\n  }\n}, {\n  timestamps: true, // createdAt, updatedAt 자동 생성\n  versionKey: false\n});\n\n// 인덱스 설정\nbranchSchema.index({ name: 1 });\nbranchSchema.index({ isActive: 1 });\nbranchSchema.index({ createdAt: -1 });\n\n// 가상 필드 - ID를 문자열로 변환\nbranchSchema.virtual('id').get(function() {\n  return this._id.toHexString();\n});\n\n// JSON 변환 시 설정\nbranchSchema.set('toJSON', {\n  virtuals: true,\n  transform: function(doc, ret) {\n    delete ret._id;\n    delete ret.__v;\n    return ret;\n  }\n});\n\n// 지점명 중복 체크를 위한 사전 저장 미들웨어\nbranchSchema.pre('save', async function(next) {\n  if (this.isModified('name')) {\n    const existingBranch = await this.constructor.findOne({\n      name: this.name,\n      _id: { $ne: this._id }\n    });\n    \n    if (existingBranch) {\n      const error = new Error('이미 존재하는 지점명입니다');\n      error.statusCode = 400;\n      return next(error);\n    }\n  }\n  next();\n});\n\n// 삭제 전 관련 데이터 체크를 위한 미들웨어\nbranchSchema.pre('deleteOne', { document: true, query: false }, async function(next) {\n  // 여기서 직원, 회원 등 관련 데이터가 있는지 체크할 수 있음\n  // const Staff = mongoose.model('Staff');\n  // const hasStaff = await Staff.findOne({ branchId: this._id });\n  // if (hasStaff) {\n  //   const error = new Error('직원이 등록된 지점은 삭제할 수 없습니다');\n  //   error.statusCode = 400;\n  //   return next(error);\n  // }\n  next();\n});\n\n// 스태틱 메소드 - 활성 지점만 조회\nbranchSchema.statics.findActive = function() {\n  return this.find({ isActive: true }).sort({ createdAt: 1 });\n};\n\n// 인스턴스 메소드 - 지점 활성/비활성 토글\nbranchSchema.methods.toggleActive = function() {\n  this.isActive = !this.isActive;\n  return this.save();\n};\n\nmodule.exports = mongoose.model('Branch', branchSchema);"
+        }
+    ]
+}

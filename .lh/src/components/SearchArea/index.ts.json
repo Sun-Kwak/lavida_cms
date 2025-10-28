@@ -1,0 +1,18 @@
+{
+    "sourceFile": "src/components/SearchArea/index.ts",
+    "activeCommit": 0,
+    "commits": [
+        {
+            "activePatchIndex": 0,
+            "patches": [
+                {
+                    "date": 1760760936032,
+                    "content": "Index: \n===================================================================\n--- \n+++ \n"
+                }
+            ],
+            "date": 1760760936032,
+            "name": "Commit-0",
+            "content": "export { default as SearchArea } from './SearchArea';\nexport type { PeriodOption } from './SearchArea';\n"
+        }
+    ]
+}

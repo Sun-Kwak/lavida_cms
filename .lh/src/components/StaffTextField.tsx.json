@@ -1,0 +1,18 @@
+{
+    "sourceFile": "src/components/StaffTextField.tsx",
+    "activeCommit": 0,
+    "commits": [
+        {
+            "activePatchIndex": 0,
+            "patches": [
+                {
+                    "date": 1759904790071,
+                    "content": "Index: \n===================================================================\n--- \n+++ \n"
+                }
+            ],
+            "date": 1759904790071,
+            "name": "Commit-0",
+            "content": "import React from 'react';\nimport styled from 'styled-components';\nimport { AppColors } from '../styles/colors';\nimport { AppTextStyles } from '../styles/textStyles';\n\nconst FormField = styled.div<{ $fullWidth?: boolean }>`\n  display: flex;\n  flex-direction: column;\n  gap: 8px;\n  grid-column: ${props => props.$fullWidth ? '1 / -1' : 'auto'};\n`;\n\nconst Label = styled.label<{ $required?: boolean }>`\n  font-size: ${AppTextStyles.label1.fontSize};\n  font-weight: 600;\n  color: ${AppColors.onSurface};\n  \n  &::after {\n    content: ${props => props.$required ? '\" *\"' : '\"\"'};\n    color: ${AppColors.error};\n  }\n`;\n\nconst Input = styled.input`\n  height: 48px;\n  padding: 0 16px;\n  border: 1px solid ${AppColors.borderLight};\n  border-radius: 12px;\n  font-size: ${AppTextStyles.body1.fontSize};\n  outline: none;\n  background: ${AppColors.surface};\n  color: ${AppColors.onSurface};\n  transition: all 0.2s ease;\n  box-sizing: border-box;\n  \n  &:hover {\n    border-color: ${AppColors.primary};\n    box-shadow: 0 2px 8px rgba(55, 187, 214, 0.1);\n  }\n  \n  &:focus {\n    border-color: ${AppColors.primary};\n    box-shadow: 0 0 0 3px rgba(55, 187, 214, 0.1);\n  }\n  \n  &::placeholder {\n    color: ${AppColors.onInput1};\n  }\n  \n  &:disabled {\n    background-color: ${AppColors.background};\n    color: ${AppColors.disabled};\n    border-color: ${AppColors.borderLight};\n  }\n`;\n\nconst ErrorMessage = styled.div`\n  color: ${AppColors.error};\n  font-size: ${AppTextStyles.label3.fontSize};\n  margin-top: 4px;\n`;\n\nexport interface StaffTextFieldProps {\n  label?: string;\n  value: string;\n  onChange: (value: string) => void;\n  placeholder?: string;\n  errorMessage?: string;\n  required?: boolean;\n  disabled?: boolean;\n  fullWidth?: boolean;\n  type?: 'text' | 'email' | 'tel' | 'password' | 'number';\n  maxLength?: number;\n  autoComplete?: string;\n  inputMode?: 'text' | 'tel' | 'email' | 'numeric';\n}\n\nexport const StaffTextField: React.FC<StaffTextFieldProps> = ({\n  label,\n  value,\n  onChange,\n  placeholder,\n  errorMessage,\n  required = false,\n  disabled = false,\n  fullWidth = false,\n  type = 'text',\n  maxLength,\n  autoComplete,\n  inputMode\n}) => {\n  const handleChange = (e: React.ChangeEvent<HTMLInputElement>) => {\n    onChange(e.target.value);\n  };\n\n  return (\n    <FormField $fullWidth={fullWidth}>\n      {label && (\n        <Label $required={required}>\n          {label}\n        </Label>\n      )}\n      <Input\n        type={type}\n        value={value}\n        onChange={handleChange}\n        placeholder={placeholder}\n        disabled={disabled}\n        maxLength={maxLength}\n        autoComplete={autoComplete}\n        inputMode={inputMode}\n      />\n      {errorMessage && <ErrorMessage>{errorMessage}</ErrorMessage>}\n    </FormField>\n  );\n};\n"
+        }
+    ]
+}

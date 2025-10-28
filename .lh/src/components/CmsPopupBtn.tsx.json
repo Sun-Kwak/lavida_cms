@@ -1,0 +1,18 @@
+{
+    "sourceFile": "src/components/CmsPopupBtn.tsx",
+    "activeCommit": 0,
+    "commits": [
+        {
+            "activePatchIndex": 0,
+            "patches": [
+                {
+                    "date": 1757830071421,
+                    "content": "Index: \n===================================================================\n--- \n+++ \n"
+                }
+            ],
+            "date": 1757830071421,
+            "name": "Commit-0",
+            "content": "import React from 'react';\nimport styled from 'styled-components';\nimport { AppColors } from '../styles/colors';\n\nexport enum CmsPopupBtnType {\n  PRIMARY = 'primary',\n  SECONDARY = 'secondary',\n  DANGER = 'danger',\n}\n\ninterface CmsPopupBtnProps {\n  type?: CmsPopupBtnType;\n  children: React.ReactNode;\n  onClick: () => void;\n  disabled?: boolean;\n}\n\nconst StyledButton = styled.button<{ $type: CmsPopupBtnType; $disabled?: boolean }>`\n  width: 100px;\n  height: 40px;\n  border-radius: 6px;\n  font-size: 14px;\n  font-weight: 500;\n  cursor: ${({ $disabled }) => ($disabled ? 'not-allowed' : 'pointer')};\n  transition: all 0.2s ease;\n  opacity: ${({ $disabled }) => ($disabled ? 0.6 : 1)};\n  \n  ${({ $type }) => {\n    if ($type === CmsPopupBtnType.PRIMARY) {\n      return `\n        background-color: ${AppColors.primary};\n        color: ${AppColors.onPrimary};\n        border: 1px solid ${AppColors.primary};\n        \n        &:hover:not(:disabled) {\n          background-color: ${AppColors.secondary};\n          border-color: ${AppColors.secondary};\n        }\n      `;\n    } else if ($type === CmsPopupBtnType.DANGER) {\n      return `\n        background-color: ${AppColors.error};\n        color: white;\n        border: 1px solid ${AppColors.error};\n        \n        &:hover:not(:disabled) {\n          background-color: #e63946;\n          border-color: #e63946;\n        }\n      `;\n    } else {\n      return `\n        background-color: white;\n        color: ${AppColors.primary};\n        border: 1px solid ${AppColors.borderPrimary};\n        \n        &:hover:not(:disabled) {\n          background-color: ${AppColors.btnCEmphasis};\n          color: ${AppColors.secondary};\n        }\n      `;\n    }\n  }}\n`;\n\nconst CmsPopupBtn: React.FC<CmsPopupBtnProps> = ({\n  type = CmsPopupBtnType.PRIMARY,\n  children,\n  onClick,\n  disabled = false,\n}) => {\n  return (\n    <StyledButton\n      $type={type}\n      $disabled={disabled}\n      onClick={onClick}\n      disabled={disabled}\n    >\n      {children}\n    </StyledButton>\n  );\n};\n\nexport default CmsPopupBtn;\n"
+        }
+    ]
+}

@@ -1,0 +1,316 @@
+<!doctype html>
+<html lang="ko">
+<head>
+  <meta charset="utf-8" />
+  <title>LaVida CRM – Ribbon UI (No Subpages)</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <!-- 보기 좋은 기본 폰트 -->
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Noto+Sans+KR:wght@400;600;700&display=swap" rel="stylesheet">
+
+  <style>
+    :root{
+      --bg:#f6f7fb; --text:#0f172a; --muted:#475569; --white:#fff;
+      --border:#e5e7eb; --brand:#6d28d9; --brand-ink:#fff;
+      --chip:#f1f5f9; --chip-ink:#0f172a; --btn:#eef2f7; --btn-hover:#e3e8f2;
+    }
+    *{box-sizing:border-box}
+    html,body{height:100%}
+    body{
+      margin:0; background:var(--bg); color:var(--text);
+      font-family:"Noto Sans KR", system-ui, -apple-system, Segoe UI, Roboto, sans-serif;
+    }
+
+    /* Layout */
+    .container{max-width:1100px; margin:0 auto; padding:0 16px}
+    .topbar{position:sticky; top:0; z-index:50; background:rgba(255,255,255,.9); backdrop-filter:saturate(180%) blur(6px); border-bottom:1px solid var(--border)}
+    .topbar-row{display:flex; flex-wrap:wrap; gap:8px; align-items:center; padding:12px 0}
+    .brand{display:flex; align-items:center; gap:10px; font-weight:700}
+    .brand-dot{width:32px; height:32px; border-radius:12px; background:var(--brand)}
+
+    /* Tabs */
+    .tabs{display:flex; flex-wrap:wrap; gap:8px; margin-left:12px}
+    .tab{padding:8px 12px; border:1px solid var(--border); border-radius:12px; background:#fff; color:#1f2937; cursor:pointer; font-size:14px}
+    .tab.active{background:var(--brand); color:var(--brand-ink); border-color:var(--brand)}
+    .tab .ico{margin-right:6px}
+
+    /* Ribbon / Toolbar */
+    .ribbon{border-top:1px solid var(--border)}
+    .ribbon-row{display:flex; flex-wrap:wrap; gap:8px; padding:10px 0}
+    .toolbtn{padding:8px 12px; border-radius:12px; background:var(--btn); cursor:pointer; font-size:14px; border:1px solid var(--border)}
+    .toolbtn:hover{background:var(--btn-hover)}
+
+    /* Main */
+    .main{padding:24px 0}
+    .card{background:#fff; border:1px solid var(--border); border-radius:16px; box-shadow:0 1px 2px rgba(16,24,40,.04)}
+    .card-hd{padding:14px 16px; border-bottom:1px solid var(--border); font-weight:600}
+    .card-bd{padding:16px}
+
+    .grid{display:grid; gap:16px}
+    @media(min-width:980px){ .grid-3{grid-template-columns: 2fr 1fr;} }
+
+    /* Search */
+    .search-row{display:flex; gap:8px; align-items:center}
+    .input{flex:1; padding:10px 12px; border:1px solid var(--border); border-radius:12px; font-size:14px}
+    .btn{padding:10px 14px; border:none; border-radius:12px; background:var(--brand); color:#fff; cursor:pointer; font-weight:600}
+    .btn.secondary{background:#fff; color:#111827; border:1px solid var(--border)}
+    .btn.full{width:100%}
+
+    /* Table */
+    table{width:100%; border-collapse:collapse; font-size:14px}
+    thead{background:#f8fafc}
+    th, td{padding:10px 12px; text-align:left; border-top:1px solid var(--border)}
+    tr:hover td{background:#f7f5ff}
+
+    .chip{display:inline-block; padding:4px 8px; background:var(--chip); color:var(--chip-ink); border-radius:999px; margin-right:6px; margin-bottom:4px; font-size:12px}
+
+    /* Stat */
+    .stat{padding:12px; border:1px solid var(--border); border-radius:14px; background:#fff}
+    .stat .label{font-size:12px; color:var(--muted)}
+    .stat .val{font-size:22px; font-weight:700; margin-top:2px}
+
+    /* Modal */
+    .modal-backdrop{position:fixed; inset:0; background:rgba(0,0,0,.28); display:flex; align-items:center; justify-content:center}
+    .modal{background:#fff; width:min(560px, 92vw); border-radius:16px; border:1px solid var(--border); box-shadow:0 12px 40px rgba(0,0,0,.18)}
+    .modal-hd{padding:14px 16px; border-bottom:1px solid var(--border); font-weight:700}
+    .modal-bd{padding:16px}
+    .modal-ft{padding:14px 16px; border-top:1px solid var(--border); text-align:right}
+  </style>
+</head>
+<body>
+  <!-- Header / Tabs -->
+  <div class="topbar">
+    <div class="container">
+      <div class="topbar-row">
+        <div class="brand">
+          <div class="brand-dot"></div>
+          <div>LaVida CRM</div>
+        </div>
+        <div id="tabs" class="tabs"></div>
+      </div>
+    </div>
+    <div class="ribbon">
+      <div class="container">
+        <div id="ribbon" class="ribbon-row"></div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Main -->
+  <div class="container main">
+    <div class="grid grid-3">
+      <div class="left-col">
+        <div class="card" style="margin-bottom:16px">
+          <div class="card-hd">빠른 검색</div>
+          <div class="card-bd">
+            <div class="search-row">
+              <input id="search" class="input" placeholder="회원명 / ID / 코치 검색" />
+              <button class="btn" onclick="onSearch()">검색</button>
+              <button class="btn secondary" onclick="toggleFilter()">필터</button>
+            </div>
+            <div id="filterPanel" style="display:none; margin-top:10px">
+              <button class="toolbtn" onclick="alert('WBM만 보기 (데모)')">WBM만</button>
+              <button class="toolbtn" onclick="alert('릴렉싱만 보기 (데모)')">릴렉싱만</button>
+              <button class="toolbtn" onclick="alert('휴면만 보기 (데모)')">휴면만</button>
+            </div>
+          </div>
+        </div>
+
+        <div class="card">
+          <div class="card-hd">회원 목록</div>
+          <div class="card-bd" style="overflow:auto">
+            <table id="table">
+              <thead>
+              <tr>
+                <th>회원ID</th><th>이름</th><th>태그</th><th>담당 코치</th>
+                <th>포인트</th><th>잔여</th><th>최근 내원</th>
+              </tr>
+              </thead>
+              <tbody id="tbody"></tbody>
+            </table>
+          </div>
+        </div>
+      </div>
+
+      <div class="right-col">
+        <div class="card" style="margin-bottom:16px">
+          <div class="card-hd">오늘의 요약</div>
+          <div class="card-bd" style="display:grid; grid-template-columns:1fr 1fr; gap:12px">
+            <div class="stat"><div class="label">금일 예약</div><div id="s1" class="val">42</div></div>
+            <div class="stat"><div class="label">체크인</div><div id="s2" class="val">35</div></div>
+            <div class="stat"><div class="label">완료 세션</div><div id="s3" class="val">29</div></div>
+            <div class="stat"><div class="label">취소/노쇼</div><div id="s4" class="val">4</div></div>
+          </div>
+        </div>
+
+        <div class="card">
+          <div class="card-hd">알림 센터</div>
+          <div class="card-bd">
+            <div style="display:flex; justify-content:space-between"><span>예약 D-1 리마인드 발송</span><strong>24건</strong></div>
+            <div style="display:flex; justify-content:space-between; color:#475569; margin-top:6px"><span>휴면 30일 대상</span><strong>7명</strong></div>
+            <div style="display:flex; justify-content:space-between; color:#b91c1c; margin-top:6px"><span>잔여세션 1회 이하</span><strong>5명</strong></div>
+            <button class="btn secondary full" style="margin-top:12px" onclick="openModal('단문 보내기','대상자에게 즉시 문자/알림톡 발송 (데모)')">대상자 문자 보내기</button>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Modal -->
+  <div id="modalRoot" style="display:none" class="modal-backdrop" onclick="closeModal(event)">
+    <div class="modal" onclick="event.stopPropagation()">
+      <div id="modalTitle" class="modal-hd">제목</div>
+      <div id="modalBody" class="modal-bd">내용</div>
+      <div class="modal-ft">
+        <button class="btn secondary" onclick="closeModal()">닫기</button>
+      </div>
+    </div>
+  </div>
+
+  <script>
+    // ===== 데이터 =====
+    const MENU = {
+      "회원관리": { icon: "👥", actions: ["신규 등록","빠른 검색","태그 관리","QR 체크인","내원 기록","엑셀 업로드","내보내기"] },
+      "예약/스케줄": { icon: "📅", actions: ["신규 예약","시간표 보기","일괄 예약","대기 관리","자동 리마인드"] },
+      "운동처방": { icon: "🏋️‍♀️", actions: ["평가 등록","체형 분석","보행/족저압","프로그램 배정","QR 카드 출력"] },
+      "릴렉싱": { icon: "🛏️", actions: ["베드 배정","타이머","회차권 관리","컨디션 노트","금일 현황"] },
+      "결제/포인트": { icon: "💳", actions: ["결제 등록","포인트 충전","환불/조정","영수증 보내기","매출 대시보드"] },
+      "알림/문자": { icon: "🔔", actions: ["단문 보내기","예약 리마인드","생일/휴면","쿠폰 발송","템플릿 관리"] },
+      "통계/리포트": { icon: "📊", actions: ["일/주/월","코치별 KPI","잔여 세션","이탈 위험","NPS 설문"] },
+      "설정": { icon: "⚙️", actions: ["직원/권한","프로그램/가격","채널 연동","데이터 백업"] },
+    };
+
+    const MEMBERS = [
+      { id:"LV0001", name:"김라비", tags:["WBM","릴렉싱"], coach:"한수민", points:120000, remain:8, lastVisit:"2025-09-07" },
+      { id:"LV0002", name:"박봄", tags:["릴렉싱"], coach:"임정현", points:40000, remain:2, lastVisit:"2025-09-09" },
+      { id:"LV0003", name:"최다움", tags:["WBM"], coach:"민웅희", points:0, remain:0, lastVisit:"2025-08-28" },
+      { id:"LV0004", name:"이지유", tags:["WBM","VIP"], coach:"한수민", points:320000, remain:14, lastVisit:"2025-09-10" },
+    ];
+
+    // ===== 상태 =====
+    let selectedMenu = "회원관리";
+    let query = "";
+
+    // ===== 초기화 =====
+    function init(){
+      renderTabs();
+      renderRibbon();
+      renderTable(MEMBERS);
+    }
+
+    // Tabs
+    function renderTabs(){
+      const el = document.getElementById("tabs");
+      el.innerHTML = "";
+      Object.keys(MENU).forEach(k=>{
+        const b = document.createElement("button");
+        b.className = "tab" + (k===selectedMenu ? " active" : "");
+        b.innerHTML = `<span class="ico">${MENU[k].icon}</span>${k}`;
+        b.onclick = ()=>{
+          selectedMenu = k;
+          renderTabs();
+          renderRibbon();
+          document.querySelector(".card-hd + .card-bd input#search")?.focus();
+        };
+        el.appendChild(b);
+      });
+    }
+
+    // Ribbon
+    function renderRibbon(){
+      const el = document.getElementById("ribbon");
+      el.innerHTML = "";
+      MENU[selectedMenu].actions.forEach(label=>{
+        const b = document.createElement("button");
+        b.className = "toolbtn";
+        b.textContent = label;
+        b.onclick = ()=> handleAction(label);
+        el.appendChild(b);
+      });
+    }
+
+    function handleAction(label){
+      // 실제 연동 포인트
+      switch(label){
+        case "빠른 검색":
+          document.getElementById("search").focus();
+          break;
+        case "신규 등록":
+          openModal("신규 회원 등록",
+            `<div>
+              <div style="display:grid; gap:8px">
+                <label>이름 <input class="input" placeholder="홍길동"/></label>
+                <label>연락처 <input class="input" placeholder="010-0000-0000"/></label>
+                <label>태그 <input class="input" placeholder="WBM, 릴렉싱"/></label>
+              </div>
+            </div>`);
+          break;
+        case "시간표 보기":
+          openModal("시간표 보기", "오늘의 WBM/릴렉싱/스트레칭 시간표 (데모)");
+          break;
+        case "베드 배정":
+          openModal("베드 배정", "릴렉싱 베드 번호 지정 및 회차 소모 기록 (데모)");
+          break;
+        case "매출 대시보드":
+          openModal("매출 대시보드", "일/주/월 매출, 상품 비중, 객단가, 전환율 (데모)");
+          break;
+        default:
+          openModal(label, `${label} 실행 (데모)`);
+      }
+    }
+
+    // Search
+    function onSearch(){
+      query = (document.getElementById("search").value || "").toLowerCase().trim();
+      const data = MEMBERS.filter(m =>
+        m.id.toLowerCase().includes(query) ||
+        m.name.toLowerCase().includes(query) ||
+        m.coach.toLowerCase().includes(query)
+      );
+      renderTable(data);
+    }
+    function toggleFilter(){
+      const p = document.getElementById("filterPanel");
+      p.style.display = (p.style.display==="none"||!p.style.display) ? "block" : "none";
+    }
+
+    function renderTable(data){
+      const tb = document.getElementById("tbody");
+      tb.innerHTML = "";
+      data.forEach(m=>{
+        const tr = document.createElement("tr");
+        tr.innerHTML = `
+          <td>${m.id}</td>
+          <td>${m.name}</td>
+          <td>${m.tags.map(t=>`<span class="chip">${t}</span>`).join("")}</td>
+          <td>${m.coach}</td>
+          <td>${m.points.toLocaleString()}p</td>
+          <td>${m.remain}</td>
+          <td>${m.lastVisit}</td>
+        `;
+        tb.appendChild(tr);
+      });
+    }
+
+    // Modal
+    function openModal(title, html){
+      document.getElementById("modalTitle").textContent = title;
+      document.getElementById("modalBody").innerHTML = html;
+      document.getElementById("modalRoot").style.display = "flex";
+    }
+    function closeModal(e){
+      document.getElementById("modalRoot").style.display = "none";
+    }
+
+    // Enter 검색
+    document.addEventListener("keydown", (e)=>{
+      if(e.key==="Enter" && document.activeElement===document.getElementById("search")){
+        onSearch();
+      }
+    });
+
+    // 시작
+    window.addEventListener("DOMContentLoaded", init);
+  </script>
+</body>
+</html>

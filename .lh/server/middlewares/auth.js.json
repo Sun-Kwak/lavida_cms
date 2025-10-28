@@ -1,0 +1,18 @@
+{
+    "sourceFile": "server/middlewares/auth.js",
+    "activeCommit": 0,
+    "commits": [
+        {
+            "activePatchIndex": 0,
+            "patches": [
+                {
+                    "date": 1761125384251,
+                    "content": "Index: \n===================================================================\n--- \n+++ \n"
+                }
+            ],
+            "date": 1761125384251,
+            "name": "Commit-0",
+            "content": "const jwt = require('jsonwebtoken');\nconst AppError = require('../utils/AppError');\nconst asyncHandler = require('../utils/asyncHandler');\n\n/**\n * JWT 토큰 검증 미들웨어\n */\nconst auth = asyncHandler(async (req, res, next) => {\n  let token;\n\n  // 헤더에서 토큰 추출\n  if (req.headers.authorization && req.headers.authorization.startsWith('Bearer')) {\n    token = req.headers.authorization.split(' ')[1];\n  }\n\n  // 토큰이 없는 경우\n  if (!token) {\n    throw new AppError('접근 권한이 없습니다. 로그인이 필요합니다.', 401);\n  }\n\n  try {\n    // 토큰 검증\n    const decoded = jwt.verify(token, process.env.JWT_SECRET || 'your-secret-key');\n    \n    // 여기서 실제로는 데이터베이스에서 사용자 정보를 조회해야 함\n    // const user = await User.findById(decoded.id);\n    // if (!user) {\n    //   throw new AppError('토큰에 해당하는 사용자를 찾을 수 없습니다', 401);\n    // }\n    \n    req.user = decoded;\n    next();\n  } catch (error) {\n    throw new AppError('유효하지 않은 토큰입니다', 401);\n  }\n});\n\n/**\n * 역할 기반 접근 제어 미들웨어\n */\nconst authorize = (...roles) => {\n  return (req, res, next) => {\n    if (!req.user) {\n      throw new AppError('인증이 필요합니다', 401);\n    }\n\n    if (!roles.includes(req.user.role)) {\n      throw new AppError('이 작업을 수행할 권한이 없습니다', 403);\n    }\n\n    next();\n  };\n};\n\n/**\n * 관리자 권한 확인 미들웨어\n */\nconst requireAdmin = (req, res, next) => {\n  if (!req.user || req.user.role !== 'admin') {\n    throw new AppError('관리자 권한이 필요합니다', 403);\n  }\n  next();\n};\n\n/**\n * 지점 접근 권한 확인 미들웨어\n */\nconst checkBranchAccess = asyncHandler(async (req, res, next) => {\n  const { id } = req.params;\n  \n  // 관리자는 모든 지점에 접근 가능\n  if (req.user.role === 'admin') {\n    return next();\n  }\n  \n  // 일반 사용자는 자신의 지점만 접근 가능\n  if (req.user.branchId !== id) {\n    throw new AppError('해당 지점에 접근할 권한이 없습니다', 403);\n  }\n  \n  next();\n});\n\nmodule.exports = {\n  auth,\n  authorize,\n  requireAdmin,\n  checkBranchAccess\n};"
+        }
+    ]
+}

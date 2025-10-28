@@ -1,0 +1,22 @@
+{
+    "sourceFile": "src/pages/CMS/Settings/PositionTable.tsx",
+    "activeCommit": 0,
+    "commits": [
+        {
+            "activePatchIndex": 1,
+            "patches": [
+                {
+                    "date": 1759897448275,
+                    "content": "Index: \n===================================================================\n--- \n+++ \n"
+                },
+                {
+                    "date": 1759897877465,
+                    "content": "Index: \n===================================================================\n--- \n+++ \n@@ -39,17 +39,8 @@\n const PositionName = styled.span`\n   flex: 1;\n `;\n \n-const FixedBadge = styled.span`\n-  padding: 4px 8px;\n-  border-radius: 4px;\n-  background-color: ${AppColors.warning}15;\n-  color: ${AppColors.warning};\n-  font-size: ${AppTextStyles.label3.fontSize};\n-  font-weight: 500;\n-`;\n-\n const positions = [\n   '대표',\n   '이사',\n   '부장',\n@@ -66,9 +57,8 @@\n       <TableHeader>직급 목록</TableHeader>\n       {positions.map((position, index) => (\n         <TableRow key={index}>\n           <PositionName>{position}</PositionName>\n-          <FixedBadge>고정</FixedBadge>\n         </TableRow>\n       ))}\n     </Table>\n   );\n"
+                }
+            ],
+            "date": 1759897448275,
+            "name": "Commit-0",
+            "content": "import React from 'react';\nimport styled from 'styled-components';\nimport { AppColors } from '../../../styles/colors';\nimport { AppTextStyles } from '../../../styles/textStyles';\n\nconst Table = styled.div`\n  border: 1px solid ${AppColors.borderLight};\n  border-radius: 8px;\n  overflow: hidden;\n`;\n\nconst TableHeader = styled.div`\n  background-color: ${AppColors.background};\n  padding: 12px 16px;\n  border-bottom: 1px solid ${AppColors.borderLight};\n  font-weight: 600;\n  font-size: ${AppTextStyles.body2.fontSize};\n  color: ${AppColors.onSurface};\n`;\n\nconst TableRow = styled.div`\n  display: flex;\n  align-items: center;\n  justify-content: space-between;\n  padding: 12px 16px;\n  border-bottom: 1px solid ${AppColors.borderLight};\n  font-size: ${AppTextStyles.body2.fontSize};\n  color: ${AppColors.onSurface};\n\n  &:last-child {\n    border-bottom: none;\n  }\n\n  &:hover {\n    background-color: ${AppColors.background};\n  }\n`;\n\nconst PositionName = styled.span`\n  flex: 1;\n`;\n\nconst FixedBadge = styled.span`\n  padding: 4px 8px;\n  border-radius: 4px;\n  background-color: ${AppColors.warning}15;\n  color: ${AppColors.warning};\n  font-size: ${AppTextStyles.label3.fontSize};\n  font-weight: 500;\n`;\n\nconst positions = [\n  '대표',\n  '이사',\n  '부장',\n  '차장',\n  '과장',\n  '대리',\n  '사원',\n  '인턴'\n];\n\nconst PositionTable: React.FC = () => {\n  return (\n    <Table>\n      <TableHeader>직급 목록</TableHeader>\n      {positions.map((position, index) => (\n        <TableRow key={index}>\n          <PositionName>{position}</PositionName>\n          <FixedBadge>고정</FixedBadge>\n        </TableRow>\n      ))}\n    </Table>\n  );\n};\n\nexport default PositionTable;\n"
+        }
+    ]
+}

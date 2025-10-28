@@ -1,0 +1,18 @@
+{
+    "sourceFile": "src/react-app-env.d.ts",
+    "activeCommit": 0,
+    "commits": [
+        {
+            "activePatchIndex": 0,
+            "patches": [
+                {
+                    "date": 1757743508405,
+                    "content": "Index: \n===================================================================\n--- \n+++ \n"
+                }
+            ],
+            "date": 1757743508405,
+            "name": "Commit-0",
+            "content": "/// <reference types=\"react-scripts\" />\n/// <reference types=\"react-scripts\" />\n\ndeclare module 'dayjs' {\n  const dayjs: any;\n  export default dayjs;\n}\n\ndeclare module 'xlsx' {\n  export const utils: any;\n  export const writeFile: any;\n}\n\ndeclare module 'react-datepicker' {\n  const DatePicker: any;\n  export default DatePicker;\n}\n\ndeclare module 'date-fns/locale' {\n  export const ko: any;\n}\n"
+        }
+    ]
+}
