@@ -69,7 +69,7 @@ function App() {
   return (
     <AdminAuthProvider>
       <DeviceProvider>
-        <Router>
+        <Router basename="/lavida_cms">
           <div className="App">
             <Routes>
               {/* 루트 경로: 사용자 화면 */}
