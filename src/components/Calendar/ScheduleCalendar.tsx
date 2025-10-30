@@ -34,7 +34,11 @@ const ScheduleCalendar: React.FC<CalendarProps> = ({
   onEventCreate,
   onHolidaySettings,
   weeklyHolidaySettings,
-  allowEmptyStaff = false
+  allowEmptyStaff = false,
+  programDuration,
+  hideViewOptions = [],
+  disablePastTime = false,
+  currentUser
 }) => {
   const handleDateClick = (date: Date) => {
     // 월별 뷰에서 날짜 클릭 시 일별 뷰로 전환
@@ -55,6 +59,9 @@ const ScheduleCalendar: React.FC<CalendarProps> = ({
             onEventCreate={onEventCreate}
             weeklyHolidaySettings={weeklyHolidaySettings}
             allowEmptyStaff={allowEmptyStaff}
+            programDuration={programDuration}
+            disablePastTime={disablePastTime}
+            currentUser={currentUser}
           />
         );
       case 'week':
@@ -67,6 +74,10 @@ const ScheduleCalendar: React.FC<CalendarProps> = ({
             onEventClick={onEventClick}
             onEventCreate={onEventCreate}
             allowEmptyStaff={allowEmptyStaff}
+            programDuration={programDuration}
+            disablePastTime={disablePastTime}
+            weeklyHolidaySettings={weeklyHolidaySettings}
+            currentUser={currentUser}
           />
         );
       case 'month':
@@ -80,6 +91,8 @@ const ScheduleCalendar: React.FC<CalendarProps> = ({
             onEventCreate={onEventCreate}
             onDateClick={handleDateClick}
             allowEmptyStaff={allowEmptyStaff}
+            programDuration={programDuration}
+            disablePastTime={disablePastTime}
           />
         );
       default:
@@ -94,6 +107,7 @@ const ScheduleCalendar: React.FC<CalendarProps> = ({
         view={view}
         onViewChange={onViewChange}
         onDateChange={onDateChange}
+        hideViewOptions={hideViewOptions}
       />
       
       {/* 기간제 프로그램이 아닌 경우에만 스태프 필터 표시 */}

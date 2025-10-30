@@ -4,9 +4,11 @@
 
 import { DayColumn, TimeSlot } from './types';
 
-// 시간대 생성 (오전 6시 ~ 오후 10시)
-export const generateTimeSlots = (): TimeSlot[] => {
+// 시간대 생성 (오전 6시 ~ 오후 10시) - 항상 30분 단위
+export const generateTimeSlots = (duration?: number): TimeSlot[] => {
   const slots: TimeSlot[] = [];
+  
+  // 항상 30분 간격으로 시간 슬롯 생성
   for (let hour = 6; hour <= 22; hour++) {
     for (let minute = 0; minute < 60; minute += 30) {
       slots.push({

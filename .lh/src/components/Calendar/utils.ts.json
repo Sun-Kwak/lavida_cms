@@ -3,11 +3,19 @@
     "activeCommit": 0,
     "commits": [
         {
-            "activePatchIndex": 0,
+            "activePatchIndex": 2,
             "patches": [
                 {
                     "date": 1760154018684,
                     "content": "Index: \n===================================================================\n--- \n+++ \n"
+                },
+                {
+                    "date": 1761735362679,
+                    "content": "Index: \n===================================================================\n--- \n+++ \n@@ -4,16 +4,38 @@\n \n import { DayColumn, TimeSlot } from './types';\n \n // 시간대 생성 (오전 6시 ~ 오후 10시)\n-export const generateTimeSlots = (): TimeSlot[] => {\n+export const generateTimeSlots = (duration?: number): TimeSlot[] => {\n   const slots: TimeSlot[] = [];\n+  \n+  // 프로그램 소요시간에 따른 시간 간격 결정\n+  let timeInterval = 30; // 기본 30분\n+  \n+  if (duration) {\n+    if (duration <= 30) {\n+      timeInterval = 30; // 30분 이하는 30분 간격\n+    } else {\n+      timeInterval = 60; // 50분 등 30분 초과는 1시간 간격\n+    }\n+  }\n+  \n   for (let hour = 6; hour <= 22; hour++) {\n-    for (let minute = 0; minute < 60; minute += 30) {\n+    if (timeInterval === 30) {\n+      // 30분 간격\n+      for (let minute = 0; minute < 60; minute += 30) {\n+        slots.push({\n+          hour,\n+          minute,\n+          display: `${hour.toString().padStart(2, '0')}:${minute.toString().padStart(2, '0')}`\n+        });\n+      }\n+    } else {\n+      // 1시간 간격\n       slots.push({\n         hour,\n-        minute,\n-        display: `${hour.toString().padStart(2, '0')}:${minute.toString().padStart(2, '0')}`\n+        minute: 0,\n+        display: `${hour.toString().padStart(2, '0')}:00`\n       });\n     }\n   }\n   return slots;\n"
+                },
+                {
+                    "date": 1761738930798,
+                    "content": "Index: \n===================================================================\n--- \n+++ \n@@ -3,39 +3,19 @@\n  */\n \n import { DayColumn, TimeSlot } from './types';\n \n-// 시간대 생성 (오전 6시 ~ 오후 10시)\n+// 시간대 생성 (오전 6시 ~ 오후 10시) - 항상 30분 단위\n export const generateTimeSlots = (duration?: number): TimeSlot[] => {\n   const slots: TimeSlot[] = [];\n   \n-  // 프로그램 소요시간에 따른 시간 간격 결정\n-  let timeInterval = 30; // 기본 30분\n-  \n-  if (duration) {\n-    if (duration <= 30) {\n-      timeInterval = 30; // 30분 이하는 30분 간격\n-    } else {\n-      timeInterval = 60; // 50분 등 30분 초과는 1시간 간격\n-    }\n-  }\n-  \n+  // 항상 30분 간격으로 시간 슬롯 생성\n   for (let hour = 6; hour <= 22; hour++) {\n-    if (timeInterval === 30) {\n-      // 30분 간격\n-      for (let minute = 0; minute < 60; minute += 30) {\n-        slots.push({\n-          hour,\n-          minute,\n-          display: `${hour.toString().padStart(2, '0')}:${minute.toString().padStart(2, '0')}`\n-        });\n-      }\n-    } else {\n-      // 1시간 간격\n+    for (let minute = 0; minute < 60; minute += 30) {\n       slots.push({\n         hour,\n-        minute: 0,\n-        display: `${hour.toString().padStart(2, '0')}:00`\n+        minute,\n+        display: `${hour.toString().padStart(2, '0')}:${minute.toString().padStart(2, '0')}`\n       });\n     }\n   }\n   return slots;\n"
                 }
             ],
             "date": 1760154018684,

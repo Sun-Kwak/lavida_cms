@@ -10,6 +10,7 @@ interface CalendarHeaderProps {
   view: CalendarView;
   onViewChange: (view: CalendarView) => void;
   onDateChange: (date: Date) => void;
+  hideViewOptions?: CalendarView[]; // 숨길 뷰 옵션들
 }
 
 const HeaderContainer = styled.div`
@@ -120,7 +121,8 @@ const CalendarHeader: React.FC<CalendarHeaderProps> = ({
   currentDate,
   view,
   onViewChange,
-  onDateChange
+  onDateChange,
+  hideViewOptions = []
 }) => {
   const goToPrevious = () => {
     const newDate = new Date(currentDate);
@@ -209,7 +211,9 @@ const CalendarHeader: React.FC<CalendarHeaderProps> = ({
       </NavigationSection>
 
       <ViewSection>
-        {(['day', 'week', 'month'] as CalendarView[]).map((viewType) => (
+        {(['day', 'week', 'month'] as CalendarView[])
+          .filter(viewType => !hideViewOptions.includes(viewType))
+          .map((viewType) => (
           <ViewTab
             key={viewType}
             $active={view === viewType}

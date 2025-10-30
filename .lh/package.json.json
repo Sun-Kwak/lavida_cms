@@ -1,0 +1,18 @@
+{
+    "sourceFile": "package.json",
+    "activeCommit": 0,
+    "commits": [
+        {
+            "activePatchIndex": 0,
+            "patches": [
+                {
+                    "date": 1761649062187,
+                    "content": "Index: \n===================================================================\n--- \n+++ \n"
+                }
+            ],
+            "date": 1761649062187,
+            "name": "Commit-0",
+            "content": "{\n  \"name\": \"lavida_draft\",\n  \"version\": \"0.1.0\",\n  \"private\": true,\n  \"homepage\": \"https://sun-kwak.github.io/lavida_cms\",\n  \"dependencies\": {\n    \"@emotion/react\": \"^11.14.0\",\n    \"@emotion/styled\": \"^11.14.1\",\n    \"@mui/icons-material\": \"^7.3.2\",\n    \"@testing-library/dom\": \"^10.4.1\",\n    \"@testing-library/jest-dom\": \"^6.8.0\",\n    \"@testing-library/react\": \"^16.3.0\",\n    \"@testing-library/user-event\": \"^13.5.0\",\n    \"@tiptap/core\": \"^3.4.2\",\n    \"@tiptap/extension-font-family\": \"^3.4.2\",\n    \"@tiptap/extension-gapcursor\": \"^3.4.2\",\n    \"@tiptap/extension-highlight\": \"^3.4.2\",\n    \"@tiptap/extension-image\": \"^3.4.2\",\n    \"@tiptap/extension-link\": \"^3.4.2\",\n    \"@tiptap/extension-text-align\": \"^3.4.2\",\n    \"@tiptap/extension-text-style\": \"^3.4.2\",\n    \"@tiptap/extension-underline\": \"^3.4.2\",\n    \"@tiptap/react\": \"^3.4.2\",\n    \"@tiptap/starter-kit\": \"^3.4.2\",\n    \"@types/jest\": \"^27.5.2\",\n    \"@types/node\": \"^16.18.126\",\n    \"@types/qrcode\": \"^1.5.6\",\n    \"@types/react\": \"^19.1.13\",\n    \"@types/react-dom\": \"^19.1.9\",\n    \"@types/react-router-dom\": \"^5.3.3\",\n    \"@types/styled-components\": \"^5.1.34\",\n    \"dayjs\": \"^1.11.18\",\n    \"qrcode\": \"^1.5.4\",\n    \"react\": \"^19.1.1\",\n    \"react-datepicker\": \"^8.7.0\",\n    \"react-dom\": \"^19.1.1\",\n    \"react-icons\": \"^5.5.0\",\n    \"react-router-dom\": \"^7.9.1\",\n    \"react-scripts\": \"5.0.1\",\n    \"react-toastify\": \"^11.0.5\",\n    \"styled-components\": \"^6.1.19\",\n    \"tiptap-extension-resize-image\": \"^1.3.1\",\n    \"typescript\": \"^4.9.5\",\n    \"web-vitals\": \"^2.1.4\",\n    \"xlsx\": \"^0.18.5\"\n  },\n  \"scripts\": {\n    \"start\": \"react-scripts start\",\n    \"build\": \"react-scripts build\",\n    \"test\": \"react-scripts test\",\n    \"eject\": \"react-scripts eject\",\n    \"predeploy\": \"npm run build\",\n    \"deploy\": \"gh-pages -d build\"\n  },\n  \"eslintConfig\": {\n    \"extends\": [\n      \"react-app\",\n      \"react-app/jest\"\n    ]\n  },\n  \"browserslist\": {\n    \"production\": [\n      \">0.2%\",\n      \"not dead\",\n      \"not op_mini all\"\n    ],\n    \"development\": [\n      \"last 1 chrome version\",\n      \"last 1 firefox version\",\n      \"last 1 safari version\"\n    ]\n  },\n  \"devDependencies\": {\n    \"gh-pages\": \"^6.3.0\"\n  }\n}\n"
+        }
+    ]
+}

@@ -3,7 +3,7 @@
     "activeCommit": 0,
     "commits": [
         {
-            "activePatchIndex": 5,
+            "activePatchIndex": 6,
             "patches": [
                 {
                     "date": 1757827860828,
@@ -28,6 +28,10 @@
                 {
                     "date": 1761379597433,
                     "content": "Index: \n===================================================================\n--- \n+++ \n@@ -2,8 +2,9 @@\n import { BrowserRouter as Router, Routes, Route } from 'react-router-dom';\n import { ToastContainer } from 'react-toastify';\n import UserPage from './pages/UserPage';\n import CMSRoutes from './pages/CMS';\n+import ExercisePrescriptionPage from './pages/ExercisePrescriptionPage';\n import { AdminAuthProvider } from './context/AdminAuthContext';\n import { DeviceProvider } from './context/DeviceContext';\n import { autoInitializeSystem } from './utils/systemInit';\n import { dbManager } from './utils/indexedDB';\n@@ -73,8 +74,11 @@\n             <Routes>\n               {/* 루트 경로: 사용자 화면 */}\n               <Route path=\"/\" element={<UserPage />} />\n               \n+              {/* 운동처방 페이지 */}\n+              <Route path=\"/exercise-prescription\" element={<ExercisePrescriptionPage />} />\n+              \n               {/* CMS 경로들 */}\n               <Route path=\"/cms/*\" element={<CMSRoutes />} />\n             </Routes>\n             \n"
+                },
+                {
+                    "date": 1761649777934,
+                    "content": "Index: \n===================================================================\n--- \n+++ \n@@ -68,9 +68,9 @@\n \n   return (\n     <AdminAuthProvider>\n       <DeviceProvider>\n-        <Router>\n+        <Router basename=\"/lavida_cms\">\n           <div className=\"App\">\n             <Routes>\n               {/* 루트 경로: 사용자 화면 */}\n               <Route path=\"/\" element={<UserPage />} />\n"
                 }
             ],
             "date": 1757827860828,

@@ -14,6 +14,8 @@ interface MonthViewProps {
   onEventCreate?: (startTime: Date, endTime: Date, staffId?: string) => void;
   onDateClick?: (date: Date) => void;
   allowEmptyStaff?: boolean; // 코치가 없어도 달력 표시 허용
+  programDuration?: number; // 프로그램 소요시간 (분 단위)
+  disablePastTime?: boolean; // 과거 시간 비활성화 여부
 }
 
 const MonthContainer = styled.div`
@@ -62,13 +64,16 @@ const DayCell = styled.div<{
   $isCurrentMonth: boolean; 
   $isWeekend: boolean; 
   $hasEvents: boolean;
+  $isPastDate: boolean;
 }>`
   flex: 1;
   border-right: 1px solid ${AppColors.borderLight};
   padding: 8px;
-  cursor: pointer;
+  cursor: ${props => props.$isPastDate ? 'not-allowed' : 'pointer'};
   position: relative;
+  opacity: ${props => props.$isPastDate ? 0.5 : 1};
   background-color: ${props => 
+    props.$isPastDate ? AppColors.onSurface + '05' :
     props.$isToday ? AppColors.primary + '10' : 
     !props.$isCurrentMonth ? AppColors.surface + '80' :
     'transparent'
@@ -76,6 +81,7 @@ const DayCell = styled.div<{
 
   &:hover {
     background-color: ${props => 
+      props.$isPastDate ? AppColors.onSurface + '05' :
       props.$isCurrentMonth ? AppColors.primary + '05' : AppColors.surface + '90'
     };
   }
@@ -192,7 +198,9 @@ const MonthView: React.FC<MonthViewProps> = ({
   onEventClick,
   onEventCreate,
   onDateClick,
-  allowEmptyStaff = false
+  allowEmptyStaff = false,
+  programDuration,
+  disablePastTime = false
 }) => {
   const monthWeeks = getMonthDates(currentDate);
   const dayNames = ['일', '월', '화', '수', '목', '금', '토'];
@@ -222,6 +230,17 @@ const MonthView: React.FC<MonthViewProps> = ({
   };
 
   const handleDayClick = (date: Date) => {
+    // 과거 날짜 체크 (disablePastTime이 true인 경우)
+    if (disablePastTime && onEventCreate) {
+      const now = new Date();
+      const today = new Date(now.getFullYear(), now.getMonth(), now.getDate());
+      const clickedDate = new Date(date.getFullYear(), date.getMonth(), date.getDate());
+      
+      if (clickedDate < today) {
+        return; // 과거 날짜인 경우 클릭 이벤트 무시
+      }
+    }
+
     if (onDateClick) {
       onDateClick(date);
     } else if (onEventCreate) {
@@ -229,7 +248,10 @@ const MonthView: React.FC<MonthViewProps> = ({
       startTime.setHours(9, 0, 0, 0); // 기본 오전 9시
       
       const endTime = new Date(startTime);
-      endTime.setHours(10, 0, 0, 0); // 1시간 후
+      // 프로그램 소요시간에 따른 종료시간 계산
+      const duration = programDuration || 30; // 기본 30분
+      const actualDuration = duration > 30 ? 60 : duration; // 50분은 1시간으로 처리
+      endTime.setMinutes(endTime.getMinutes() + actualDuration);
       
       onEventCreate(startTime, endTime);
     }
@@ -283,6 +305,14 @@ const MonthView: React.FC<MonthViewProps> = ({
             const visibleEvents = dayEvents.slice(0, 3); // 최대 3개만 표시
             const hiddenCount = dayEvents.length - visibleEvents.length;
 
+            // 과거 날짜 체크
+            const isPastDate = disablePastTime && (() => {
+              const now = new Date();
+              const today = new Date(now.getFullYear(), now.getMonth(), now.getDate());
+              const currentDay = new Date(day.date.getFullYear(), day.date.getMonth(), day.date.getDate());
+              return currentDay < today;
+            })();
+
             return (
               <DayCell
                 key={day.date.toISOString()}
@@ -290,6 +320,7 @@ const MonthView: React.FC<MonthViewProps> = ({
                 $isCurrentMonth={isSameMonth(day.date, currentDate)}
                 $isWeekend={day.isWeekend}
                 $hasEvents={dayEvents.length > 0}
+                $isPastDate={isPastDate}
                 onClick={() => handleDayClick(day.date)}
               >
                 <DateNumber

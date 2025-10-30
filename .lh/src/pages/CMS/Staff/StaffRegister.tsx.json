@@ -3,7 +3,7 @@
     "activeCommit": 0,
     "commits": [
         {
-            "activePatchIndex": 33,
+            "activePatchIndex": 34,
             "patches": [
                 {
                     "date": 1759900871595,
@@ -140,6 +140,10 @@
                 {
                     "date": 1760163015562,
                     "content": "Index: \n===================================================================\n--- \n+++ \n@@ -1,9 +1,8 @@\n import React, { useState, useEffect, useCallback } from 'react';\n import styled from 'styled-components';\n import { toast } from 'react-toastify';\n import { Visibility, VisibilityOff } from '@mui/icons-material';\n-import CMSLayout from '../../../components/CMSLayout';\n import CustomDropdown from '../../../components/CustomDropdown';\n import CustomDateInput from '../../../components/CustomDateInput';\n import { StaffFileUploadField } from '../../../components/StaffFormComponents';\n import { AppColors } from '../../../styles/colors';\n@@ -576,14 +575,13 @@\n     return '';\n   };\n \n   return (\n-    <CMSLayout>\n-      <PageContainer>\n-        <PageHeader>\n-          <PageTitle>직원 등록</PageTitle>\n-          <PageDescription>새로운 직원 정보를 등록합니다.</PageDescription>\n-        </PageHeader>\n+    <PageContainer>\n+      <PageHeader>\n+        <PageTitle>직원 등록</PageTitle>\n+        <PageDescription>새로운 직원 정보를 등록합니다.</PageDescription>\n+      </PageHeader>\n \n         <FormContainer>\n           {/* 기본 정보 섹션 */}\n           <FormSection>\n@@ -835,9 +833,8 @@\n             {isSubmitting ? '등록 중...' : '등록'}\n           </Button>\n         </ButtonContainer>\n       </PageContainer>\n-    </CMSLayout>\n-  );\n-};\n+    );\n+  };\n \n export default StaffRegister;\n"
+                },
+                {
+                    "date": 1761650403335,
+                    "content": "Index: \n===================================================================\n--- \n+++ \n@@ -1,5 +1,6 @@\n import React, { useState, useEffect, useCallback } from 'react';\n+import { useNavigate } from 'react-router-dom';\n import styled from 'styled-components';\n import { toast } from 'react-toastify';\n import { Visibility, VisibilityOff } from '@mui/icons-material';\n import CustomDropdown from '../../../components/CustomDropdown';\n@@ -186,8 +187,9 @@\n   [key: string]: string;\n }\n \n const StaffRegister: React.FC = () => {\n+  const navigate = useNavigate();\n   const [formData, setFormData] = useState<StaffFormData>({\n     name: '',\n     loginId: '',\n     password: '',\n@@ -266,13 +268,13 @@\n   const checkUserPermission = useCallback(() => {\n     if (currentUserInfo && currentUserInfo.permission === 'VIEWER') {\n       alert('접근 권한이 없습니다. VIEWER 권한은 조회만 가능합니다.');\n       // StaffSearch 페이지로 리다이렉트\n-      window.location.href = '/cms/staff/search';\n+      navigate('/cms/staff/search');\n       return false;\n     }\n     return true;\n-  }, [currentUserInfo]);\n+  }, [currentUserInfo, navigate]);\n \n   // 컴포넌트 마운트 시 권한 체크\n   useEffect(() => {\n     if (currentUserInfo) {\n"
                 }
             ],
             "date": 1759900871595,

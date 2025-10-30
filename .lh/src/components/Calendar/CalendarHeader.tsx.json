@@ -3,7 +3,7 @@
     "activeCommit": 0,
     "commits": [
         {
-            "activePatchIndex": 1,
+            "activePatchIndex": 2,
             "patches": [
                 {
                     "date": 1760154018684,
@@ -12,6 +12,10 @@
                 {
                     "date": 1760160713133,
                     "content": "Index: \n===================================================================\n--- \n+++ \n@@ -87,13 +87,13 @@\n   align-items: center;\n   gap: 4px;\n `;\n \n-const ViewTab = styled.button<{ active: boolean }>`\n+const ViewTab = styled.button<{ $active: boolean }>`\n   padding: 8px 16px;\n-  border: 1px solid ${props => props.active ? AppColors.primary : AppColors.borderLight};\n-  background-color: ${props => props.active ? AppColors.primary : AppColors.surface};\n-  color: ${props => props.active ? AppColors.onPrimary : AppColors.onSurface};\n+  border: 1px solid ${props => props.$active ? AppColors.primary : AppColors.borderLight};\n+  background-color: ${props => props.$active ? AppColors.primary : AppColors.surface};\n+  color: ${props => props.$active ? AppColors.onPrimary : AppColors.onSurface};\n   font-size: ${AppTextStyles.body2.fontSize};\n   font-weight: 500;\n   cursor: pointer;\n   transition: all 0.2s ease;\n@@ -211,9 +211,9 @@\n       <ViewSection>\n         {(['day', 'week', 'month'] as CalendarView[]).map((viewType) => (\n           <ViewTab\n             key={viewType}\n-            active={view === viewType}\n+            $active={view === viewType}\n             onClick={() => onViewChange(viewType)}\n           >\n             {getViewLabel(viewType)}\n           </ViewTab>\n"
+                },
+                {
+                    "date": 1761739739739,
+                    "content": "Index: \n===================================================================\n--- \n+++ \n@@ -9,8 +9,9 @@\n   currentDate: Date;\n   view: CalendarView;\n   onViewChange: (view: CalendarView) => void;\n   onDateChange: (date: Date) => void;\n+  hideViewOptions?: CalendarView[]; // 숨길 뷰 옵션들\n }\n \n const HeaderContainer = styled.div`\n   display: flex;\n@@ -119,9 +120,10 @@\n const CalendarHeader: React.FC<CalendarHeaderProps> = ({\n   currentDate,\n   view,\n   onViewChange,\n-  onDateChange\n+  onDateChange,\n+  hideViewOptions = []\n }) => {\n   const goToPrevious = () => {\n     const newDate = new Date(currentDate);\n     switch (view) {\n@@ -208,9 +210,11 @@\n         </TodayButton>\n       </NavigationSection>\n \n       <ViewSection>\n-        {(['day', 'week', 'month'] as CalendarView[]).map((viewType) => (\n+        {(['day', 'week', 'month'] as CalendarView[])\n+          .filter(viewType => !hideViewOptions.includes(viewType))\n+          .map((viewType) => (\n           <ViewTab\n             key={viewType}\n             $active={view === viewType}\n             onClick={() => onViewChange(viewType)}\n"
                 }
             ],
             "date": 1760154018684,

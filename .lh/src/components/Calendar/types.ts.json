@@ -3,7 +3,7 @@
     "activeCommit": 0,
     "commits": [
         {
-            "activePatchIndex": 7,
+            "activePatchIndex": 11,
             "patches": [
                 {
                     "date": 1760154018682,
@@ -36,6 +36,22 @@
                 {
                     "date": 1761460460457,
                     "content": "Index: \n===================================================================\n--- \n+++ \n@@ -71,8 +71,9 @@\n   onEventClick?: (event: ScheduleEvent) => void;\n   onEventCreate?: (startTime: Date, endTime: Date, staffId?: string) => void;\n   onHolidaySettings?: (staffId?: string) => void; // 휴일설정 핸들러 추가\n   weeklyHolidaySettings?: WeeklyHolidaySettings[]; // 주별 휴일설정 추가\n+  allowEmptyStaff?: boolean; // 코치가 없어도 달력 표시 허용 (기간제용)\n }\n \n export interface TimeSlot {\n   hour: number;\n"
+                },
+                {
+                    "date": 1761735362704,
+                    "content": "Index: \n===================================================================\n--- \n+++ \n@@ -72,8 +72,9 @@\n   onEventCreate?: (startTime: Date, endTime: Date, staffId?: string) => void;\n   onHolidaySettings?: (staffId?: string) => void; // 휴일설정 핸들러 추가\n   weeklyHolidaySettings?: WeeklyHolidaySettings[]; // 주별 휴일설정 추가\n   allowEmptyStaff?: boolean; // 코치가 없어도 달력 표시 허용 (기간제용)\n+  programDuration?: number; // 프로그램 소요시간 (분 단위)\n }\n \n export interface TimeSlot {\n   hour: number;\n"
+                },
+                {
+                    "date": 1761739739719,
+                    "content": "Index: \n===================================================================\n--- \n+++ \n@@ -73,8 +73,9 @@\n   onHolidaySettings?: (staffId?: string) => void; // 휴일설정 핸들러 추가\n   weeklyHolidaySettings?: WeeklyHolidaySettings[]; // 주별 휴일설정 추가\n   allowEmptyStaff?: boolean; // 코치가 없어도 달력 표시 허용 (기간제용)\n   programDuration?: number; // 프로그램 소요시간 (분 단위)\n+  hideViewOptions?: CalendarView[]; // 숨길 뷰 옵션들 (기간제용)\n }\n \n export interface TimeSlot {\n   hour: number;\n"
+                },
+                {
+                    "date": 1761740206324,
+                    "content": "Index: \n===================================================================\n--- \n+++ \n@@ -74,8 +74,9 @@\n   weeklyHolidaySettings?: WeeklyHolidaySettings[]; // 주별 휴일설정 추가\n   allowEmptyStaff?: boolean; // 코치가 없어도 달력 표시 허용 (기간제용)\n   programDuration?: number; // 프로그램 소요시간 (분 단위)\n   hideViewOptions?: CalendarView[]; // 숨길 뷰 옵션들 (기간제용)\n+  disablePastTime?: boolean; // 과거 시간 비활성화 여부\n }\n \n export interface TimeSlot {\n   hour: number;\n"
+                },
+                {
+                    "date": 1761741030967,
+                    "content": "Index: \n===================================================================\n--- \n+++ \n@@ -68,15 +68,20 @@\n   onViewChange: (view: CalendarView) => void;\n   onDateChange: (date: Date) => void;\n   onStaffFilter: (staffIds: string[]) => void;\n   onEventClick?: (event: ScheduleEvent) => void;\n-  onEventCreate?: (startTime: Date, endTime: Date, staffId?: string) => void;\n+  onEventCreate?: (startTime: Date, endTime: Date, staffId?: string, replaceEventId?: string) => void;\n   onHolidaySettings?: (staffId?: string) => void; // 휴일설정 핸들러 추가\n   weeklyHolidaySettings?: WeeklyHolidaySettings[]; // 주별 휴일설정 추가\n   allowEmptyStaff?: boolean; // 코치가 없어도 달력 표시 허용 (기간제용)\n   programDuration?: number; // 프로그램 소요시간 (분 단위)\n   hideViewOptions?: CalendarView[]; // 숨길 뷰 옵션들 (기간제용)\n   disablePastTime?: boolean; // 과거 시간 비활성화 여부\n+  currentUser?: {\n+    id: string;\n+    role: 'master' | 'coach' | 'admin';\n+    name?: string;\n+  }; // 현재 사용자 정보\n }\n \n export interface TimeSlot {\n   hour: number;\n"
                 }
             ],
             "date": 1760154018682,

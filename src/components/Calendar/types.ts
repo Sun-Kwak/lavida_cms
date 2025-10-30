@@ -69,10 +69,18 @@ export interface CalendarProps {
   onDateChange: (date: Date) => void;
   onStaffFilter: (staffIds: string[]) => void;
   onEventClick?: (event: ScheduleEvent) => void;
-  onEventCreate?: (startTime: Date, endTime: Date, staffId?: string) => void;
+  onEventCreate?: (startTime: Date, endTime: Date, staffId?: string, replaceEventId?: string) => void;
   onHolidaySettings?: (staffId?: string) => void; // 휴일설정 핸들러 추가
   weeklyHolidaySettings?: WeeklyHolidaySettings[]; // 주별 휴일설정 추가
   allowEmptyStaff?: boolean; // 코치가 없어도 달력 표시 허용 (기간제용)
+  programDuration?: number; // 프로그램 소요시간 (분 단위)
+  hideViewOptions?: CalendarView[]; // 숨길 뷰 옵션들 (기간제용)
+  disablePastTime?: boolean; // 과거 시간 비활성화 여부
+  currentUser?: {
+    id: string;
+    role: 'master' | 'coach' | 'admin';
+    name?: string;
+  }; // 현재 사용자 정보
 }
 
 export interface TimeSlot {

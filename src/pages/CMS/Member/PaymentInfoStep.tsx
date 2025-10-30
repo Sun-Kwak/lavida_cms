@@ -95,15 +95,14 @@ const PaymentInfoStep: React.FC<StepProps> = ({ formData, onUpdate }) => {
           // 적용금액도 초기에는 계산된 금액과 동일
           convertedProduct.appliedPrice = convertedProduct.price;
         }
-        // 횟수제인 경우 기본 횟수 설정 (상품에서 가져오거나 기본값 사용)
+        // 횟수제인 경우 상품의 실제 횟수 설정
         else if (product.programType === '횟수제') {
-          // DB에서 sessions 정보를 가져와야 하지만, 임시로 기본값 사용
-          const defaultSessions = 10; // 기본 10회
-          convertedProduct.sessions = defaultSessions;
-          convertedProduct.baseSessions = defaultSessions;
-          // 계산된 정확한 상품금액
-          convertedProduct.price = calculateSessionPrice(product.price || 0, defaultSessions, defaultSessions);
-          // 적용금액도 초기에는 계산된 금액과 동일
+          const productSessions = product.sessions || 10; // 상품에 설정된 횟수 또는 기본 10회
+          convertedProduct.sessions = productSessions;
+          convertedProduct.baseSessions = productSessions;
+          // 횟수제는 상품 가격이 해당 횟수에 대한 가격이므로 그대로 사용
+          convertedProduct.price = product.price || 0;
+          // 적용금액도 초기에는 상품 가격과 동일
           convertedProduct.appliedPrice = convertedProduct.price;
         }
 
@@ -139,9 +138,9 @@ const PaymentInfoStep: React.FC<StepProps> = ({ formData, onUpdate }) => {
     } else if (field === 'sessions') {
       product.sessions = value;
       if (product.programType === '횟수제') {
-        // 횟수제: 횟수에 따른 상품금액 재계산
+        // 횟수제: 상품의 기본 횟수와 가격을 기준으로 비례 계산
         const basePrice = product.basePrice || product.originalPrice || 0;
-        const baseSessions = product.baseSessions || 10; // 기준 횟수
+        const baseSessions = product.baseSessions || 1; // 상품의 기본 횟수
         product.price = calculateSessionPrice(basePrice, value, baseSessions);
         product.appliedPrice = product.price; // 적용금액도 함께 업데이트
       }
@@ -332,7 +331,7 @@ const PaymentInfoStep: React.FC<StepProps> = ({ formData, onUpdate }) => {
                           type="number"
                           min="1"
                           max="100"
-                          value={product.sessions || 10}
+                          value={product.sessions || (product.baseSessions || 10)}
                           onChange={(e) => handleProductEdit(index, 'sessions', parseInt(e.target.value) || 1)}
                           style={{
                             width: '100px',

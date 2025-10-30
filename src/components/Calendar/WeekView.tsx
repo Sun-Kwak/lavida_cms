@@ -3,7 +3,8 @@ import styled from 'styled-components';
 import { AppColors } from '../../styles/colors';
 import { AppTextStyles } from '../../styles/textStyles';
 import { ScheduleEvent, StaffInfo } from './types';
-import { getWeekDates, isEventOnDate } from './utils';
+import { getWeekDates, isEventOnDate, generateTimeSlots } from './utils';
+import type { WeeklyHolidaySettings } from '../../utils/db/types';
 
 interface WeekViewProps {
   currentDate: Date;
@@ -11,8 +12,16 @@ interface WeekViewProps {
   staffList: StaffInfo[];
   selectedStaffIds: string[];
   onEventClick?: (event: ScheduleEvent) => void;
-  onEventCreate?: (startTime: Date, endTime: Date, staffId?: string) => void;
+  onEventCreate?: (startTime: Date, endTime: Date, staffId?: string, replaceEventId?: string) => void;
   allowEmptyStaff?: boolean; // 코치가 없어도 달력 표시 허용
+  programDuration?: number; // 프로그램 소요시간 (분 단위)
+  disablePastTime?: boolean; // 과거 시간 비활성화 여부
+  weeklyHolidaySettings?: WeeklyHolidaySettings[]; // 주별 휴일설정 추가
+  currentUser?: {
+    id: string;
+    role: 'master' | 'coach' | 'admin';
+    name?: string;
+  }; // 현재 사용자 정보
 }
 
 const WeekContainer = styled.div`
@@ -105,7 +114,7 @@ const TimeColumn = styled.div`
 `;
 
 const TimeSlot = styled.div`
-  height: 60px;
+  height: 30px;
   padding: 4px 8px;
   border-bottom: 1px solid ${AppColors.borderLight}20;
   font-size: ${AppTextStyles.label2.fontSize};
@@ -133,14 +142,37 @@ const DayGridColumn = styled.div<{ $isToday: boolean; $isWeekend: boolean }>`
   }
 `;
 
-const DayTimeSlot = styled.div`
-  height: 60px;
+const DayTimeSlot = styled.div<{ $isPastTime?: boolean; $isHoliday?: boolean }>`
+  height: 30px;
   border-bottom: 1px solid ${AppColors.borderLight}20;
   position: relative;
-  cursor: pointer;
+  cursor: ${props => props.$isPastTime ? 'not-allowed' : 'pointer'};
+  opacity: ${props => props.$isPastTime ? 0.5 : 1};
+  background-color: ${props => {
+    if (props.$isPastTime) return AppColors.onSurface + '05';
+    if (props.$isHoliday) return '#f8717115'; // 휴일 배경색
+    return 'transparent';
+  }};
+  border-left: ${props => props.$isHoliday ? '3px solid #f87171' : 'none'};
 
   &:hover {
-    background-color: ${AppColors.primary}08;
+    background-color: ${props => {
+      if (props.$isPastTime) return AppColors.onSurface + '05';
+      if (props.$isHoliday) return '#f8717125'; // 휴일 호버 색상
+      return AppColors.primary + '08';
+    }};
+  }
+
+  &::after {
+    content: ${props => props.$isHoliday ? '"휴일"' : 'none'};
+    position: absolute;
+    left: 8px;
+    top: 50%;
+    transform: translateY(-50%);
+    font-size: 10px;
+    color: #dc2626;
+    font-weight: 500;
+    pointer-events: none;
   }
 `;
 
@@ -238,10 +270,16 @@ const WeekView: React.FC<WeekViewProps> = ({
   selectedStaffIds,
   onEventClick,
   onEventCreate,
-  allowEmptyStaff = false
+  allowEmptyStaff = false,
+  programDuration,
+  disablePastTime = false,
+  weeklyHolidaySettings = [],
+  currentUser
 }) => {
   const weekDates = getWeekDates(currentDate);
-  const timeSlots = Array.from({ length: 17 }, (_, i) => 6 + i); // 6시부터 22시까지
+  
+  // 항상 30분 단위로 시간 슬롯 생성
+  const timeSlots = generateTimeSlots(programDuration);
   
   // 필터링된 직원 목록 (선택된 코치만)
   const filteredStaff = staffList.filter(staff => 
@@ -277,8 +315,8 @@ const WeekView: React.FC<WeekViewProps> = ({
     const durationMinutes = (eventEnd.getTime() - eventStart.getTime()) / (1000 * 60);
 
     return {
-      top: Math.max(0, (startMinutes / 60) * 60), // 1시간당 60px
-      height: Math.max(20, (durationMinutes / 60) * 60)
+      top: Math.max(0, (startMinutes / 30) * 30), // 30분당 30px (30분 단위로 조정)
+      height: Math.max(15, (durationMinutes / 30) * 30)
     };
   };
 
@@ -318,15 +356,126 @@ const WeekView: React.FC<WeekViewProps> = ({
     };
   };
 
-  const handleSlotClick = (dayDate: Date, hour: number) => {
+  // 특정 시간이 휴일인지 확인 (WeeklyHolidaySettings 기반)
+  const isTimeInHoliday = (staffId: string, dayDate: Date, hour: number, minute: number) => {
+    if (!weeklyHolidaySettings || weeklyHolidaySettings.length === 0) {
+      console.log('WeekView - weeklyHolidaySettings가 없음:', weeklyHolidaySettings?.length);
+      return false;
+    }
+    
+    const dayOfWeek = dayDate.getDay(); // 0: 일요일, 1: 월요일, ..., 6: 토요일
+    const weekStartDate = (() => {
+      const monday = new Date(dayDate);
+      monday.setDate(dayDate.getDate() - (dayOfWeek === 0 ? 6 : dayOfWeek - 1));
+      return monday.toISOString().split('T')[0];
+    })();
+
+    console.log('WeekView 휴일 체크:', { 
+      staffId, 
+      hour, 
+      minute, 
+      dayOfWeek, 
+      weekStartDate,
+      settingsCount: weeklyHolidaySettings.length,
+      dayDate: dayDate.toISOString().split('T')[0]
+    });
+
+    const weeklySettings = weeklyHolidaySettings.find(
+      s => s.staffId === staffId && s.weekStartDate === weekStartDate
+    );
+
+    if (weeklySettings) {
+      const dayKeys = ['sunday', 'monday', 'tuesday', 'wednesday', 'thursday', 'friday', 'saturday'];
+      const dayKey = dayKeys[dayOfWeek] as keyof typeof weeklySettings.weekDays;
+      const daySettings = weeklySettings.weekDays[dayKey];
+      
+      console.log('WeekView 휴일 설정 찾음:', { dayKey, isHoliday: daySettings?.isHoliday });
+      return daySettings?.isHoliday || false;
+    }
+
+    console.log('WeekView 해당 주차 휴일 설정 없음');
+    return false;
+  };
+
+  // 특정 시간이 휴게시간에 포함되는지 확인
+  const isTimeInBreak = (staffId: string, dayDate: Date, hour: number, minute: number) => {
+    const targetTime = new Date(dayDate);
+    targetTime.setHours(hour, minute, 0, 0);
+    
+    return events.some(event => 
+      event.staffId === staffId &&
+      event.type === 'break' &&
+      targetTime >= event.startTime &&
+      targetTime < event.endTime
+    );
+  };
+
+  const handleSlotClick = (dayDate: Date, slot: { hour: number; minute: number }) => {
+    // 과거 시간 체크 (disablePastTime이 true인 경우)
+    if (disablePastTime) {
+      const now = new Date();
+      const slotTime = new Date(dayDate);
+      slotTime.setHours(slot.hour, slot.minute, 0, 0);
+      
+      if (slotTime < now) {
+        return; // 과거 시간인 경우 클릭 이벤트 무시
+      }
+    }
+
+    // WeekView에서는 선택된 코치가 하나일 때만 예약 생성
+    if (filteredStaff.length !== 1) {
+      alert('예약을 생성하려면 코치를 하나만 선택해주세요.');
+      return;
+    }
+
+    const staffId = filteredStaff[0].id;
+
+    // 해당 시간이 휴일인지 확인
+    const isInHoliday = isTimeInHoliday(staffId, dayDate, slot.hour, slot.minute);
+    
+    if (isInHoliday) {
+      // 휴일에 포함된 경우, 코치 권한이 있는지 확인
+      if (currentUser && (currentUser.role === 'master' || currentUser.id === staffId)) {
+        // 마스터이거나 본인 코치인 경우 허용
+        if (window.confirm(`이 시간대는 휴일입니다. 예약을 생성하시겠습니까?`)) {
+          // 예약 생성 진행
+          if (onEventCreate) {
+            const startTime = new Date(dayDate);
+            startTime.setHours(slot.hour, slot.minute, 0, 0);
+            
+            const endTime = new Date(startTime);
+            const duration = programDuration || 30;
+            const actualDuration = duration > 30 ? 60 : duration;
+            endTime.setMinutes(endTime.getMinutes() + actualDuration);
+            
+            onEventCreate(startTime, endTime, staffId);
+          }
+        }
+      } else {
+        // 일반 사용자는 휴일에 예약 불가
+        alert('휴일에는 예약을 생성할 수 없습니다. 관리자 또는 해당 코치에게 문의하세요.');
+      }
+      return;
+    }
+
+    // 휴게시간 체크
+    const isInBreak = isTimeInBreak(staffId, dayDate, slot.hour, slot.minute);
+    if (isInBreak) {
+      alert('휴게시간에는 예약을 생성할 수 없습니다.');
+      return;
+    }
+
     if (onEventCreate) {
       const startTime = new Date(dayDate);
-      startTime.setHours(hour, 0, 0, 0);
+      startTime.setHours(slot.hour, slot.minute, 0, 0);
       
       const endTime = new Date(startTime);
-      endTime.setHours(hour + 1); // 기본 1시간 슬롯
+      // 프로그램 소요시간에 따른 종료시간 계산
+      const duration = programDuration || 30; // 기본 30분
+      const actualDuration = duration > 30 ? 60 : duration; // 50분은 1시간으로 처리
+      endTime.setMinutes(endTime.getMinutes() + actualDuration);
       
-      onEventCreate(startTime, endTime);
+      onEventCreate(startTime, endTime, staffId);
     }
   };
 
@@ -364,9 +513,9 @@ const WeekView: React.FC<WeekViewProps> = ({
         <TimeGrid>
           {/* 시간 컬럼 */}
           <TimeColumn>
-            {timeSlots.map(hour => (
-              <TimeSlot key={hour}>
-                {hour}:00
+            {timeSlots.map(slot => (
+              <TimeSlot key={`${slot.hour}-${slot.minute}`}>
+                {slot.minute === 0 ? slot.display : ''}
               </TimeSlot>
             ))}
           </TimeColumn>
@@ -388,12 +537,31 @@ const WeekView: React.FC<WeekViewProps> = ({
                 $isToday={day.isToday}
                 $isWeekend={day.isWeekend}
               >
-                {timeSlots.map(hour => (
-                  <DayTimeSlot
-                    key={`${day.date.toISOString()}-${hour}`}
-                    onClick={() => handleSlotClick(day.date, hour)}
-                  />
-                ))}
+                {timeSlots.map(slot => {
+                  // 과거 시간 체크
+                  const isPastTime = disablePastTime && (() => {
+                    const now = new Date();
+                    const slotTime = new Date(day.date);
+                    slotTime.setHours(slot.hour, slot.minute, 0, 0);
+                    return slotTime < now;
+                  })();
+
+                  // 선택된 코치들의 휴일 체크
+                  const isHolidayForAnyStaff = filteredStaff.length > 0 
+                    ? filteredStaff.some(staff => 
+                        isTimeInHoliday(staff.id, day.date, slot.hour, slot.minute)
+                      )
+                    : false;
+
+                  return (
+                    <DayTimeSlot
+                      key={`${day.date.toISOString()}-${slot.hour}-${slot.minute}`}
+                      $isPastTime={isPastTime}
+                      $isHoliday={isHolidayForAnyStaff}
+                      onClick={() => handleSlotClick(day.date, slot)}
+                    />
+                  );
+                })}
 
                 {/* 해당 날짜의 이벤트들 */}
                 <StaffEventsContainer>

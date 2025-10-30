@@ -4,6 +4,7 @@ import styled from 'styled-components';
 import { AppColors } from '../../../styles/colors';
 import { AppTextStyles } from '../../../styles/textStyles';
 import CustomDropdown from '../../../components/CustomDropdown';
+import ReservationModal from '../../../components/ReservationModal';
 import { dbManager, type Branch, type Program } from '../../../utils/indexedDB';
 import { getCurrentUser } from '../../../utils/authUtils';
 import { migrateHolidaySettingsToWeekly, checkMigrationStatus } from '../../../utils/holidayMigration';
@@ -83,6 +84,7 @@ const ReservationPage: React.FC = () => {
   
   // 프로그램 관련 상태
   const [currentProgram, setCurrentProgram] = useState<Program | null>(null);
+  const [programDuration, setProgramDuration] = useState<number | undefined>(undefined);
   
   // 달력 관련 상태
   const [calendarView, setCalendarView] = useState<CalendarView>('week');
@@ -96,9 +98,18 @@ const ReservationPage: React.FC = () => {
   const [isWeeklyHolidayModalOpen, setIsWeeklyHolidayModalOpen] = useState(false);
   const [holidayModalStaffId, setHolidayModalStaffId] = useState<string | undefined>();
   const [weeklyHolidayModalStaffId, setWeeklyHolidayModalStaffId] = useState<string | undefined>();
-  const [currentUser, setCurrentUser] = useState<{ id: string; role: 'master' | 'coach' | 'admin' } | undefined>();
+  const [currentUser, setCurrentUser] = useState<{ id: string; role: 'master' | 'coach' | 'admin'; name?: string } | undefined>();
   const holidaySettings: HolidaySettings[] = []; // 빈 배열로 고정
-  const [weeklyHolidaySettings] = useState<WeeklyHolidaySettings[]>([]); // 빈 배열로 고정
+  const [weeklyHolidaySettings, setWeeklyHolidaySettings] = useState<WeeklyHolidaySettings[]>([]);
+
+  // 예약 모달 상태
+  const [isReservationModalOpen, setIsReservationModalOpen] = useState(false);
+  const [reservationModalData, setReservationModalData] = useState<{
+    startTime: Date;
+    endTime: Date;
+    staffId: string;
+    staffName: string;
+  } | null>(null);
 
   // 현재 선택된 메뉴 확인
   const getMenuType = () => {
@@ -157,14 +168,35 @@ const ReservationPage: React.FC = () => {
         const allPrograms = await dbManager.getAllPrograms();
         const foundProgram = allPrograms.find(p => p.id === programId);
         setCurrentProgram(foundProgram || null);
+
+        // 프로그램과 연결된 상품의 소요시간 조회
+        if (foundProgram && selectedBranchId) {
+          const allProducts = await dbManager.getAllProducts();
+          const programProducts = allProducts.filter(product => 
+            product.programId === foundProgram.id && 
+            product.branchId === selectedBranchId &&
+            product.isActive
+          );
+
+          // 첫 번째 활성 상품의 소요시간을 사용 (대부분의 경우 프로그램당 하나의 소요시간)
+          if (programProducts.length > 0) {
+            setProgramDuration(programProducts[0].duration);
+          } else {
+            setProgramDuration(undefined);
+          }
+        } else {
+          setProgramDuration(undefined);
+        }
       } catch (error) {
         console.error('프로그램 데이터 로드 실패:', error);
         setCurrentProgram(null);
+        setProgramDuration(undefined);
       }
     } else {
       setCurrentProgram(null);
+      setProgramDuration(undefined);
     }
-  }, [programId]);
+  }, [programId, selectedBranchId]);
 
   // 직원 데이터 로드 (횟수제 프로그램용)
   const loadStaffData = useCallback(async () => {
@@ -208,12 +240,31 @@ const ReservationPage: React.FC = () => {
       
       setStaffList(staffInfo);
       
-      // 기본적으로 모든 코치 선택
-      setSelectedStaffIds(staffInfo.map(staff => staff.id));
+      // 사용자 권한에 따른 기본 코치 선택
+      if (currentUser) {
+        if (currentUser.role === 'master') {
+          // Master: 기본적으로 모든 코치 선택
+          setSelectedStaffIds(staffInfo.map(staff => staff.id));
+        } else if (currentUser.role === 'coach') {
+          // 담당 코치: 본인만 선택
+          const myStaffInfo = staffInfo.find(staff => staff.id === currentUser.id);
+          if (myStaffInfo) {
+            setSelectedStaffIds([currentUser.id]);
+          } else {
+            // 본인이 목록에 없는 경우 (다른 프로그램 담당 등) 빈 배열
+            setSelectedStaffIds([]);
+          }
+        } else {
+          setSelectedStaffIds([]);
+        }
+      } else {
+        // 사용자 정보가 없는 경우 기본적으로 모든 코치 선택
+        setSelectedStaffIds(staffInfo.map(staff => staff.id));
+      }
     } catch (error) {
       console.error('직원 데이터 로드 실패:', error);
     }
-  }, [selectedBranchId, currentProgram]);
+  }, [selectedBranchId, currentProgram, currentUser]);
 
   // 기간제 수강 정보 로드
   const loadPeriodCourseEnrollments = useCallback(async () => {
@@ -424,6 +475,33 @@ const ReservationPage: React.FC = () => {
   //   }
   // }, []);
 
+  // 주별 휴일설정 로드
+  const loadWeeklyHolidaySettings = useCallback(async () => {
+    try {
+      if (!selectedBranchId || staffList.length === 0) return;
+      
+      console.log('주별 휴일설정 로드 시작:', { selectedBranchId, staffCount: staffList.length });
+      
+      const allSettings: WeeklyHolidaySettings[] = [];
+      
+      // 각 코치별로 휴일 설정 로드
+      for (const staff of staffList) {
+        try {
+          const staffSettings = await dbManager.getWeeklyHolidaySettingsByStaff(staff.id);
+          console.log(`${staff.name} 코치 휴일설정:`, staffSettings.length, '개');
+          allSettings.push(...staffSettings);
+        } catch (error) {
+          console.error(`${staff.name} 코치 휴일설정 로드 실패:`, error);
+        }
+      }
+      
+      console.log('전체 주별 휴일설정 로드 완료:', allSettings.length, '개');
+      setWeeklyHolidaySettings(allSettings);
+    } catch (error) {
+      console.error('주별 휴일설정 로드 실패:', error);
+    }
+  }, [selectedBranchId, staffList]);
+
   // 현재 사용자 정보 로드
   const loadCurrentUser = useCallback(async () => {
     try {
@@ -526,7 +604,11 @@ const ReservationPage: React.FC = () => {
         console.log(`${setting.staffId}의 ${weekStartDate}~${weekEndDateStr} 주차 이벤트 삭제 예정`);
       }
       
-      // 3. 새로운 휴일/휴게시간을 스케줄 이벤트로 생성하여 저장
+      // 3. 새로운 휴일/휴게시간을 스케줄 이벤트로 생성하여 저장하지 않음
+      // 대신 휴일 정보는 WeeklyHolidaySettings에만 저장하고, 
+      // 화면에서는 해당 정보를 읽어서 시각적으로만 표시
+      
+      // 휴게시간만 스케줄 이벤트로 생성 (휴게시간은 실제로 예약 불가해야 함)
       const scheduleEvents: ScheduleEvent[] = [];
       
       for (const setting of settings) {
@@ -535,7 +617,7 @@ const ReservationPage: React.FC = () => {
         
         const weekStartDate = new Date(setting.weekStartDate + 'T00:00:00');
         
-        // 각 요일별로 이벤트 생성
+        // 각 요일별로 휴게시간 이벤트만 생성
         const dayKeys = ['monday', 'tuesday', 'wednesday', 'thursday', 'friday', 'saturday', 'sunday'] as const;
         
         dayKeys.forEach((dayKey, index) => {
@@ -544,28 +626,10 @@ const ReservationPage: React.FC = () => {
           currentDate.setDate(weekStartDate.getDate() + index);
           const dateStr = currentDate.toISOString().split('T')[0];
           
-          if (daySettings.isHoliday) {
-            // 휴일 이벤트 생성
-            const startTime = new Date(currentDate);
-            startTime.setHours(0, 0, 0, 0);
-            const endTime = new Date(currentDate);
-            endTime.setHours(23, 59, 59, 999);
-            
-            scheduleEvents.push({
-              id: `holiday-${setting.staffId}-${dateStr}`,
-              title: '휴일',
-              startTime,
-              endTime,
-              staffId: setting.staffId,
-              staffName: staff.name,
-              type: 'holiday',
-              color: '#f87171',
-              description: `${staff.name} 코치 휴일`,
-              sourceType: 'weekly_holiday',
-              sourceId: setting.staffId + '-' + setting.weekStartDate
-            });
-          } else if (daySettings.breakTimes && daySettings.breakTimes.length > 0) {
-            // 휴게시간 이벤트들 생성
+          // 휴일은 스케줄 이벤트로 생성하지 않음 - 화면에서만 표시
+          
+          // 휴게시간만 스케줄 이벤트로 생성
+          if (!daySettings.isHoliday && daySettings.breakTimes && daySettings.breakTimes.length > 0) {
             daySettings.breakTimes.forEach((breakTime, breakIndex) => {
               if (breakTime.name && breakTime.name.trim() !== '') {
                 const breakStartTime = new Date(currentDate);
@@ -713,10 +777,17 @@ const ReservationPage: React.FC = () => {
 
   // 직원 데이터 로드 (지점 선택이나 프로그램이 변경될 때마다)
   useEffect(() => {
-    if (selectedBranchId) {
+    if (selectedBranchId && currentUser) {
       loadStaffData();
     }
-  }, [selectedBranchId, currentProgram, loadStaffData]);
+  }, [selectedBranchId, currentProgram, currentUser, loadStaffData]);
+
+  // 직원 데이터가 로드된 후 주별 휴일설정 로드
+  useEffect(() => {
+    if (staffList.length > 0) {
+      loadWeeklyHolidaySettings();
+    }
+  }, [staffList, loadWeeklyHolidaySettings]);
 
   // 지점 선택 변경 핸들러
   const handleBranchChange = useCallback(async (branchId: string) => {
@@ -787,15 +858,126 @@ const ReservationPage: React.FC = () => {
     return dayOfWeek >= 5;
   };
 
-  const handleEventCreate = (startTime: Date, endTime: Date, staffId?: string) => {
+  const handleEventCreate = (startTime: Date, endTime: Date, staffId?: string, replaceEventId?: string) => {
+    // 횟수제 프로그램인지 확인
+    if (!currentProgram || currentProgram.type !== '횟수제') {
+      alert('횟수제 프로그램에서만 예약을 생성할 수 있습니다.');
+      return;
+    }
+
+    // 사용자 권한에 따른 코치 선택 로직
+    let selectedStaffId = staffId;
+    let selectedStaff: StaffInfo | undefined;
+
+    if (!currentUser) {
+      alert('사용자 정보를 확인할 수 없습니다.');
+      return;
+    }
+
+    // 휴일에 대한 권한 체크 (weeklyHolidaySettings 기반)
+    const targetStaffId = staffId || selectedStaffIds[0];
+    if (targetStaffId) {
+      const dayOfWeek = startTime.getDay();
+      const weekStartDate = (() => {
+        const monday = new Date(startTime);
+        monday.setDate(startTime.getDate() - (dayOfWeek === 0 ? 6 : dayOfWeek - 1));
+        return monday.toISOString().split('T')[0];
+      })();
+
+      const weeklySettings = weeklyHolidaySettings.find(
+        s => s.staffId === targetStaffId && s.weekStartDate === weekStartDate
+      );
+
+      if (weeklySettings) {
+        const dayKeys = ['sunday', 'monday', 'tuesday', 'wednesday', 'thursday', 'friday', 'saturday'];
+        const dayKey = dayKeys[dayOfWeek] as keyof typeof weeklySettings.weekDays;
+        const daySettings = weeklySettings.weekDays[dayKey];
+
+        if (daySettings?.isHoliday) {
+          // 휴일에 예약하려는 경우 권한 체크
+          if (currentUser.role === 'master' || currentUser.id === targetStaffId) {
+            // 마스터이거나 본인 코치인 경우 허용
+            console.log('휴일 예약 권한 확인됨:', currentUser.role, currentUser.id, targetStaffId);
+          } else {
+            // 일반 사용자는 휴일에 예약 불가
+            alert('휴일에는 예약을 생성할 수 없습니다. 관리자에게 문의하세요.');
+            return;
+          }
+        }
+      }
+    }
+
+    // 휴게시간에 대한 체크 (스케줄 이벤트 기반)
+    const isBreakTime = events.some(event => 
+      event.staffId === targetStaffId &&
+      event.type === 'break' &&
+      startTime >= event.startTime &&
+      startTime < event.endTime
+    );
+
+    if (isBreakTime) {
+      alert('휴게시간에는 예약을 생성할 수 없습니다.');
+      return;
+    }
+
+    if (currentUser.role === 'master') {
+      // Master: 달력에서 하나의 코치만 선택된 경우에만 허용
+      if (selectedStaffIds.length !== 1) {
+        alert('예약을 생성하려면 달력에서 코치를 하나만 선택해주세요.');
+        return;
+      }
+      
+      // 선택된 코치 사용
+      selectedStaffId = selectedStaffIds[0];
+      selectedStaff = staffList.find(s => s.id === selectedStaffId);
+      
+      if (!selectedStaff) {
+        alert('선택한 코치 정보를 찾을 수 없습니다.');
+        return;
+      }
+    } else if (currentUser.role === 'coach') {
+      // 담당 코치: 본인의 코치 ID 사용
+      selectedStaffId = currentUser.id;
+      selectedStaff = staffList.find(s => s.id === selectedStaffId);
+      
+      if (!selectedStaff) {
+        alert('코치 정보를 찾을 수 없습니다.');
+        return;
+      }
+    } else {
+      alert('예약 생성 권한이 없습니다.');
+      return;
+    }
+
     // 예약 가능 시점 체크
     if (!isReservationAllowed(startTime)) {
       alert('다음주 예약은 금요일 이후부터 가능합니다.');
       return;
     }
     
-    console.log('새 이벤트 생성:', { startTime, endTime, staffId });
-    // 여기서 새 이벤트 생성 모달 등을 열 수 있습니다
+    // 예약 모달 데이터 설정 및 모달 열기
+    setReservationModalData({
+      startTime,
+      endTime,
+      staffId: selectedStaffId,
+      staffName: selectedStaff.name
+    });
+    setIsReservationModalOpen(true);
+  };
+
+  // 예약 모달 닫기
+  const handleReservationModalClose = () => {
+    setIsReservationModalOpen(false);
+    setReservationModalData(null);
+  };
+
+  // 예약 생성 완료 후 콜백
+  const handleReservationCreate = (newReservation: ScheduleEvent) => {
+    // 이벤트 목록에 새 예약 추가
+    setEvents(prev => [...prev, newReservation]);
+    
+    // 모달 닫기
+    handleReservationModalClose();
   };
 
   const menuType = getMenuType();
@@ -849,6 +1031,9 @@ const ReservationPage: React.FC = () => {
                       onEventCreate={handleEventCreate}
                       onHolidaySettings={handleHolidaySettings}
                       weeklyHolidaySettings={weeklyHolidaySettings}
+                      programDuration={programDuration}
+                      disablePastTime={true}
+                      currentUser={currentUser}
                     />
                   ) : (
                     <PlaceholderContent>
@@ -858,14 +1043,14 @@ const ReservationPage: React.FC = () => {
                     </PlaceholderContent>
                   )
                 ) : currentProgram.type === '기간제' ? (
-                  // 기간제 프로그램인 경우 기간제 스케줄 표시
+                  // 기간제 프로그램인 경우 월별 달력만 표시
                   <ScheduleCalendar
-                    view={calendarView}
+                    view="month" // 월별 고정
                     currentDate={currentDate}
                     events={events}
                     staffList={[]} // 기간제는 코치별 필터링 없음
                     selectedStaffIds={[]}
-                    onViewChange={setCalendarView}
+                    onViewChange={() => {}} // 기간제는 뷰 변경 비활성화
                     onDateChange={handleDateChange}
                     onStaffFilter={() => {}} // 기간제는 코치 필터링 없음
                     onEventClick={handleEventClick}
@@ -873,6 +1058,9 @@ const ReservationPage: React.FC = () => {
                     onHolidaySettings={undefined} // 기간제는 휴일설정 없음
                     weeklyHolidaySettings={[]}
                     allowEmptyStaff={true} // 기간제는 코치가 없어도 달력 표시
+                    programDuration={programDuration}
+                    hideViewOptions={['day', 'week']} // 일별, 주별 뷰 숨김
+                    disablePastTime={true}
                   />
                 ) : (
                   <PlaceholderContent>
@@ -922,6 +1110,26 @@ const ReservationPage: React.FC = () => {
         onSave={handleWeeklyHolidaySettingsSave}
         existingWeeklyHolidays={weeklyHolidaySettings}
       />
+
+      {/* 예약 생성 모달 */}
+      {isReservationModalOpen && reservationModalData && currentProgram && (
+        <ReservationModal
+          isOpen={isReservationModalOpen}
+          onClose={handleReservationModalClose}
+          startTime={reservationModalData.startTime}
+          endTime={reservationModalData.endTime}
+          staffId={reservationModalData.staffId}
+          staffName={reservationModalData.staffName}
+          programId={currentProgram.id}
+          programName={currentProgram.name}
+          program={currentProgram}
+          branchId={selectedBranchId}
+          branchName={branches.find(b => b.id === selectedBranchId)?.name || ''}
+          currentUser={currentUser}
+          existingEvents={events}
+          onReservationCreate={handleReservationCreate}
+        />
+      )}
     </>
   );
 };
