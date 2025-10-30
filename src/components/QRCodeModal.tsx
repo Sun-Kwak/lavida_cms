@@ -149,7 +149,7 @@ const QRCodeModal: React.FC<QRCodeModalProps> = ({ isOpen, onClose, memberName, 
     
     try {
       // QR 코드로 연결될 URL (운동처방 페이지)
-      const url = `${window.location.origin}/exercise-prescription?memberId=${memberId}`;
+      const url = `${window.location.origin}/lavida_cms/exercise-prescription?memberId=${memberId}`;
       
       // QR 코드 생성
       await QRCode.toCanvas(canvasRef.current, url, {
@@ -272,14 +272,14 @@ const QRCodeModal: React.FC<QRCodeModalProps> = ({ isOpen, onClose, memberName, 
         });
       } else {
         // Web Share API를 지원하지 않는 경우 클립보드에 복사
-        await navigator.clipboard.writeText(`${window.location.origin}/exercise-prescription?memberId=${memberId}`);
+        await navigator.clipboard.writeText(`${window.location.origin}/lavida_cms/exercise-prescription?memberId=${memberId}`);
         alert('QR 코드 링크가 클립보드에 복사되었습니다.');
       }
     } catch (error) {
       console.error('공유 실패:', error);
       // 폴백: 링크를 클립보드에 복사
       try {
-        await navigator.clipboard.writeText(`${window.location.origin}/exercise-prescription?memberId=${memberId}`);
+        await navigator.clipboard.writeText(`${window.location.origin}/lavida_cms/exercise-prescription?memberId=${memberId}`);
         alert('QR 코드 링크가 클립보드에 복사되었습니다.');
       } catch (clipboardError) {
         console.error('클립보드 복사 실패:', clipboardError);
@@ -289,7 +289,7 @@ const QRCodeModal: React.FC<QRCodeModalProps> = ({ isOpen, onClose, memberName, 
   };
 
   const handleGoToPage = () => {
-    const url = `/exercise-prescription?memberId=${memberId}`;
+    const url = `/lavida_cms/exercise-prescription?memberId=${memberId}`;
     window.open(url, '_blank');
   };
 
