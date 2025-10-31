@@ -176,6 +176,8 @@ interface Product {
   // 기간제 관련
   duration?: number; // 기간(일)
   baseDuration?: number; // 기준 기간
+  months?: number; // 개월수
+  baseMonths?: number; // 기준 개월수
   startDate?: Date;
   endDate?: Date;
   // 횟수제 관련
@@ -205,12 +207,6 @@ const CoursePaymentPanel: React.FC<CoursePaymentPanelProps> = ({
 }) => {
   const [availableProducts, setAvailableProducts] = useState<DBProduct[]>([]);
   const [loading, setLoading] = useState(false);
-
-  // 기간제 상품의 금액 계산 (기본 한달 기준으로 일할 계산)
-  const calculatePeriodPrice = (basePrice: number, days: number): number => {
-    const baseDays = 30; // 기본 한달 (30일) 기준
-    return Math.round((basePrice / baseDays) * days);
-  };
 
   // 횟수제 상품의 금액 계산 (기준 횟수 대비 비례 계산)
   const calculateSessionPrice = (basePrice: number, sessions: number, baseSessions: number): number => {
@@ -268,20 +264,26 @@ const CoursePaymentPanel: React.FC<CoursePaymentPanelProps> = ({
           programType: product.programType
         };
 
-        // 기간제인 경우 기본 30일 설정
+        // 기간제인 경우 상품의 개월수를 기준으로 기간 설정 (가격은 고정)
         if (product.programType === '기간제') {
           const tomorrow = new Date();
           tomorrow.setDate(tomorrow.getDate() + 1);
-          const endDate = new Date(tomorrow);
-          endDate.setDate(endDate.getDate() + 30);
           
-          convertedProduct.duration = 30;
-          convertedProduct.baseDuration = 30;
+          // 상품에 등록된 개월수를 기준으로 설정 (기본값: 1개월)
+          const productMonths = product.months || 1;
+          const days = productMonths * 30; // 개월수를 일수로 변환 (1개월 = 30일)
+          
+          const endDate = new Date(tomorrow);
+          endDate.setDate(endDate.getDate() + days);
+          
+          convertedProduct.duration = days;
+          convertedProduct.baseDuration = days;
+          convertedProduct.months = productMonths; // 개월수 저장
+          convertedProduct.baseMonths = productMonths; // 기준 개월수 저장
           convertedProduct.startDate = tomorrow;
           convertedProduct.endDate = endDate;
-          // 계산된 정확한 상품금액
-          convertedProduct.price = calculatePeriodPrice(product.price || 0, 30);
-          // 적용금액도 초기에는 계산된 금액과 동일
+          // 기간제는 가격 고정 (기간 변경해도 가격 변동 없음)
+          convertedProduct.price = product.price || 0;
           convertedProduct.appliedPrice = convertedProduct.price;
         }
         // 횟수제인 경우 상품의 실제 횟수 설정
@@ -320,14 +322,31 @@ const CoursePaymentPanel: React.FC<CoursePaymentPanelProps> = ({
     if (field === 'duration') {
       product.duration = value;
       if (product.programType === '기간제' && product.startDate) {
-        // 기간제: 종료일 재계산
+        // 기간제: 일수를 개월수로 변환 (가격은 변경하지 않음)
+        const months = Math.round(value / 30); // 일수를 개월수로 변환 (30일 = 1개월)
+        product.months = months;
+        
+        // 종료일 재계산
         const endDate = new Date(product.startDate);
         endDate.setDate(endDate.getDate() + value);
         product.endDate = endDate;
-        // 상품금액 재계산
-        const basePrice = product.basePrice || product.originalPrice || 0;
-        product.price = calculatePeriodPrice(basePrice, value);
-        product.appliedPrice = product.price; // 적용금액도 함께 업데이트
+        
+        // 기간제는 가격 고정 (기간 변경해도 가격 변동 없음)
+      }
+    } else if (field === 'months') {
+      // 개월수 직접 변경 (기간제)
+      product.months = value;
+      if (product.programType === '기간제' && product.startDate) {
+        // 개월수를 일수로 변환
+        const days = value * 30; // 1개월 = 30일
+        product.duration = days;
+        
+        // 종료일 재계산
+        const endDate = new Date(product.startDate);
+        endDate.setDate(endDate.getDate() + days);
+        product.endDate = endDate;
+        
+        // 기간제는 가격 고정 (기간 변경해도 가격 변동 없음)
       }
     } else if (field === 'sessions') {
       product.sessions = value;
@@ -345,6 +364,14 @@ const CoursePaymentPanel: React.FC<CoursePaymentPanelProps> = ({
         const endDate = new Date(value);
         endDate.setDate(endDate.getDate() + product.duration);
         product.endDate = endDate;
+      }
+    } else if (field === 'endDate') {
+      product.endDate = value;
+      if (product.programType === '기간제' && product.startDate) {
+        // 종료일 변경 시 기간 재계산 (가격은 변경하지 않음)
+        const days = Math.ceil((value.getTime() - product.startDate.getTime()) / (1000 * 3600 * 24));
+        product.duration = days;
+        product.months = Math.round(days / 30);
       }
     } else if (field === 'appliedPrice') {
       // 적용금액은 사용자가 직접 수정 가능
@@ -515,14 +542,12 @@ const CoursePaymentPanel: React.FC<CoursePaymentPanelProps> = ({
                           marginBottom: '6px',
                           fontWeight: '500'
                         }}>
-                          기간(일)
+                          종료일
                         </label>
                         <input
-                          type="number"
-                          min="1"
-                          max="365"
-                          value={product.duration || 30}
-                          onChange={(e) => handleProductEdit(index, 'duration', parseInt(e.target.value) || 1)}
+                          type="date"
+                          value={product.endDate ? product.endDate.toISOString().split('T')[0] : ''}
+                          onChange={(e) => handleProductEdit(index, 'endDate', new Date(e.target.value))}
                           style={{
                             width: '100%',
                             padding: '8px 10px',
@@ -535,19 +560,22 @@ const CoursePaymentPanel: React.FC<CoursePaymentPanelProps> = ({
                         />
                       </div>
                     </div>
-                    {product.endDate && (
-                      <div style={{ 
-                        fontSize: '11px', 
-                        color: '#666',
-                        marginTop: '4px',
-                        padding: '4px 8px',
-                        backgroundColor: '#fff',
-                        borderRadius: '3px',
-                        border: '1px solid #e9ecef'
-                      }}>
-                        종료일: {product.endDate.toLocaleDateString()}
-                      </div>
-                    )}
+                    <div style={{ 
+                      fontSize: '11px', 
+                      color: '#666',
+                      marginTop: '4px',
+                      padding: '4px 8px',
+                      backgroundColor: '#fff',
+                      borderRadius: '3px',
+                      border: '1px solid #e9ecef'
+                    }}>
+                      💡 기간제는 가격이 고정되어 있습니다. 기간을 조정해도 가격은 변경되지 않습니다.
+                      {product.startDate && product.endDate && (
+                        <>
+                          <br />기간: {Math.ceil((product.endDate.getTime() - product.startDate.getTime()) / (1000 * 3600 * 24))}일
+                        </>
+                      )}
+                    </div>
                   </div>
                 )}
 

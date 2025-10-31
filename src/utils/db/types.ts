@@ -79,6 +79,7 @@ export interface Product extends DBRecord {
   programName: string; // 프로그램명 저장 (조회 성능 향상)
   programType: string; // 프로그램 종류 저장 (조회 성능 향상)
   sessions?: number; // 횟수 (횟수제인 경우에만 필요)
+  months?: number; // 개월수 (기간제인 경우에만 필요)
   duration?: number; // 소요시간 (분 단위, 횟수제인 경우에만 필요)
   price?: number; // 가격
   description?: string; // 상품소개

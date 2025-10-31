@@ -87,6 +87,8 @@ export interface Product {
   basePrice?: number; // 기준 가격 (30일 또는 기준 횟수 기준)
   baseDuration?: number; // 기준 기간 (일 단위, 기간제용)
   baseSessions?: number; // 기준 횟수 (횟수제용)
+  months?: number; // 개월수 (기간제용)
+  baseMonths?: number; // 기준 개월수 (기간제용)
   appliedPrice?: number; // 적용금액 (실제 받을 금액, 사용자가 수정 가능)
 }
 

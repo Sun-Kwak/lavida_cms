@@ -95,6 +95,8 @@ interface Product {
   // 기간제 관련
   duration?: number; // 기간(일)
   baseDuration?: number; // 기준 기간
+  months?: number; // 개월수
+  baseMonths?: number; // 기준 개월수
   startDate?: Date;
   endDate?: Date;
   // 횟수제 관련

@@ -68,7 +68,6 @@ const CMSLogin: React.FC = () => {
   const [idError, setIdError] = useState<string | null>(null);
   const [pwdError, setPwdError] = useState<string | null>(null);
   const [isLoading, setIsLoading] = useState(false);
-  const [systemStatus, setSystemStatus] = useState<'checking' | 'ready' | 'initializing'>('checking');
 
   const { login, isLoggedIn, ready } = useAdminAuth();
 
@@ -79,79 +78,6 @@ const CMSLogin: React.FC = () => {
       navigate('/cms/member/search');
     }
   }, [ready, isLoggedIn, isLoading, navigate]);
-
-  useEffect(() => {
-    // 시스템 상태 확인
-    const checkSystemStatus = async () => {
-      try {
-        setSystemStatus('checking');
-        
-        // IndexedDB 연결 대기
-        let dbReady = false;
-        let attempts = 0;
-        const maxAttempts = 15;
-        
-        while (!dbReady && attempts < maxAttempts) {
-          try {
-            await dbManager.getAllBranches();
-            dbReady = true;
-          } catch (error) {
-            attempts++;
-            console.log(`🔄 시스템 상태 확인 중... (${attempts}/${maxAttempts})`);
-            await new Promise(resolve => setTimeout(resolve, 500));
-          }
-        }
-        
-        if (!dbReady) {
-          console.warn('⚠️ IndexedDB 연결 시간 초과, 계속 진행');
-        }
-        
-        // 시스템 관리자 존재 여부 확인
-        const systemAdmin = await dbManager.getStaffByLoginId('system_admin');
-        
-        if (systemAdmin) {
-          console.log('✅ 시스템 준비 완료');
-          setSystemStatus('ready');
-        } else {
-          console.log('⏳ 시스템 관리자 생성 중...');
-          setSystemStatus('initializing');
-          
-          // 시스템 관리자가 생성될 때까지 대기
-          await waitForSystemAdmin();
-        }
-      } catch (error) {
-        console.error('시스템 상태 확인 중 오류:', error);
-        setSystemStatus('ready'); // 오류 시에도 계속 진행
-      }
-    };
-    
-    checkSystemStatus();
-  }, []);
-
-  const waitForSystemAdmin = async () => {
-    let attempts = 0;
-    const maxAttempts = 30; // 15초까지 대기
-    
-    while (attempts < maxAttempts) {
-      try {
-        const systemAdmin = await dbManager.getStaffByLoginId('system_admin');
-        if (systemAdmin) {
-          console.log('✅ 시스템 관리자 생성 완료');
-          setSystemStatus('ready');
-          return;
-        }
-        
-        attempts++;
-        await new Promise(resolve => setTimeout(resolve, 500));
-      } catch (error) {
-        attempts++;
-        await new Promise(resolve => setTimeout(resolve, 500));
-      }
-    }
-    
-    console.log('⏰ 시스템 관리자 생성 대기 시간 초과, 계속 진행');
-    setSystemStatus('ready');
-  };
 
   const handleLogin = async () => {
     if (isLoading) return; // 이미 로딩 중이면 중복 실행 방지
@@ -245,6 +171,12 @@ const CMSLogin: React.FC = () => {
     setIsLoading(false);
   };
 
+  const handleKeyPress = (e: React.KeyboardEvent) => {
+    if (e.key === 'Enter') {
+      handleLogin();
+    }
+  };
+
   return (
     <Container className="cms-layout">
       <LoginFormContainer>
@@ -254,55 +186,39 @@ const CMSLogin: React.FC = () => {
         
         <FormTitle>로그인</FormTitle>
         
-        {systemStatus === 'checking' && (
-          <HelpText>
-            🔄 시스템 상태를 확인하고 있습니다...
-          </HelpText>
-        )}
+        <FormWrapper onKeyDown={handleKeyPress}>
+          <div>
+            <AppIdTextField
+              value={userId}
+              onChange={(e) => setUserId(e.target.value)}
+              showValidationMessage={false}
+              errorMessage={idError || undefined}
+            />
+          </div>
+          
+          <div>
+            <AppPwdTextField
+              value={password}
+              onChange={(e) => setPassword(e.target.value)}
+              fieldType={PwdFieldType.PASSWORD}
+              showValidationMessage={false}
+              errorMessage={pwdError || undefined}
+            />
+          </div>
+        </FormWrapper>
         
-        {systemStatus === 'initializing' && (
-          <HelpText>
-            ⏳ 시스템을 초기화하고 있습니다. 잠시만 기다려주세요...
-          </HelpText>
-        )}
+        <ButtonWrapper>
+          <PrimaryButton
+            onClick={handleLogin}
+            disabled={isLoading}
+          >
+            {isLoading ? "로그인 중..." : "로그인"}
+          </PrimaryButton>
+        </ButtonWrapper>
         
-        {systemStatus === 'ready' && (
-          <>
-            <FormWrapper>
-              <div>
-                <AppIdTextField
-                  value={userId}
-                  onChange={(e) => setUserId(e.target.value)}
-                  showValidationMessage={false}
-                  errorMessage={idError || undefined}
-                />
-              </div>
-              
-              <div>
-                <AppPwdTextField
-                  value={password}
-                  onChange={(e) => setPassword(e.target.value)}
-                  fieldType={PwdFieldType.PASSWORD}
-                  showValidationMessage={false}
-                  errorMessage={pwdError || undefined}
-                />
-              </div>
-            </FormWrapper>
-            
-            <ButtonWrapper>
-              <PrimaryButton
-                onClick={handleLogin}
-                disabled={isLoading}
-              >
-                {isLoading ? "로그인 중..." : "로그인"}
-              </PrimaryButton>
-            </ButtonWrapper>
-            
-            <HelpText>
-              시스템 계정이 없다면, 관리자에게 문의 바랍니다.
-            </HelpText>
-          </>
-        )}
+        <HelpText>
+          시스템 계정이 없다면, 관리자에게 문의 바랍니다.
+        </HelpText>
       </LoginFormContainer>
     </Container>
   );

@@ -354,6 +354,7 @@ const ProductManagement: React.FC = () => {
   const [newBranchId, setNewBranchId] = useState('');
   const [newProgramId, setNewProgramId] = useState('');
   const [newSessions, setNewSessions] = useState<number | ''>('');
+  const [newMonths, setNewMonths] = useState<number | ''>(''); // 기간제용 개월수
   const [newDuration, setNewDuration] = useState<number>(30); // 기본 30분
   const [newPrice, setNewPrice] = useState<number | ''>('');
   const [newDescription, setNewDescription] = useState('');
@@ -363,6 +364,7 @@ const ProductManagement: React.FC = () => {
   const [editBranchId, setEditBranchId] = useState('');
   const [editProgramId, setEditProgramId] = useState('');
   const [editSessions, setEditSessions] = useState<number | ''>('');
+  const [editMonths, setEditMonths] = useState<number | ''>(''); // 기간제용 개월수
   const [editDuration, setEditDuration] = useState<number>(30); // 기본 30분
   const [editPrice, setEditPrice] = useState<number | ''>('');
   const [editDescription, setEditDescription] = useState('');
@@ -402,11 +404,15 @@ const ProductManagement: React.FC = () => {
   ];
 
   // 상품명 자동 생성 함수
-  const generateProductName = useCallback((programName: string, sessions?: number | '') => {
+  const generateProductName = useCallback((programName: string, sessions?: number | '', months?: number | '') => {
     if (!programName) return '';
     
     if (sessions && typeof sessions === 'number') {
       return `${programName} ${sessions}회`;
+    }
+    
+    if (months && typeof months === 'number') {
+      return `${programName} ${months}개월`;
     }
     
     return programName;
@@ -415,17 +421,25 @@ const ProductManagement: React.FC = () => {
   // 프로그램 선택 시 상품명 자동 업데이트
   useEffect(() => {
     if (selectedProgram) {
-      const autoName = generateProductName(selectedProgram.name, selectedProgram.type === '횟수제' ? newSessions : undefined);
+      const autoName = generateProductName(
+        selectedProgram.name, 
+        selectedProgram.type === '횟수제' ? newSessions : undefined,
+        selectedProgram.type === '기간제' ? newMonths : undefined
+      );
       setNewProductName(autoName);
     }
-  }, [selectedProgram, newSessions, generateProductName]);
+  }, [selectedProgram, newSessions, newMonths, generateProductName]);
 
   useEffect(() => {
     if (editSelectedProgram) {
-      const autoName = generateProductName(editSelectedProgram.name, editSelectedProgram.type === '횟수제' ? editSessions : undefined);
+      const autoName = generateProductName(
+        editSelectedProgram.name, 
+        editSelectedProgram.type === '횟수제' ? editSessions : undefined,
+        editSelectedProgram.type === '기간제' ? editMonths : undefined
+      );
       setEditProductName(autoName);
     }
-  }, [editSelectedProgram, editSessions, generateProductName]);
+  }, [editSelectedProgram, editSessions, editMonths, generateProductName]);
 
   // 컴포넌트 마운트 시 권한 체크 및 데이터 로드
   const checkPermissionAndLoadData = useCallback(async () => {
@@ -504,7 +518,7 @@ const ProductManagement: React.FC = () => {
     }
   };
 
-  const validateForm = (name: string, branchId: string, programId: string, sessions?: number | ''): boolean => {
+  const validateForm = (name: string, branchId: string, programId: string, sessions?: number | '', months?: number | ''): boolean => {
     const newErrors: { [key: string]: string } = {};
 
     if (!name.trim()) {
@@ -519,11 +533,17 @@ const ProductManagement: React.FC = () => {
       newErrors.programId = '프로그램을 선택해주세요.';
     }
 
-    // 횟수제인 경우 횟수 검증
+    // 프로그램 타입에 따른 검증
     const program = programs.find(p => p.id === programId);
-    if (program && program.type === '횟수제') {
-      if (!sessions || sessions <= 0) {
-        newErrors.sessions = '횟수를 입력해주세요.';
+    if (program) {
+      if (program.type === '횟수제') {
+        if (!sessions || sessions <= 0) {
+          newErrors.sessions = '횟수를 입력해주세요.';
+        }
+      } else if (program.type === '기간제') {
+        if (!months || months <= 0) {
+          newErrors.months = '개월수를 입력해주세요.';
+        }
       }
     }
 
@@ -532,7 +552,7 @@ const ProductManagement: React.FC = () => {
   };
 
   const handleAddProduct = async () => {
-    if (!validateForm(newProductName, newBranchId, newProgramId, newSessions)) {
+    if (!validateForm(newProductName, newBranchId, newProgramId, newSessions, newMonths)) {
       return;
     }
 
@@ -554,6 +574,7 @@ const ProductManagement: React.FC = () => {
         programName: selectedProgram.name,
         programType: selectedProgram.type,
         sessions: selectedProgram.type === '횟수제' ? Number(newSessions) : undefined,
+        months: selectedProgram.type === '기간제' ? Number(newMonths) : undefined,
         duration: selectedProgram.type === '횟수제' ? newDuration : undefined,
         price: newPrice ? Number(newPrice) : undefined,
         description: newDescription.trim() || undefined,
@@ -573,6 +594,7 @@ const ProductManagement: React.FC = () => {
       setNewBranchId('');
       setNewProgramId('');
       setNewSessions('');
+      setNewMonths('');
       setNewDuration(30);
       setNewPrice('');
       setNewDescription('');
@@ -629,6 +651,7 @@ const ProductManagement: React.FC = () => {
     setEditBranchId(product.branchId);
     setEditProgramId(product.programId);
     setEditSessions(product.sessions || '');
+    setEditMonths(product.months || '');
     setEditDuration(product.duration || 30);
     setEditPrice(product.price || '');
     setEditDescription(product.description || '');
@@ -637,7 +660,7 @@ const ProductManagement: React.FC = () => {
   };
 
   const handleUpdateProduct = async () => {
-    if (!validateForm(editProductName, editBranchId, editProgramId, editSessions)) {
+    if (!validateForm(editProductName, editBranchId, editProgramId, editSessions, editMonths)) {
       return;
     }
 
@@ -661,6 +684,7 @@ const ProductManagement: React.FC = () => {
         programName: selectedProgram.name,
         programType: selectedProgram.type,
         sessions: selectedProgram.type === '횟수제' ? Number(editSessions) : undefined,
+        months: selectedProgram.type === '기간제' ? Number(editMonths) : undefined,
         duration: selectedProgram.type === '횟수제' ? editDuration : undefined,
         price: editPrice ? Number(editPrice) : undefined,
         description: editDescription.trim() || undefined,
@@ -690,6 +714,7 @@ const ProductManagement: React.FC = () => {
     setEditBranchId('');
     setEditProgramId('');
     setEditSessions('');
+    setEditMonths('');
     setEditDuration(30);
     setEditPrice('');
     setEditDescription('');
@@ -702,6 +727,7 @@ const ProductManagement: React.FC = () => {
     setNewBranchId('');
     setNewProgramId('');
     setNewSessions('');
+    setNewMonths('');
     setNewDuration(30);
     setNewPrice('');
     setNewDescription('');
@@ -711,6 +737,7 @@ const ProductManagement: React.FC = () => {
     setEditBranchId('');
     setEditProgramId('');
     setEditSessions('');
+    setEditMonths('');
     setEditDuration(30);
     setEditPrice('');
     setEditDescription('');
@@ -805,6 +832,23 @@ const ProductManagement: React.FC = () => {
                 {errors.sessions && <ErrorText>{errors.sessions}</ErrorText>}
               </FieldColumn>
               <FieldColumn>
+                <Label $required={selectedProgram?.type === '기간제'}>개월수</Label>
+                <Input
+                  type="number"
+                  placeholder={selectedProgram?.type === '기간제' ? "개월수를 입력하세요" : "횟수제는 개월수 불필요"}
+                  value={newMonths}
+                  onChange={(e) => setNewMonths(e.target.value ? Number(e.target.value) : '')}
+                  onKeyPress={handleKeyPress}
+                  disabled={saving || !selectedProgram || selectedProgram.type === '횟수제'}
+                  $error={!!errors.months}
+                  min={1}
+                />
+                {errors.months && <ErrorText>{errors.months}</ErrorText>}
+              </FieldColumn>
+            </FormRow>
+            
+            <FormRow>
+              <FieldColumn>
                 <Label $required={selectedProgram?.type === '횟수제'}>소요시간</Label>
                 <CustomDropdown
                   value={newDuration.toString()}
@@ -879,6 +923,7 @@ const ProductManagement: React.FC = () => {
             setEditBranchId('');
             setEditProgramId('');
             setEditSessions('');
+            setEditMonths('');
             setEditDuration(30);
             setEditPrice('');
             setEditDescription('');
@@ -971,6 +1016,23 @@ const ProductManagement: React.FC = () => {
                         />
                         {errors.sessions && <ErrorText>{errors.sessions}</ErrorText>}
                       </FieldColumn>
+                      <FieldColumn>
+                        <Label $required={editSelectedProgram?.type === '기간제'}>개월수</Label>
+                        <Input
+                          type="number"
+                          placeholder={editSelectedProgram?.type === '기간제' ? "개월수를 입력하세요" : "횟수제는 개월수 불필요"}
+                          value={editMonths}
+                          onChange={(e) => setEditMonths(e.target.value ? Number(e.target.value) : '')}
+                          onKeyPress={handleEditKeyPress}
+                          disabled={saving || !editSelectedProgram || editSelectedProgram.type === '횟수제'}
+                          $error={!!errors.months}
+                          min={1}
+                        />
+                        {errors.months && <ErrorText>{errors.months}</ErrorText>}
+                      </FieldColumn>
+                    </div>
+                    
+                    <div style={{ display: 'flex', gap: '12px' }}>
                       <FieldColumn>
                         <Label $required={editSelectedProgram?.type === '횟수제'}>소요시간</Label>
                         <CustomDropdown
@@ -1075,6 +1137,12 @@ const ProductManagement: React.FC = () => {
                           <DetailItem>
                             <DetailLabel>횟수:</DetailLabel>
                             <DetailValue>{product.sessions}회</DetailValue>
+                          </DetailItem>
+                        )}
+                        {product.months && (
+                          <DetailItem>
+                            <DetailLabel>개월수:</DetailLabel>
+                            <DetailValue>{product.months}개월</DetailValue>
                           </DetailItem>
                         )}
                         {product.duration && (

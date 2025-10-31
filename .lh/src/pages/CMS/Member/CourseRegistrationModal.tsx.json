@@ -3,7 +3,7 @@
     "activeCommit": 0,
     "commits": [
         {
-            "activePatchIndex": 7,
+            "activePatchIndex": 8,
             "patches": [
                 {
                     "date": 1761132526034,
@@ -36,6 +36,10 @@
                 {
                     "date": 1761459688972,
                     "content": "Index: \n===================================================================\n--- \n+++ \n@@ -85,10 +85,22 @@\n \n interface Product {\n   id: string;\n   name: string;\n-  price: number;\n+  originalPrice?: number; // DB에서 가져온 기본 가격\n+  basePrice?: number; // 기준 가격\n+  price: number; // 상품금액 (계산될 정확한 금액)\n+  appliedPrice?: number; // 적용금액 (사용자가 조정할 수 있는 최종 금액)\n   description?: string;\n+  programType?: string; // '기간제' | '횟수제'\n+  // 기간제 관련\n+  duration?: number; // 기간(일)\n+  baseDuration?: number; // 기준 기간\n+  startDate?: Date;\n+  endDate?: Date;\n+  // 횟수제 관련\n+  sessions?: number; // 수업 횟수\n+  baseSessions?: number; // 기준 횟수\n }\n \n interface PaymentInfo {\n   selectedProducts: Product[];\n@@ -158,9 +170,10 @@\n \n     setIsProcessing(true);\n \n     try {\n-      const totalAmount = paymentInfo.selectedProducts.reduce((sum, product) => sum + product.price, 0);\n+      const totalAmount = paymentInfo.selectedProducts.reduce((sum, product) => \n+        sum + (product.appliedPrice || product.price), 0);\n       const pointPayment = paymentInfo.pointPayment || 0;\n       const cashPayment = paymentInfo.receivedAmount || 0; // 현금/카드로 받은 금액\n       const totalReceived = pointPayment + cashPayment; // 총 받은 금액\n \n@@ -200,9 +213,9 @@\n         \n         orderProducts.push({\n           id: product.id,\n           name: product.name,\n-          price: product.price,\n+          price: product.appliedPrice || product.price, // 적용금액 사용\n           programId: dbProduct.programId,\n           programName: dbProduct.programName,\n           programType: dbProduct.programType\n         });\n"
+                },
+                {
+                    "date": 1761910063251,
+                    "content": "Index: \n===================================================================\n--- \n+++ \n@@ -94,8 +94,10 @@\n   programType?: string; // '기간제' | '횟수제'\n   // 기간제 관련\n   duration?: number; // 기간(일)\n   baseDuration?: number; // 기준 기간\n+  months?: number; // 개월수\n+  baseMonths?: number; // 기준 개월수\n   startDate?: Date;\n   endDate?: Date;\n   // 횟수제 관련\n   sessions?: number; // 수업 횟수\n"
                 }
             ],
             "date": 1761132526034,

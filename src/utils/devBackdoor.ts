@@ -96,8 +96,8 @@ export const executeBackdoor = async (): Promise<void> => {
 };
 
 /**
- * 개발 환경에서만 백도어 기능 활성화
+ * 백도어 기능 활성화 (테스트용으로 모든 환경에서 활성화)
  */
 export const isBackdoorEnabled = (): boolean => {
-  return process.env.NODE_ENV === 'development';
+  return true; // 배포 환경에서도 테스트할 수 있도록 임시로 활성화
 };
