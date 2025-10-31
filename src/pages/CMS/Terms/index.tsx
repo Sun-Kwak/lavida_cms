@@ -37,13 +37,26 @@ const TermsPage: React.FC = () => {
     try {
       setIsLoading(true);
       setError(null);
-      const documents = await dbManager.getAllTermsDocuments();
+      
+      // IndexedDB 연결 상태 확인
+      if (!dbManager.isConnected) {
+        devLog("IndexedDB가 연결되지 않음, 재연결 시도 중...");
+        await new Promise(resolve => setTimeout(resolve, 1000)); // 1초 대기
+        if (!dbManager.isConnected) {
+          throw new Error("IndexedDB 연결에 실패했습니다. 페이지를 새로고침해주세요.");
+        }
+      }
+      
+      const documents = await dbManager.terms.getAllTermsDocuments();
       setAllDocuments(documents);
       devLog("문서 목록 로딩 완료:", documents);
+      devLog("IndexedDB 연결 상태:", dbManager.isConnected);
+      devLog("IndexedDB 버전:", dbManager.dbVersion);
     } catch (err: any) {
       devLog("문서 목록 로딩 실패:", err);
-      setError("문서 목록을 불러오는데 실패했습니다.");
-      toast.error("문서 목록을 불러오는데 실패했습니다.");
+      const errorMessage = err.message || "문서 목록을 불러오는데 실패했습니다.";
+      setError(errorMessage);
+      toast.error(errorMessage);
     } finally {
       setIsLoading(false);
     }
@@ -52,7 +65,7 @@ const TermsPage: React.FC = () => {
   // 현재 선택된 탭에 해당하는 문서 로딩
   const loadCurrentDocument = useCallback(async () => {
     try {
-      const activeDoc = await dbManager.getActiveTermsDocument(selectedTab);
+      const activeDoc = await dbManager.terms.getActiveTermsDocument(selectedTab);
       if (activeDoc) {
         setCurrentDocument(activeDoc);
         setContent(activeDoc.content);
@@ -97,7 +110,7 @@ const TermsPage: React.FC = () => {
 
       if (currentDocument) {
         // 기존 문서 수정
-        const updatedDoc = await dbManager.updateTermsDocument(currentDocument.id, {
+        const updatedDoc = await dbManager.terms.updateTermsDocument(currentDocument.id, {
           title: title.trim(),
           content: content.trim(),
           isActive: true
@@ -110,7 +123,7 @@ const TermsPage: React.FC = () => {
         }
       } else {
         // 새 문서 생성
-        const newDoc = await dbManager.addTermsDocument({
+        const newDoc = await dbManager.terms.addTermsDocument({
           type: selectedTab,
           title: title.trim(),
           content: content.trim(),
@@ -146,7 +159,7 @@ const TermsPage: React.FC = () => {
 
     try {
       setIsLoading(true);
-      await dbManager.deleteTermsDocument(currentDocument.id);
+      await dbManager.terms.deleteTermsDocument(currentDocument.id);
       
       toast.success("문서가 성공적으로 삭제되었습니다!");
       devLog("문서 삭제 성공:", currentDocument.id);
@@ -179,7 +192,7 @@ const TermsPage: React.FC = () => {
     try {
       setIsLoading(true);
       
-      const newDoc = await dbManager.addTermsDocument({
+      const newDoc = await dbManager.terms.addTermsDocument({
         type: currentDocument.type,
         title: currentDocument.title,
         content: currentDocument.content,
@@ -219,7 +232,21 @@ const TermsPage: React.FC = () => {
 
   // 컴포넌트 마운트 시 문서 목록 로딩
   useEffect(() => {
-    loadDocuments();
+    const initializeData = async () => {
+      devLog("약관 페이지 초기화 시작");
+      devLog("IndexedDB 연결 상태:", dbManager.isConnected);
+      devLog("IndexedDB 버전:", dbManager.dbVersion);
+      
+      // IndexedDB가 연결되지 않은 경우 잠시 대기 후 재시도
+      if (!dbManager.isConnected) {
+        devLog("IndexedDB 연결 대기 중...");
+        await new Promise(resolve => setTimeout(resolve, 1000));
+      }
+      
+      await loadDocuments();
+    };
+    
+    initializeData();
   }, []);
 
   // 탭이 변경될 때 현재 문서 로딩
@@ -238,7 +265,32 @@ const TermsPage: React.FC = () => {
   return (
     <CMSLayout currentPath="/cms/terms">
       <TermsPageContainer>
-        {error && <ErrorMessage>{error}</ErrorMessage>}
+        {error && (
+          <ErrorMessage>
+            <strong>오류 발생:</strong> {error}
+            <br />
+            <small>
+              IndexedDB 연결 상태: {dbManager.isConnected ? '연결됨' : '연결 안됨'} | 
+              버전: {dbManager.dbVersion}
+            </small>
+            <br />
+            <button 
+              onClick={() => window.location.reload()} 
+              style={{ 
+                marginTop: '8px', 
+                padding: '4px 8px', 
+                fontSize: '12px',
+                backgroundColor: '#007bff',
+                color: 'white',
+                border: 'none',
+                borderRadius: '4px',
+                cursor: 'pointer'
+              }}
+            >
+              페이지 새로고침
+            </button>
+          </ErrorMessage>
+        )}
         
         {/* 문서 타입 탭 */}
         <TabContainer>

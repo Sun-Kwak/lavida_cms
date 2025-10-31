@@ -3,7 +3,7 @@
     "activeCommit": 0,
     "commits": [
         {
-            "activePatchIndex": 1,
+            "activePatchIndex": 2,
             "patches": [
                 {
                     "date": 1760248357527,
@@ -12,6 +12,10 @@
                 {
                     "date": 1760248513902,
                     "content": "Index: \n===================================================================\n--- \n+++ \n@@ -20,8 +20,10 @@\n   border: 1px solid #ddd;\n   border-radius: 4px;\n   font-size: 14px;\n   box-sizing: border-box;\n+  cursor: pointer;\n+  background-color: white;\n   \n   &:focus {\n     outline: none;\n     border-color: #007bff;\n@@ -29,9 +31,14 @@\n   \n   &:disabled {\n     background-color: #f5f5f5;\n     color: #999;\n+    cursor: not-allowed;\n   }\n+  \n+  &:hover:not(:disabled) {\n+    border-color: #007bff;\n+  }\n `;\n \n const SearchButton = styled.button`\n   position: absolute;\n@@ -72,9 +79,9 @@\n }\n \n const DaumAddressSearch: React.FC<DaumAddressSearchProps> = ({\n   onAddressSelect,\n-  placeholder = \"주소를 검색하세요\",\n+  placeholder = \"클릭하여 주소를 검색하세요\",\n   disabled = false,\n   value = \"\"\n }) => {\n   const [address, setAddress] = useState(value);\n@@ -144,18 +151,29 @@\n       onresize: function(size: any) {\n         // 팝업 크기 조정 시 처리할 내용\n       },\n       width: '100%',\n-      height: '100%'\n+      height: '100%',\n+      theme: {\n+        bgColor: \"#FFFFFF\", // 배경색\n+        searchBgColor: \"#0B65C8\", // 검색창 배경색\n+        contentBgColor: \"#FFFFFF\", // 본문 배경색\n+        pageBgColor: \"#FAFAFA\", // 페이지 배경색\n+        textColor: \"#333333\", // 기본 글자색\n+        queryTextColor: \"#FFFFFF\", // 검색창 글자색\n+        postcodeTextColor: \"#FA4256\", // 우편번호 글자색\n+        emphTextColor: \"#008BD3\", // 강조 글자색\n+        outlineColor: \"#E0E0E0\" // 테두리\n+      }\n     }).open();\n   };\n \n   return (\n     <SearchContainer>\n       <SearchInput\n         type=\"text\"\n         value={address}\n-        onChange={(e) => setAddress(e.target.value)}\n+        onClick={handleSearch}\n         placeholder={placeholder}\n         disabled={disabled}\n         readOnly\n       />\n"
+                },
+                {
+                    "date": 1761912365298,
+                    "content": "Index: \n===================================================================\n--- \n+++ \n@@ -15,19 +15,22 @@\n `;\n \n const SearchInput = styled.input`\n   width: 100%;\n-  padding: 12px;\n+  height: 48px;\n+  padding: 0 100px 0 16px;\n   border: 1px solid #ddd;\n-  border-radius: 4px;\n+  border-radius: 12px;\n   font-size: 14px;\n   box-sizing: border-box;\n   cursor: pointer;\n   background-color: white;\n+  transition: all 0.2s ease;\n   \n   &:focus {\n     outline: none;\n     border-color: #007bff;\n+    box-shadow: 0 0 0 3px rgba(0, 123, 255, 0.1);\n   }\n   \n   &:disabled {\n     background-color: #f5f5f5;\n@@ -36,21 +39,22 @@\n   }\n   \n   &:hover:not(:disabled) {\n     border-color: #007bff;\n+    box-shadow: 0 2px 8px rgba(0, 123, 255, 0.1);\n   }\n `;\n \n const SearchButton = styled.button`\n   position: absolute;\n-  right: 8px;\n+  right: 12px;\n   top: 50%;\n   transform: translateY(-50%);\n-  padding: 6px 12px;\n+  padding: 8px 16px;\n   background-color: #007bff;\n   color: white;\n   border: none;\n-  border-radius: 4px;\n+  border-radius: 8px;\n   cursor: pointer;\n   font-size: 12px;\n   \n   &:hover {\n"
                 }
             ],
             "date": 1760248357527,

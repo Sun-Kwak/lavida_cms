@@ -381,11 +381,13 @@ const ProductManagement: React.FC = () => {
   const selectedProgram = programs.find(p => p.id === newProgramId);
   const editSelectedProgram = programs.find(p => p.id === editProgramId);
 
-  // 드롭다운 옵션 생성
-  const branchOptions = branches.map(branch => ({
-    value: branch.id,
-    label: branch.name
-  }));
+  // 드롭다운 옵션 생성 ('전체' 지점 제외)
+  const branchOptions = branches
+    .filter(branch => branch.name !== '전체')
+    .map(branch => ({
+      value: branch.id,
+      label: branch.name
+    }));
 
   // EDITOR인 경우 본인 지점만 표시
   const availableBranchOptions = userPermission === 'EDITOR' 

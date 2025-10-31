@@ -73,7 +73,7 @@ const PrivacyPolicy: React.FC = () => {
   const loadDocument = useCallback(async () => {
     try {
       setIsLoading(true);
-      const activeDoc = await dbManager.getActiveTermsDocument('privacy_policy');
+      const activeDoc = await dbManager.terms.getActiveTermsDocument('privacy_policy');
       if (activeDoc) {
         setCurrentDocument(activeDoc);
         setContent(activeDoc.content);
@@ -103,7 +103,7 @@ const PrivacyPolicy: React.FC = () => {
       
       if (currentDocument) {
         // 기존 문서 수정
-        const updatedDoc = await dbManager.updateTermsDocument(currentDocument.id, {
+        const updatedDoc = await dbManager.terms.updateTermsDocument(currentDocument.id, {
           title: "개인정보 처리방침",
           content: content.trim(),
           isActive: true
@@ -115,7 +115,7 @@ const PrivacyPolicy: React.FC = () => {
         }
       } else {
         // 새 문서 생성
-        const newDoc = await dbManager.addTermsDocument({
+        const newDoc = await dbManager.terms.addTermsDocument({
           type: 'privacy_policy',
           title: "개인정보 처리방침",
           content: content.trim(),

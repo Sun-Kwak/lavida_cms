@@ -133,14 +133,23 @@ export const Label = styled.label`
 `;
 
 export const Input = styled.input`
-  padding: 12px;
+  height: 48px;
+  padding: 0 16px;
   border: 1px solid ${AppColors.borderLight};
-  border-radius: 8px;
+  border-radius: 12px;
   font-size: ${AppTextStyles.body1.fontSize};
   outline: none;
+  box-sizing: border-box;
+  transition: all 0.2s ease;
   
   &:focus {
     border-color: ${AppColors.primary};
+    box-shadow: 0 0 0 3px rgba(55, 187, 214, 0.1);
+  }
+  
+  &:hover {
+    border-color: ${AppColors.primary};
+    box-shadow: 0 2px 8px rgba(55, 187, 214, 0.1);
   }
   
   &::placeholder {

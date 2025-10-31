@@ -122,13 +122,15 @@ const FilterLabel = styled.label`
 
 const LockerGrid = styled.div`
   display: grid;
-  grid-template-columns: repeat(auto-fill, minmax(120px, 1fr));
+  grid-template-columns: repeat(auto-fill, 140px);
   gap: 16px;
   margin-bottom: 32px;
+  justify-content: start;
 `;
 
 const LockerItem = styled.div<{ $status: 'available' | 'occupied' | 'maintenance' | 'pending' }>`
-  aspect-ratio: 1;
+  width: 140px;
+  height: 140px;
   display: flex;
   flex-direction: column;
   align-items: center;
@@ -166,6 +168,7 @@ const LockerItem = styled.div<{ $status: 'available' | 'occupied' | 'maintenance
   transition: all 0.2s ease;
   position: relative;
   padding: 8px;
+  box-sizing: border-box;
 
   &:hover {
     transform: translateY(-2px);
@@ -203,6 +206,26 @@ const LockerPrice = styled.div`
   font-size: ${AppTextStyles.label2.fontSize};
   color: ${AppColors.primary};
   font-weight: 600;
+  margin-top: 2px;
+`;
+
+const LockerUserInfo = styled.div`
+  font-size: ${AppTextStyles.label2.fontSize};
+  color: ${AppColors.onSurface};
+  text-align: center;
+  margin-top: 4px;
+  line-height: 1.2;
+`;
+
+const LockerUserName = styled.div`
+  font-weight: 600;
+  color: ${AppColors.error};
+  font-size: ${AppTextStyles.label1.fontSize};
+`;
+
+const LockerPeriod = styled.div`
+  font-size: ${AppTextStyles.label2.fontSize};
+  color: ${AppColors.onInput1};
   margin-top: 2px;
 `;
 
@@ -952,9 +975,23 @@ const LockerManagement: React.FC = () => {
               <LockerStatus $status={locker.status}>
                 {getStatusText(locker.status)}
               </LockerStatus>
-              <LockerPrice>
-                {formatPrice(getCurrentBranchLockerPrice())}
-              </LockerPrice>
+              {locker.status === 'occupied' && locker.userName ? (
+                <LockerUserInfo>
+                  <LockerUserName>{locker.userName}</LockerUserName>
+                  {locker.endDate && (
+                    <LockerPeriod>
+                      ~{new Date(locker.endDate).toLocaleDateString('ko-KR', { 
+                        month: 'short', 
+                        day: 'numeric' 
+                      })}
+                    </LockerPeriod>
+                  )}
+                </LockerUserInfo>
+              ) : (
+                <LockerPrice>
+                  {formatPrice(getCurrentBranchLockerPrice())}
+                </LockerPrice>
+              )}
             </LockerItem>
           ))}
         </LockerGrid>

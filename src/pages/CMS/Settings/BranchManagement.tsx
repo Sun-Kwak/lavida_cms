@@ -115,8 +115,17 @@ const BranchInfo = styled.div`
   gap: 4px;
 `;
 
-const BranchName = styled.span`
+const BranchName = styled.span<{ isDefault?: boolean }>`
   font-weight: 500;
+  color: ${props => props.isDefault ? AppColors.primary : 'inherit'};
+  ${props => props.isDefault && `
+    &::after {
+      content: ' (기본)';
+      font-size: ${AppTextStyles.label3.fontSize};
+      color: ${AppColors.primary};
+      font-weight: 400;
+    }
+  `}
 `;
 
 const BranchDetails = styled.div`
@@ -320,6 +329,15 @@ const BranchManagement: React.FC = () => {
       return;
     }
 
+    // 중복 지점명 검사
+    const existingBranch = branches.find(branch => 
+      branch.name.toLowerCase() === newBranchName.trim().toLowerCase()
+    );
+    if (existingBranch) {
+      alert('이미 존재하는 지점명입니다.');
+      return;
+    }
+
     try {
       setSaving(true);
       setError(null);
@@ -354,6 +372,13 @@ const BranchManagement: React.FC = () => {
   };
 
   const handleDeleteBranch = async (id: string) => {
+    // '전체' 지점 삭제 방지
+    const branchToDelete = branches.find(branch => branch.id === id);
+    if (branchToDelete?.name === '전체') {
+      alert('전체 지점은 삭제할 수 없습니다.');
+      return;
+    }
+
     if (!window.confirm('정말로 삭제하시겠습니까?\n삭제된 데이터는 복구할 수 없습니다.')) {
       return;
     }
@@ -389,6 +414,16 @@ const BranchManagement: React.FC = () => {
     }
 
     if (!editingId) return;
+
+    // 중복 지점명 검사 (현재 편집 중인 지점 제외)
+    const existingBranch = branches.find(branch => 
+      branch.id !== editingId && 
+      branch.name.toLowerCase() === editBranchName.trim().toLowerCase()
+    );
+    if (existingBranch) {
+      alert('이미 존재하는 지점명입니다.');
+      return;
+    }
 
     try {
       setSaving(true);
@@ -613,7 +648,7 @@ const BranchManagement: React.FC = () => {
                 // 보기 모드
                 <>
                   <BranchInfo>
-                    <BranchName>{branch.name}</BranchName>
+                    <BranchName isDefault={branch.name === '전체'}>{branch.name}</BranchName>
                     <BranchDetails>
                       {branch.address && (
                         <DetailItem>
@@ -638,7 +673,8 @@ const BranchManagement: React.FC = () => {
                     </EditButton>
                     <DeleteButton 
                       onClick={() => handleDeleteBranch(branch.id)}
-                      disabled={saving || editingId !== null}
+                      disabled={saving || editingId !== null || branch.name === '전체'}
+                      title={branch.name === '전체' ? '전체 지점은 삭제할 수 없습니다' : ''}
                     >
                       삭제
                     </DeleteButton>

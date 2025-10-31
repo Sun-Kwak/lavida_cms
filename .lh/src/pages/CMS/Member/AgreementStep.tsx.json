@@ -3,7 +3,7 @@
     "activeCommit": 0,
     "commits": [
         {
-            "activePatchIndex": 7,
+            "activePatchIndex": 8,
             "patches": [
                 {
                     "date": 1760248001088,
@@ -36,6 +36,10 @@
                 {
                     "date": 1760252977305,
                     "content": "Index: \n===================================================================\n--- \n+++ \n@@ -169,9 +169,9 @@\n       <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '24px' }}>\n         <StepTitle>동의 및 서명</StepTitle>\n         <Button \n           variant=\"outline\" \n-          onClick={() => openPreviewWindow(formData)}\n+          onClick={async () => await openPreviewWindow(formData)}\n           style={{ padding: '8px 16px', fontSize: '14px' }}\n         >\n           전체 미리보기\n         </Button>\n"
+                },
+                {
+                    "date": 1761912999992,
+                    "content": "Index: \n===================================================================\n--- \n+++ \n@@ -40,9 +40,9 @@\n       \n       setLoading(true);\n       try {\n         console.log('약관 로딩 시작...');\n-        const documents = await dbManager.getAllTermsDocuments();\n+        const documents = await dbManager.terms.getAllTermsDocuments();\n         console.log('DB에서 가져온 약관 수:', documents.length);\n         console.log('모든 약관:', documents);\n         \n         // 활성 문서만 필터링\n"
                 }
             ],
             "date": 1760248001088,

@@ -255,8 +255,8 @@ const JoinInfoStep: React.FC<StepProps> = ({ formData, onUpdate }) => {
             onSelectItem={handleStaffSelect}
             onClear={handleStaffClear}
             results={staffSearchResults}
-            label="담당 직원"
             placeholder="직원 이름, 로그인ID, 직급, 직책으로 검색하세요"
+            header="직원 검색"
           />
         </FormField>
 
@@ -292,13 +292,15 @@ const JoinInfoStep: React.FC<StepProps> = ({ formData, onUpdate }) => {
             <Label>지인추천인 *</Label>
             {formData.joinInfo.referrerName ? (
               <div style={{
-                padding: '12px',
+                height: '48px',
+                padding: '0 16px',
                 border: '1px solid #ddd',
-                borderRadius: '8px',
+                borderRadius: '12px',
                 backgroundColor: '#f8f9fa',
                 display: 'flex',
                 justifyContent: 'space-between',
-                alignItems: 'center'
+                alignItems: 'center',
+                boxSizing: 'border-box'
               }}>
                 <span>{formData.joinInfo.referrerName}</span>
                 <button
@@ -309,7 +311,11 @@ const JoinInfoStep: React.FC<StepProps> = ({ formData, onUpdate }) => {
                     border: 'none',
                     cursor: 'pointer',
                     color: '#dc3545',
-                    fontSize: '16px'
+                    fontSize: '16px',
+                    padding: '4px',
+                    display: 'flex',
+                    alignItems: 'center',
+                    justifyContent: 'center'
                   }}
                 >
                   ✕
@@ -324,8 +330,8 @@ const JoinInfoStep: React.FC<StepProps> = ({ formData, onUpdate }) => {
                 onSelectItem={handleReferrerSelect}
                 onClear={handleReferrerClear}
                 results={referrerSearchResults}
-                label="지인추천인"
                 placeholder="추천인 이름, 연락처, 이메일, 로그인ID로 검색하세요"
+                header="지인추천인 검색"
               />
             )}
           </FormField>
@@ -344,19 +350,19 @@ const JoinInfoStep: React.FC<StepProps> = ({ formData, onUpdate }) => {
         {formData.joinInfo.enableLogin && (
           <>
             <FormField>
+              <Label>로그인 아이디 *</Label>
               <AppIdTextField
                 value={formData.joinInfo.loginId}
                 onChange={(e) => handleInputChange('loginId', e.target.value)}
-                label="로그인 아이디"
               />
             </FormField>
 
             <FormField>
+              <Label>로그인 비밀번호 *</Label>
               <AppPwdTextField
                 value={formData.joinInfo.loginPassword || ''} // null인 경우 빈 문자열로 변환
                 onChange={(e) => handleInputChange('loginPassword', e.target.value)}
                 fieldType={PwdFieldType.PASSWORD}
-                label="로그인 비밀번호"
               />
             </FormField>
           </>

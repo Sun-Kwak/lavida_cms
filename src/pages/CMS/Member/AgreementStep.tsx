@@ -41,7 +41,7 @@ const AgreementStep: React.FC<StepProps> = ({ formData, onUpdate }) => {
       setLoading(true);
       try {
         console.log('약관 로딩 시작...');
-        const documents = await dbManager.getAllTermsDocuments();
+        const documents = await dbManager.terms.getAllTermsDocuments();
         console.log('DB에서 가져온 약관 수:', documents.length);
         console.log('모든 약관:', documents);
         

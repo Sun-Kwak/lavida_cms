@@ -73,7 +73,7 @@ const ServiceTerms: React.FC = () => {
   const loadDocument = useCallback(async () => {
     try {
       setIsLoading(true);
-      const activeDoc = await dbManager.getActiveTermsDocument('terms_of_service');
+      const activeDoc = await dbManager.terms.getActiveTermsDocument('terms_of_service');
       if (activeDoc) {
         setCurrentDocument(activeDoc);
         setContent(activeDoc.content);
@@ -103,7 +103,7 @@ const ServiceTerms: React.FC = () => {
       
       if (currentDocument) {
         // 기존 문서 수정
-        const updatedDoc = await dbManager.updateTermsDocument(currentDocument.id, {
+        const updatedDoc = await dbManager.terms.updateTermsDocument(currentDocument.id, {
           title: "서비스 이용약관",
           content: content.trim(),
           isActive: true
@@ -115,7 +115,7 @@ const ServiceTerms: React.FC = () => {
         }
       } else {
         // 새 문서 생성
-        const newDoc = await dbManager.addTermsDocument({
+        const newDoc = await dbManager.terms.addTermsDocument({
           type: 'terms_of_service',
           title: "서비스 이용약관",
           content: content.trim(),

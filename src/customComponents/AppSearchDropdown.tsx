@@ -1,24 +1,63 @@
-import React, { useState, useRef, useEffect, ReactNode } from 'react';
+import React, { useState, ReactNode } from 'react';
 import styled from 'styled-components';
 import { AppColors } from '../styles/colors';
-import { AppTextField } from './AppTextField';
+import Modal from '../components/Modal';
 
 // 스타일 컴포넌트들
+const ClickableInputContainer = styled.div`
+  position: relative;
+  cursor: pointer;
+  
+  &:hover {
+    opacity: 0.8;
+  }
+`;
+
+const SearchContainer = styled.div`
+  position: relative;
+  margin-bottom: 16px;
+`;
+
+const SearchButton = styled.button`
+  position: absolute;
+  right: 12px;
+  top: 50%;
+  transform: translateY(-50%);
+  background: none;
+  border: none;
+  color: ${AppColors.onInput2};
+  cursor: pointer;
+  padding: 4px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border-radius: 4px;
+  transition: all 0.2s ease;
+  
+  &:hover {
+    color: ${AppColors.primary};
+    background-color: ${AppColors.onInput1};
+  }
+  
+  &:disabled {
+    cursor: not-allowed;
+    opacity: 0.5;
+  }
+`;
+
 const CustomSearchContainer = styled.div`
   display: flex;
   flex-direction: column;
   background: white;
   border: 1px solid ${AppColors.onInput1};
   border-radius: 12px;
-  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
-  margin-top: 4px;
-  width: 100%;
-  max-height: 300px;
+  max-height: 400px;
   overflow: hidden;
+  margin-bottom: 20px;
 `;
 
 const ResultsList = styled.div`
-  max-height: 280px;
+  max-height: 350px;
   overflow-y: auto;
   padding: 8px;
   
@@ -123,39 +162,6 @@ const LoadingSpinner = styled.div`
   }
 `;
 
-const SearchInputContainer = styled.div`
-  position: relative;
-  display: flex;
-  align-items: center;
-`;
-
-const SearchButton = styled.button`
-  position: absolute;
-  right: 12px;
-  top: 50%;
-  transform: translateY(-50%);
-  background: none;
-  border: none;
-  color: ${AppColors.onInput2};
-  cursor: pointer;
-  padding: 4px;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  border-radius: 4px;
-  transition: all 0.2s ease;
-  
-  &:hover {
-    color: ${AppColors.primary};
-    background-color: ${AppColors.onInput1};
-  }
-  
-  &:disabled {
-    cursor: not-allowed;
-    opacity: 0.5;
-  }
-`;
-
 const ClearButton = styled.button`
   position: absolute;
   right: 16px;
@@ -236,6 +242,7 @@ export interface AppSearchDropdownProps {
   getItemId?: (item: SearchResultItem) => string | number;
   autoFocus?: boolean;
   language?: 'ko' | 'en';
+  header?: string; // 모달 헤더 제목
   
   // Validation 관련
   isValidSelection?: boolean; // 현재 선택된 값이 유효한지 여부
@@ -262,6 +269,7 @@ export const AppSearchDropdown: React.FC<AppSearchDropdownProps> = ({
   getItemId,
   autoFocus = false,
   language = 'ko',
+  header = '검색', // 기본값 설정
   
   // Validation 관련
   isValidSelection = true,
@@ -271,15 +279,14 @@ export const AppSearchDropdown: React.FC<AppSearchDropdownProps> = ({
   const texts = searchDropdownTexts[language];
   
   // 다국어 적용된 기본값들
-  const finalLabel = label || texts.defaultLabel;
   const finalPlaceholder = placeholder || texts.defaultPlaceholder;
   const finalEmptyMessage = emptyMessage || texts.noResults;
   const finalValidationErrorMessage = validationErrorMessage || texts.validationError;
-  const [isFocused, setIsFocused] = useState(false);
-  const [isSearchMode, setIsSearchMode] = useState(false);
-  const [popupPosition, setPopupPosition] = useState<'left' | 'right'>('left');
+  
+  // 상태 관리
+  const [isModalOpen, setIsModalOpen] = useState(false);
+  const [internalSearchTerm, setInternalSearchTerm] = useState('');
   const [hasSearched, setHasSearched] = useState(false);
-  const inputRef = useRef<HTMLDivElement>(null);
 
   // 기본 함수들
   const defaultGetItemId = (item: SearchResultItem): string | number => {
@@ -295,58 +302,37 @@ export const AppSearchDropdown: React.FC<AppSearchDropdownProps> = ({
     ? finalValidationErrorMessage
     : errorMessage;
 
-  // 드롭다운 표시 조건
-  const shouldShowDropdown = isFocused && isSearchMode && hasSearched && (results.length > 0 || loading || (!loading && results.length === 0));
-
-  // 화면 크기 변경 시 팝업 위치 재계산
-  useEffect(() => {
-    const handleResize = () => {
-      if (shouldShowDropdown && inputRef.current) {
-        const rect = inputRef.current.getBoundingClientRect();
-        const popupWidth = 400;
-        const viewportWidth = window.innerWidth;
-        const rightSpace = viewportWidth - rect.right;
-        
-        if (rightSpace < popupWidth && rect.left > popupWidth) {
-          setPopupPosition('right');
-        } else {
-          setPopupPosition('left');
-        }
-      }
-    };
-
-    window.addEventListener('resize', handleResize);
-    return () => window.removeEventListener('resize', handleResize);
-  }, [shouldShowDropdown]);
-
-  // 검색 모드 진입
-  const enterSearchMode = () => {
+  // 모달 열기
+  const openModal = () => {
     if (disabled) return;
-    setIsSearchMode(true);
+    setIsModalOpen(true);
+    setInternalSearchTerm('');
     setHasSearched(false);
   };
 
-  // 검색 모드 종료
-  const exitSearchMode = () => {
-    setIsSearchMode(false);
+  // 모달 닫기
+  const closeModal = () => {
+    setIsModalOpen(false);
+    setInternalSearchTerm('');
     setHasSearched(false);
-    setIsFocused(false);
   };
 
   // 검색어 변경 핸들러
   const handleSearchTermChange = (e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement>) => {
     const newSearchTerm = e.target.value;
+    setInternalSearchTerm(newSearchTerm);
+    setHasSearched(false);
+    
     if (onSearchTermChange) {
       onSearchTermChange(newSearchTerm);
     }
-    setHasSearched(false);
   };
 
   // 검색 실행
   const handleSearch = () => {
-    if (searchTerm.trim()) {
+    if (internalSearchTerm.trim()) {
       setHasSearched(true);
-      onSearch(searchTerm.trim());
+      onSearch(internalSearchTerm.trim());
     }
   };
 
@@ -355,8 +341,6 @@ export const AppSearchDropdown: React.FC<AppSearchDropdownProps> = ({
     if (e.key === 'Enter') {
       e.preventDefault();
       handleSearch();
-    } else if (e.key === 'Escape') {
-      exitSearchMode();
     }
   };
 
@@ -367,33 +351,9 @@ export const AppSearchDropdown: React.FC<AppSearchDropdownProps> = ({
     handleSearch();
   };
 
-  // 포커스 핸들러
-  const handleFocus = () => {
-    setIsFocused(true);
-    if (inputRef.current) {
-      const rect = inputRef.current.getBoundingClientRect();
-      const popupWidth = 400;
-      const viewportWidth = window.innerWidth;
-      const rightSpace = viewportWidth - rect.right;
-      
-      if (rightSpace < popupWidth && rect.left > popupWidth) {
-        setPopupPosition('right');
-      } else {
-        setPopupPosition('left');
-      }
-    }
-  };
-
-  // 블러 핸들러
-  const handleBlur = () => {
-    setTimeout(() => {
-      setIsFocused(false);
-    }, 150);
-  };
-
   // 아이템 선택
   const handleItemSelect = (item: SearchResultItem) => {
-    exitSearchMode();
+    closeModal();
     
     if (onSelectItem) {
       onSelectItem(item);
@@ -406,7 +366,6 @@ export const AppSearchDropdown: React.FC<AppSearchDropdownProps> = ({
     if (onClear) {
       onClear();
     }
-    exitSearchMode();
   };
 
   // 기본 아이템 렌더링
@@ -464,79 +423,105 @@ export const AppSearchDropdown: React.FC<AppSearchDropdownProps> = ({
   };
 
   return (
-    <div ref={inputRef} style={{ position: 'relative' }}>
-      {!isSearchMode ? (
-        // 선택된 값 표시 모드
-        <div onClick={enterSearchMode} style={{ cursor: disabled ? 'not-allowed' : 'pointer' }}>
-          <AppTextField
-            value={selectedValue}
-            onChange={() => {}}
-            label={finalLabel}
-            placeholder={finalPlaceholder || texts.selectItem}
-            errorMessage={finalErrorMessage}
-            readOnly={true}
-            autoFocus={false}
-          />
-          {selectedValue && !disabled && (
-            <ClearButton onClick={handleClear} title={texts.clearButton}>
-              <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
-                <line x1="18" y1="6" x2="6" y2="18"></line>
-                <line x1="6" y1="6" x2="18" y2="18"></line>
-              </svg>
-            </ClearButton>
-          )}
-        </div>
-      ) : (
-        // 검색 모드
-        <SearchInputContainer
-          onFocus={handleFocus}
-          onBlur={handleBlur}
-          onKeyDown={handleKeyDown}
-        >
-          <AppTextField
-            value={searchTerm}
-            onChange={handleSearchTermChange}
-            label={finalLabel}
-            placeholder={finalPlaceholder}
-            errorMessage={finalErrorMessage}
-            autoFocus={autoFocus}
-          />
-          <SearchButton
-            onClick={handleSearchButtonClick}
-            disabled={disabled || !searchTerm.trim()}
-            title={texts.searchButton}
-          >
-            <svg 
-              width="16" 
-              height="16" 
-              viewBox="0 0 24 24" 
-              fill="none" 
-              stroke="currentColor" 
-              strokeWidth="2" 
-              strokeLinecap="round" 
-              strokeLinejoin="round"
-            >
-              <circle cx="11" cy="11" r="8"></circle>
-              <path d="m21 21-4.35-4.35"></path>
-            </svg>
-          </SearchButton>
-        </SearchInputContainer>
-      )}
-      
-      {shouldShowDropdown && (
-        <CustomSearchContainer
-          style={{ 
-            position: 'absolute', 
-            top: '100%', 
-            ...(popupPosition === 'right' ? { right: 0 } : { left: 0 }),
-            zIndex: 1000 
+    <>
+      <ClickableInputContainer onClick={openModal}>
+        <input
+          value={selectedValue}
+          onChange={() => {}}
+          placeholder={finalPlaceholder}
+          readOnly={true}
+          disabled={disabled}
+          style={{
+            width: '100%',
+            height: '48px',
+            padding: '0 48px 0 16px',
+            border: `1px solid ${finalErrorMessage ? '#dc3545' : '#ddd'}`,
+            borderRadius: '12px',
+            fontSize: '14px',
+            boxSizing: 'border-box',
+            cursor: disabled ? 'not-allowed' : 'pointer',
+            backgroundColor: disabled ? '#f5f5f5' : 'white',
+            color: disabled ? '#999' : '#333',
+            outline: 'none',
+            transition: 'all 0.2s ease'
           }}
-        >
-          <ResultsList>
-            {renderResults()}
-          </ResultsList>
-        </CustomSearchContainer>
-      )}
-    </div>
+        />
+        {finalErrorMessage && (
+          <div style={{ 
+            color: '#dc3545', 
+            fontSize: '12px', 
+            marginTop: '4px',
+            marginLeft: '4px'
+          }}>
+            {finalErrorMessage}
+          </div>
+        )}
+        {selectedValue && !disabled && (
+          <ClearButton onClick={handleClear} title={texts.clearButton}>
+            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+              <line x1="18" y1="6" x2="6" y2="18"></line>
+              <line x1="6" y1="6" x2="18" y2="18"></line>
+            </svg>
+          </ClearButton>
+        )}
+      </ClickableInputContainer>
+
+      <Modal 
+        isOpen={isModalOpen} 
+        onClose={closeModal}
+        header={header}
+        body={
+          <div onKeyDown={handleKeyDown}>
+            <SearchContainer>
+              <input
+                value={internalSearchTerm}
+                onChange={handleSearchTermChange}
+                placeholder={finalPlaceholder}
+                autoFocus={true}
+                style={{
+                  width: '100%',
+                  height: '48px',
+                  padding: '0 48px 0 16px',
+                  border: '1px solid #ddd',
+                  borderRadius: '12px',
+                  fontSize: '14px',
+                  boxSizing: 'border-box',
+                  outline: 'none',
+                  transition: 'all 0.2s ease'
+                }}
+              />
+              <SearchButton
+                onClick={handleSearchButtonClick}
+                disabled={!internalSearchTerm.trim()}
+                title={texts.searchButton}
+              >
+                <svg 
+                  width="16" 
+                  height="16" 
+                  viewBox="0 0 24 24" 
+                  fill="none" 
+                  stroke="currentColor" 
+                  strokeWidth="2" 
+                  strokeLinecap="round" 
+                  strokeLinejoin="round"
+                >
+                  <circle cx="11" cy="11" r="8"></circle>
+                  <path d="m21 21-4.35-4.35"></path>
+                </svg>
+              </SearchButton>
+            </SearchContainer>
+
+            {hasSearched && (
+              <CustomSearchContainer>
+                <ResultsList>
+                  {renderResults()}
+                </ResultsList>
+              </CustomSearchContainer>
+            )}
+          </div>
+        }
+        width="500px"
+      />
+    </>
   );
 };

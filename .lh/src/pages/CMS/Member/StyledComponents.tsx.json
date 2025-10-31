@@ -3,11 +3,15 @@
     "activeCommit": 0,
     "commits": [
         {
-            "activePatchIndex": 0,
+            "activePatchIndex": 1,
             "patches": [
                 {
                     "date": 1760248001089,
                     "content": "Index: \n===================================================================\n--- \n+++ \n"
+                },
+                {
+                    "date": 1761912365265,
+                    "content": "Index: \n===================================================================\n--- \n+++ \n@@ -132,18 +132,27 @@\n   color: ${AppColors.onSurface};\n `;\n \n export const Input = styled.input`\n-  padding: 12px;\n+  height: 48px;\n+  padding: 0 16px;\n   border: 1px solid ${AppColors.borderLight};\n-  border-radius: 8px;\n+  border-radius: 12px;\n   font-size: ${AppTextStyles.body1.fontSize};\n   outline: none;\n+  box-sizing: border-box;\n+  transition: all 0.2s ease;\n   \n   &:focus {\n     border-color: ${AppColors.primary};\n+    box-shadow: 0 0 0 3px rgba(55, 187, 214, 0.1);\n   }\n   \n+  &:hover {\n+    border-color: ${AppColors.primary};\n+    box-shadow: 0 2px 8px rgba(55, 187, 214, 0.1);\n+  }\n+  \n   &::placeholder {\n     color: ${AppColors.onInput1};\n   }\n `;\n"
                 }
             ],
             "date": 1760248001089,

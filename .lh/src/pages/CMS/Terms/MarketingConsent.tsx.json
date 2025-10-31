@@ -3,11 +3,15 @@
     "activeCommit": 0,
     "commits": [
         {
-            "activePatchIndex": 0,
+            "activePatchIndex": 1,
             "patches": [
                 {
                     "date": 1760165251561,
                     "content": "Index: \n===================================================================\n--- \n+++ \n"
+                },
+                {
+                    "date": 1761911068734,
+                    "content": "Index: \n===================================================================\n--- \n+++ \n@@ -15,9 +15,9 @@\n   // 문서 로딩\n   const loadDocument = useCallback(async () => {\n     try {\n       setIsLoading(true);\n-      const activeDoc = await dbManager.getActiveTermsDocument('marketing_consent');\n+      const activeDoc = await dbManager.terms.getActiveTermsDocument('marketing_consent');\n       if (activeDoc) {\n         setCurrentDocument(activeDoc);\n         setContent(activeDoc.content);\n         devLog(\"마케팅 활용 동의 문서 로딩:\", activeDoc);\n@@ -45,9 +45,9 @@\n       setIsLoading(true);\n       \n       if (currentDocument) {\n         // 기존 문서 수정\n-        const updatedDoc = await dbManager.updateTermsDocument(currentDocument.id, {\n+        const updatedDoc = await dbManager.terms.updateTermsDocument(currentDocument.id, {\n           title: \"마케팅 활용 동의\",\n           content: content.trim(),\n           isActive: true\n         });\n@@ -57,9 +57,9 @@\n           toast.success(\"마케팅 활용 동의가 성공적으로 수정되었습니다!\");\n         }\n       } else {\n         // 새 문서 생성\n-        const newDoc = await dbManager.addTermsDocument({\n+        const newDoc = await dbManager.terms.addTermsDocument({\n           type: 'marketing_consent',\n           title: \"마케팅 활용 동의\",\n           content: content.trim(),\n           isActive: true\n"
                 }
             ],
             "date": 1760165251561,

@@ -16,7 +16,7 @@ const MarketingConsent: React.FC = () => {
   const loadDocument = useCallback(async () => {
     try {
       setIsLoading(true);
-      const activeDoc = await dbManager.getActiveTermsDocument('marketing_consent');
+      const activeDoc = await dbManager.terms.getActiveTermsDocument('marketing_consent');
       if (activeDoc) {
         setCurrentDocument(activeDoc);
         setContent(activeDoc.content);
@@ -46,7 +46,7 @@ const MarketingConsent: React.FC = () => {
       
       if (currentDocument) {
         // 기존 문서 수정
-        const updatedDoc = await dbManager.updateTermsDocument(currentDocument.id, {
+        const updatedDoc = await dbManager.terms.updateTermsDocument(currentDocument.id, {
           title: "마케팅 활용 동의",
           content: content.trim(),
           isActive: true
@@ -58,7 +58,7 @@ const MarketingConsent: React.FC = () => {
         }
       } else {
         // 새 문서 생성
-        const newDoc = await dbManager.addTermsDocument({
+        const newDoc = await dbManager.terms.addTermsDocument({
           type: 'marketing_consent',
           title: "마케팅 활용 동의",
           content: content.trim(),
