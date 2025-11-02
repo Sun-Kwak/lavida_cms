@@ -256,32 +256,34 @@ const BreakTimeItem = styled.div`
 `;
 */
 
-const TimeInput = styled.input`
-  width: 50px;
-  padding: 6px 8px;
+
+const TimeSelectContainer = styled.div`
+  display: flex;
+  align-items: center;
+  gap: 4px;
+`;
+
+const TimeSelect = styled.select`
+  padding: 4px 6px;
   border: 1px solid #ddd;
   border-radius: 4px;
-  text-align: center;
   font-size: 0.9rem;
   font-weight: 500;
+  background-color: white;
   
   &:focus {
     outline: none;
     border-color: ${AppColors.primary};
     box-shadow: 0 0 0 2px ${AppColors.primary}20;
   }
-  
-  /* Hide number input spinners */
-  &::-webkit-outer-spin-button,
-  &::-webkit-inner-spin-button {
-    -webkit-appearance: none;
-    margin: 0;
-  }
-  
-  &[type=number] {
-    appearance: textfield;
-    -moz-appearance: textfield;
-  }
+`;
+
+const HourSelect = styled(TimeSelect)`
+  width: 50px;
+`;
+
+const MinuteSelect = styled(TimeSelect)`
+  width: 50px;
 `;
 
 // DayDate component removed - date now included in day label
@@ -369,70 +371,24 @@ const AddBreakTimeButton = styled.button`
   }
 `;
 
-const TimeSettingsSection = styled.div`
-  margin-bottom: 20px;
-  background-color: ${AppColors.background};
-  border-radius: 8px;
-  padding: 12px;
-  border: 1px solid ${AppColors.borderLight};
-`;
-
-const TimeSettingsTitle = styled.h4`
-  font-size: ${AppTextStyles.body1.fontSize};
-  font-weight: 600;
-  color: ${AppColors.onSurface};
-  margin: 0;
-  display: flex;
-  justify-content: space-between;
-  align-items: center;
-  flex-wrap: wrap;
-  gap: 12px;
-`;
-
-const TimeInputContainer = styled.div`
-  display: flex;
-  align-items: center;
-  gap: 12px;
+const ApplyToAllButton = styled.button`
+  background: #f3e5f5;
+  border: 1px solid #9c27b0;
+  color: #9c27b0;
+  padding: 4px 8px;
+  border-radius: 4px;
+  font-size: 0.7rem;
+  cursor: pointer;
+  font-weight: 500;
+  margin-left: 8px;
   
-  label {
-    font-size: 0.9rem;
-    color: ${AppColors.onSurface};
-    font-weight: 500;
-    min-width: 70px;
-  }
-  
-  input {
-    width: 60px;
-    padding: 8px 10px;
-    border: 1px solid ${AppColors.borderLight};
-    border-radius: 4px;
-    text-align: center;
-    font-size: 0.9rem;
-    font-weight: 500;
-    
-    &:focus {
-      outline: none;
-      border-color: ${AppColors.primary};
-      box-shadow: 0 0 0 2px ${AppColors.primary}20;
-    }
-  }
-  
-  span {
-    color: ${AppColors.onSurface + '80'};
-    font-size: 0.9rem;
+  &:hover {
+    background: #9c27b0;
+    color: white;
   }
 `;
 
-const TimeInputRow = styled.div`
-  display: flex;
-  gap: 20px;
-  flex-wrap: wrap;
-  
-  @media (max-width: 480px) {
-    flex-direction: column;
-    gap: 12px;
-  }
-`;
+
 
 const Button = styled.button<{ $variant: 'primary' | 'secondary'; $disabled?: boolean }>`
   padding: 10px 20px;
@@ -470,6 +426,21 @@ const WeeklyHolidayModal: React.FC<WeeklyHolidayModalProps> = ({
   onSave,
   existingWeeklyHolidays = []
 }) => {
+
+
+  // 분을 시와 분으로 분리하는 함수
+  const minutesToHourMinute = (minutes: number): { hour: number; minute: number } => {
+    const hour = Math.floor(minutes / 60);
+    const minute = minutes % 60;
+    return { hour, minute };
+  };
+
+  // 시와 분을 분으로 변환하는 함수
+  const hourMinuteToMinutes = (hour: number, minute: number): number => {
+    return hour * 60 + minute;
+  };
+
+
   const [selectedStaffIds, setSelectedStaffIds] = useState<string[]>([]);
   const [currentWeekStartDate, setCurrentWeekStartDate] = useState('');
   const [weekDaySettings, setWeekDaySettings] = useState<{
@@ -483,78 +454,78 @@ const WeeklyHolidayModal: React.FC<WeeklyHolidayModalProps> = ({
   }>({
     monday: {
       isHoliday: false,
-      workingHours: { start: 9, end: 21 },
+      workingHours: { start: 540, end: 1260 }, // 09:00 ~ 21:00 (분 단위)
       breakTimes: []
     },
     tuesday: {
       isHoliday: false,
-      workingHours: { start: 9, end: 21 },
+      workingHours: { start: 540, end: 1260 },
       breakTimes: []
     },
     wednesday: {
       isHoliday: false,
-      workingHours: { start: 9, end: 21 },
+      workingHours: { start: 540, end: 1260 },
       breakTimes: []
     },
     thursday: {
       isHoliday: false,
-      workingHours: { start: 9, end: 21 },
+      workingHours: { start: 540, end: 1260 },
       breakTimes: []
     },
     friday: {
       isHoliday: false,
-      workingHours: { start: 9, end: 21 },
+      workingHours: { start: 540, end: 1260 },
       breakTimes: []
     },
     saturday: {
       isHoliday: true,  // 기본값: 주말 휴일
-      workingHours: { start: 9, end: 21 },
+      workingHours: { start: 540, end: 1260 },
       breakTimes: []
     },
     sunday: {
       isHoliday: true,  // 기본값: 주말 휴일
-      workingHours: { start: 9, end: 21 },
+      workingHours: { start: 540, end: 1260 },
       breakTimes: []
     }
   });
-  const [defaultStartTime, setDefaultStartTime] = useState(9);
-  const [defaultEndTime, setDefaultEndTime] = useState(21);
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
   // 현재 설정 가능한 주의 월요일 날짜 계산
+  // 휴일설정은 이번주 토요일부터 다음주 금요일까지에 대한 결정
   const getCurrentSettableWeekStartDate = (): string => {
     const today = new Date();
     const dayOfWeek = today.getDay(); // 0: 일요일, 1: 월요일, ..., 5: 금요일, 6: 토요일
     
-    let targetWeek: Date;
+    // 이번주 토요일 계산
+    let thisWeekSaturday = new Date(today);
+    const daysUntilSaturday = 6 - dayOfWeek; // 토요일까지 남은 일수 (토요일이면 0)
+    thisWeekSaturday.setDate(today.getDate() + daysUntilSaturday);
     
-    if (dayOfWeek >= 0 && dayOfWeek <= 5) {
-      // 일요일부터 금요일까지: 다음주 설정 가능
-      targetWeek = new Date(today);
-      const daysUntilNextMonday = dayOfWeek === 0 ? 1 : 8 - dayOfWeek;
-      targetWeek.setDate(today.getDate() + daysUntilNextMonday);
-    } else {
-      // 토요일(6): 그 다음주 설정 가능 (다다음주)
-      targetWeek = new Date(today);
-      const daysUntilNextNextMonday = 2; // 토요일 기준으로 2일 후가 다다음주 월요일
-      targetWeek.setDate(today.getDate() + daysUntilNextNextMonday);
-    }
+    // 토요일부터 시작하는 주의 월요일 계산 (토요일 + 2일)
+    const targetMonday = new Date(thisWeekSaturday);
+    targetMonday.setDate(thisWeekSaturday.getDate() + 2); // 토요일 + 2일 = 월요일
     
-    return targetWeek.toISOString().split('T')[0];
+    return targetMonday.toISOString().split('T')[0];
   };
   
-  // 주 날짜 범위 표시
+  // 주 날짜 범위 표시 (토요일부터 금요일까지)
   const getWeekDateRange = (): string => {
-    const startDate = new Date(currentWeekStartDate + 'T00:00:00');
-    const endDate = new Date(startDate);
-    endDate.setDate(startDate.getDate() + 6);
+    const mondayDate = new Date(currentWeekStartDate + 'T00:00:00');
+    
+    // 월요일에서 토요일로 이동 (월요일 - 2일 = 토요일)
+    const saturdayDate = new Date(mondayDate);
+    saturdayDate.setDate(mondayDate.getDate() - 2);
+    
+    // 토요일에서 금요일로 이동 (토요일 + 6일 = 금요일)
+    const fridayDate = new Date(saturdayDate);
+    fridayDate.setDate(saturdayDate.getDate() + 6);
     
     const formatDate = (date: Date) => {
       return `${date.getMonth() + 1}/${date.getDate()}`;
     };
     
-    return `${formatDate(startDate)} - ${formatDate(endDate)}`;
+    return `${formatDate(saturdayDate)} - ${formatDate(fridayDate)}`;
   };
 
   // 초기화
@@ -577,16 +548,6 @@ const WeeklyHolidayModal: React.FC<WeeklyHolidayModalProps> = ({
       } else if (currentUser?.id) {
         console.log('Setting selectedStaffIds to current user:', currentUser.id);
         setSelectedStaffIds([currentUser.id]);
-      }
-
-      // 기본 근무시간 설정 (첫 번째 선택된 직원 기준)
-      const firstStaffId = staffId || selectedStaffIds[0];
-      if (firstStaffId) {
-        const staff = staffList.find(s => s.id === firstStaffId);
-        if (staff?.workingHours) {
-          setDefaultStartTime(staff.workingHours.start);
-          setDefaultEndTime(staff.workingHours.end);
-        }
       }
 
       setError(null);
@@ -614,7 +575,7 @@ const WeeklyHolidayModal: React.FC<WeeklyHolidayModalProps> = ({
             
             acc[dayKey] = {
               isHoliday: existingDay?.isHoliday ?? false,
-              workingHours: existingDay?.workingHours ?? { start: 9, end: 21 },
+              workingHours: existingDay?.workingHours ?? { start: 540, end: 1260 }, // 기본값: 09:00 ~ 21:00
               breakTimes: (existingDay?.breakTimes ?? []).map(bt => ({
                 start: bt.start,
                 end: bt.end,
@@ -634,44 +595,44 @@ const WeeklyHolidayModal: React.FC<WeeklyHolidayModalProps> = ({
         setWeekDaySettings({
           monday: {
             isHoliday: false,
-            workingHours: { start: defaultStartTime, end: defaultEndTime },
+            workingHours: { start: 540, end: 1260 }, // 09:00 ~ 21:00
             breakTimes: []
           },
           tuesday: {
             isHoliday: false,
-            workingHours: { start: defaultStartTime, end: defaultEndTime },
+            workingHours: { start: 540, end: 1260 },
             breakTimes: []
           },
           wednesday: {
             isHoliday: false,
-            workingHours: { start: defaultStartTime, end: defaultEndTime },
+            workingHours: { start: 540, end: 1260 },
             breakTimes: []
           },
           thursday: {
             isHoliday: false,
-            workingHours: { start: defaultStartTime, end: defaultEndTime },
+            workingHours: { start: 540, end: 1260 },
             breakTimes: []
           },
           friday: {
             isHoliday: false,
-            workingHours: { start: defaultStartTime, end: defaultEndTime },
+            workingHours: { start: 540, end: 1260 },
             breakTimes: []
           },
           saturday: {
             isHoliday: true,
-            workingHours: { start: defaultStartTime, end: defaultEndTime },
+            workingHours: { start: 540, end: 1260 },
             breakTimes: []
           },
           sunday: {
             isHoliday: true,
-            workingHours: { start: defaultStartTime, end: defaultEndTime },
+            workingHours: { start: 540, end: 1260 },
             breakTimes: []
           }
         });
       }
     }
   // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [isOpen, currentWeekStartDate, selectedStaffIds, existingWeeklyHolidays, defaultStartTime, defaultEndTime]);
+  }, [isOpen, currentWeekStartDate, selectedStaffIds, existingWeeklyHolidays]);
 
   const handleStaffToggle = (staffId: string) => {
     setSelectedStaffIds(prev => 
@@ -696,53 +657,55 @@ const WeeklyHolidayModal: React.FC<WeeklyHolidayModalProps> = ({
     });
   };
 
-  const handleWorkingHoursChange = (day: keyof typeof weekDaySettings, field: 'start' | 'end', value: number) => {
+
+
+  // 드롭다운용 시간 변경 핸들러
+  const handleTimeDropdownChange = (
+    day: keyof typeof weekDaySettings, 
+    field: 'start' | 'end', 
+    type: 'hour' | 'minute', 
+    value: string
+  ) => {
+    const currentTime = minutesToHourMinute(weekDaySettings[day].workingHours[field]);
+    let newHour = currentTime.hour;
+    let newMinute = currentTime.minute;
+    
+    if (type === 'hour') {
+      newHour = parseInt(value, 10);
+    } else {
+      newMinute = parseInt(value, 10);
+    }
+    
+    const newMinutes = hourMinuteToMinutes(newHour, newMinute);
+    
+    // 시작 시간이 종료 시간보다 늦지 않도록 검증
+    const otherField = field === 'start' ? 'end' : 'start';
+    const otherTime = weekDaySettings[day].workingHours[otherField];
+    
+    let finalMinutes = newMinutes;
+    if (field === 'start' && newMinutes >= otherTime) {
+      finalMinutes = otherTime - 30; // 최소 30분 차이
+      if (finalMinutes < 0) finalMinutes = 0;
+    } else if (field === 'end' && newMinutes <= otherTime) {
+      finalMinutes = otherTime + 30; // 최소 30분 차이
+      if (finalMinutes >= 24 * 60) finalMinutes = 24 * 60 - 30;
+    }
+    
     setWeekDaySettings(prev => ({
       ...prev,
       [day]: {
         ...prev[day],
         workingHours: {
           ...prev[day].workingHours,
-          [field]: value
+          [field]: finalMinutes
         }
       }
     }));
   };
 
-  // 시간 입력 처리 함수 추가
-  const handleTimeInputChange = (
-    value: string, 
-    onChange: (value: number) => void
-  ) => {
-    // 숫자만 허용
-    const numericValue = value.replace(/[^0-9]/g, '');
-    
-    if (numericValue === '') {
-      onChange(1); // 빈 값일 때 최소값으로 설정
-      return;
-    }
-    
-    const num = parseInt(numericValue, 10);
-    
-    // 1-24 범위로 제한
-    if (num >= 1 && num <= 24) {
-      onChange(num);
-    } else if (num > 24) {
-      onChange(24);
-    } else if (num < 1) {
-      onChange(1);
-    }
-  };
 
-  const handleDefaultTimeChange = (field: 'start' | 'end', value: string) => {
-    handleTimeInputChange(value, (num) => {
-      if (field === 'start') {
-        setDefaultStartTime(num);
-      } else {
-        setDefaultEndTime(num);
-      }
-    });
-  };
+
+
 
   const handleAddBreakTime = (day: keyof typeof weekDaySettings) => {
     setWeekDaySettings(prev => ({
@@ -751,7 +714,7 @@ const WeeklyHolidayModal: React.FC<WeeklyHolidayModalProps> = ({
         ...prev[day],
         breakTimes: [
           ...prev[day].breakTimes,
-          { start: 12, end: 13, name: '점심시간' }
+          { start: 720, end: 780, name: '점심시간' } // 12:00 ~ 13:00
         ]
       }
     }));
@@ -767,11 +730,89 @@ const WeeklyHolidayModal: React.FC<WeeklyHolidayModalProps> = ({
       ...prev,
       [day]: {
         ...prev[day],
-        breakTimes: prev[day].breakTimes.map((breakTime, i) => 
-          i === index ? { ...breakTime, [field]: value } : breakTime
+        breakTimes: prev[day].breakTimes.map((breakTime, i) => {
+          if (i === index) {
+            if (field === 'start' || field === 'end') {
+              // 시간 필드인 경우 숫자 그대로 사용 (이미 분 단위)
+              const timeValue = typeof value === 'number' ? value : parseInt(value as string, 10);
+              return { ...breakTime, [field]: timeValue };
+            } else {
+              // 이름 필드인 경우 그대로
+              return { ...breakTime, [field]: value };
+            }
+          }
+          return breakTime;
+        })
+      }
+    }));
+  };
+
+  // 휴게시간용 드롭다운 변경 핸들러
+  const handleBreakTimeDropdownChange = (
+    day: keyof typeof weekDaySettings, 
+    index: number, 
+    field: 'start' | 'end', 
+    type: 'hour' | 'minute', 
+    value: string
+  ) => {
+    const breakTime = weekDaySettings[day].breakTimes[index];
+    if (!breakTime) return;
+    
+    const currentTime = minutesToHourMinute(breakTime[field]);
+    let newHour = currentTime.hour;
+    let newMinute = currentTime.minute;
+    
+    if (type === 'hour') {
+      newHour = parseInt(value, 10);
+    } else {
+      newMinute = parseInt(value, 10);
+    }
+    
+    const newMinutes = hourMinuteToMinutes(newHour, newMinute);
+    
+    // 시작 시간이 종료 시간보다 늦지 않도록 검증
+    const otherField = field === 'start' ? 'end' : 'start';
+    const otherTime = breakTime[otherField];
+    
+    let finalMinutes = newMinutes;
+    if (field === 'start' && newMinutes >= otherTime) {
+      finalMinutes = otherTime - 30;
+      if (finalMinutes < 0) finalMinutes = 0;
+    } else if (field === 'end' && newMinutes <= otherTime) {
+      finalMinutes = otherTime + 30;
+      if (finalMinutes >= 24 * 60) finalMinutes = 24 * 60 - 30;
+    }
+    
+    setWeekDaySettings(prev => ({
+      ...prev,
+      [day]: {
+        ...prev[day],
+        breakTimes: prev[day].breakTimes.map((bt, i) => 
+          i === index ? { ...bt, [field]: finalMinutes } : bt
         )
       }
     }));
+  };
+
+  const handleApplyToAll = (sourceDay: keyof typeof weekDaySettings) => {
+    const sourceSettings = weekDaySettings[sourceDay];
+    const allDayKeys: (keyof typeof weekDaySettings)[] = ['monday', 'tuesday', 'wednesday', 'thursday', 'friday', 'saturday', 'sunday'];
+    
+    setWeekDaySettings(prev => {
+      const newSettings = { ...prev };
+      
+      allDayKeys.forEach(dayKey => {
+        if (dayKey !== sourceDay) {
+          newSettings[dayKey] = {
+            ...newSettings[dayKey],
+            workingHours: { ...sourceSettings.workingHours },
+            breakTimes: sourceSettings.breakTimes.map(bt => ({ ...bt }))
+          };
+        }
+      });
+      
+      return newSettings;
+    });
   };
 
   const handleRemoveBreakTime = (day: keyof typeof weekDaySettings, index: number) => {
@@ -817,13 +858,13 @@ const WeeklyHolidayModal: React.FC<WeeklyHolidayModalProps> = ({
   if (!isOpen) return null;
 
   const dayLabels = [
+    { key: 'saturday' as const, label: '토요일', isWeekend: true },
+    { key: 'sunday' as const, label: '일요일', isWeekend: true },
     { key: 'monday' as const, label: '월요일', isWeekend: false },
     { key: 'tuesday' as const, label: '화요일', isWeekend: false },
     { key: 'wednesday' as const, label: '수요일', isWeekend: false },
     { key: 'thursday' as const, label: '목요일', isWeekend: false },
-    { key: 'friday' as const, label: '금요일', isWeekend: false },
-    { key: 'saturday' as const, label: '토요일', isWeekend: true },
-    { key: 'sunday' as const, label: '일요일', isWeekend: true }
+    { key: 'friday' as const, label: '금요일', isWeekend: false }
   ];
 
   return (
@@ -860,50 +901,7 @@ const WeeklyHolidayModal: React.FC<WeeklyHolidayModalProps> = ({
             </StaffSelector>
           )}
 
-          {/* 기본 근무시간 설정 */}
-          <TimeSettingsSection>
-            <TimeSettingsTitle>
-              기본 근무시간
-              <TimeInputRow>
-                <TimeInputContainer>
-                  <label>시작:</label>
-                  <input
-                    type="text"
-                    value={defaultStartTime}
-                    onChange={(e) => handleDefaultTimeChange('start', e.target.value)}
-                    style={{
-                      width: '60px',
-                      padding: '8px 10px',
-                      border: `1px solid ${AppColors.borderLight}`,
-                      borderRadius: '4px',
-                      textAlign: 'center',
-                      fontSize: '0.9rem',
-                      fontWeight: '500'
-                    }}
-                  />
-                  <span>시</span>
-                </TimeInputContainer>
-                <TimeInputContainer>
-                  <label>종료:</label>
-                  <input
-                    type="text"
-                    value={defaultEndTime}
-                    onChange={(e) => handleDefaultTimeChange('end', e.target.value)}
-                    style={{
-                      width: '60px',
-                      padding: '8px 10px',
-                      border: `1px solid ${AppColors.borderLight}`,
-                      borderRadius: '4px',
-                      textAlign: 'center',
-                      fontSize: '0.9rem',
-                      fontWeight: '500'
-                    }}
-                  />
-                  <span>시</span>
-                </TimeInputContainer>
-              </TimeInputRow>
-            </TimeSettingsTitle>
-          </TimeSettingsSection>
+
 
           {/* 주별 휴일설정 */}
           <WeekSection>
@@ -914,15 +912,7 @@ const WeeklyHolidayModal: React.FC<WeeklyHolidayModalProps> = ({
             </WeekHeader>
             
             <div style={{ fontSize: '14px', marginBottom: '12px', color: AppColors.onSurface + '80' }}>
-              {(() => {
-                const today = new Date();
-                const dayOfWeek = today.getDay();
-                if (dayOfWeek >= 0 && dayOfWeek <= 5) {
-                  return '금요일 오후 6시 전까지 다음주 휴일과 근무시간을 설정할 수 있습니다.';
-                } else {
-                  return '토요일이므로 그 다음주 휴일과 근무시간을 설정할 수 있습니다.';
-                }
-              })()}
+              휴일설정은 다음 토요일부터 그 다음주 금요일까지에 대한 결정입니다.
               <br />
               체크하면 휴일, 체크 해제하면 근무일입니다.
             </div>
@@ -930,8 +920,17 @@ const WeeklyHolidayModal: React.FC<WeeklyHolidayModalProps> = ({
             <WeekDaysContainer>
               {dayLabels.map(({ key, label, isWeekend }) => {
                 const daySettings = weekDaySettings[key];
-                const currentDate = new Date(currentWeekStartDate);
-                currentDate.setDate(currentDate.getDate() + ['sunday', 'monday', 'tuesday', 'wednesday', 'thursday', 'friday', 'saturday'].indexOf(key));
+                
+                // 토요일부터 시작하는 주간에서 각 요일의 날짜 계산
+                const mondayDate = new Date(currentWeekStartDate);
+                const saturdayDate = new Date(mondayDate);
+                saturdayDate.setDate(mondayDate.getDate() - 2); // 월요일 - 2일 = 토요일
+                
+                // 토요일부터의 요일 순서로 계산
+                const dayOrder = ['saturday', 'sunday', 'monday', 'tuesday', 'wednesday', 'thursday', 'friday'];
+                const dayIndex = dayOrder.indexOf(key);
+                const currentDate = new Date(saturdayDate);
+                currentDate.setDate(saturdayDate.getDate() + dayIndex);
                 
                 return (
                   <WeekDay key={key} $isWeekend={isWeekend} $isHoliday={daySettings.isHoliday}>
@@ -955,28 +954,50 @@ const WeeklyHolidayModal: React.FC<WeeklyHolidayModalProps> = ({
                       <WorkingHoursSection $isVisible={!daySettings.isHoliday}>
                         <WorkingHoursLabel>
                           근무 시간
-                          <WorkingHoursInputs>
-                            <TimeInput
-                              type="text"
-                              value={daySettings.workingHours.start}
-                              onChange={(e: React.ChangeEvent<HTMLInputElement>) => {
-                                handleTimeInputChange(e.target.value, (num) => {
-                                  handleWorkingHoursChange(key, 'start', num);
-                                });
-                              }}
-                            />
-                            <span>시 ~</span>
-                            <TimeInput
-                              type="text"
-                              value={daySettings.workingHours.end}
-                              onChange={(e: React.ChangeEvent<HTMLInputElement>) => {
-                                handleTimeInputChange(e.target.value, (num) => {
-                                  handleWorkingHoursChange(key, 'end', num);
-                                });
-                              }}
-                            />
-                            <span>시</span>
-                          </WorkingHoursInputs>
+                          <div style={{ display: 'flex', alignItems: 'center' }}>
+                            <WorkingHoursInputs>
+                              <TimeSelectContainer>
+                                <HourSelect
+                                  value={minutesToHourMinute(daySettings.workingHours.start).hour}
+                                  onChange={(e) => handleTimeDropdownChange(key, 'start', 'hour', e.target.value)}
+                                >
+                                  {Array.from({ length: 24 }, (_, i) => i + 1).map(hour => (
+                                    <option key={hour} value={hour}>{String(hour).padStart(2, '0')}</option>
+                                  ))}
+                                </HourSelect>
+                                <span>:</span>
+                                <MinuteSelect
+                                  value={minutesToHourMinute(daySettings.workingHours.start).minute}
+                                  onChange={(e) => handleTimeDropdownChange(key, 'start', 'minute', e.target.value)}
+                                >
+                                  <option value={0}>00</option>
+                                  <option value={30}>30</option>
+                                </MinuteSelect>
+                              </TimeSelectContainer>
+                              <span>~</span>
+                              <TimeSelectContainer>
+                                <HourSelect
+                                  value={minutesToHourMinute(daySettings.workingHours.end).hour}
+                                  onChange={(e) => handleTimeDropdownChange(key, 'end', 'hour', e.target.value)}
+                                >
+                                  {Array.from({ length: 24 }, (_, i) => i + 1).map(hour => (
+                                    <option key={hour} value={hour}>{String(hour).padStart(2, '0')}</option>
+                                  ))}
+                                </HourSelect>
+                                <span>:</span>
+                                <MinuteSelect
+                                  value={minutesToHourMinute(daySettings.workingHours.end).minute}
+                                  onChange={(e) => handleTimeDropdownChange(key, 'end', 'minute', e.target.value)}
+                                >
+                                  <option value={0}>00</option>
+                                  <option value={30}>30</option>
+                                </MinuteSelect>
+                              </TimeSelectContainer>
+                            </WorkingHoursInputs>
+                            <ApplyToAllButton onClick={() => handleApplyToAll(key)}>
+                              모두적용
+                            </ApplyToAllButton>
+                          </div>
                         </WorkingHoursLabel>
                         
                         <BreakTimesSection>
@@ -994,26 +1015,43 @@ const WeeklyHolidayModal: React.FC<WeeklyHolidayModalProps> = ({
                                 value={breakTime.name}
                                 onChange={(e: React.ChangeEvent<HTMLInputElement>) => handleBreakTimeChange(key, index, 'name', e.target.value)}
                               />
-                              <TimeInput
-                                type="text"
-                                value={breakTime.start}
-                                onChange={(e: React.ChangeEvent<HTMLInputElement>) => {
-                                  handleTimeInputChange(e.target.value, (num) => {
-                                    handleBreakTimeChange(key, index, 'start', num);
-                                  });
-                                }}
-                              />
-                              <span>시 ~</span>
-                              <TimeInput
-                                type="text"
-                                value={breakTime.end}
-                                onChange={(e: React.ChangeEvent<HTMLInputElement>) => {
-                                  handleTimeInputChange(e.target.value, (num) => {
-                                    handleBreakTimeChange(key, index, 'end', num);
-                                  });
-                                }}
-                              />
-                              <span>시</span>
+                              <TimeSelectContainer>
+                                <HourSelect
+                                  value={minutesToHourMinute(breakTime.start).hour}
+                                  onChange={(e) => handleBreakTimeDropdownChange(key, index, 'start', 'hour', e.target.value)}
+                                >
+                                  {Array.from({ length: 24 }, (_, i) => i + 1).map(hour => (
+                                    <option key={hour} value={hour}>{String(hour).padStart(2, '0')}</option>
+                                  ))}
+                                </HourSelect>
+                                <span>:</span>
+                                <MinuteSelect
+                                  value={minutesToHourMinute(breakTime.start).minute}
+                                  onChange={(e) => handleBreakTimeDropdownChange(key, index, 'start', 'minute', e.target.value)}
+                                >
+                                  <option value={0}>00</option>
+                                  <option value={30}>30</option>
+                                </MinuteSelect>
+                              </TimeSelectContainer>
+                              <span>~</span>
+                              <TimeSelectContainer>
+                                <HourSelect
+                                  value={minutesToHourMinute(breakTime.end).hour}
+                                  onChange={(e) => handleBreakTimeDropdownChange(key, index, 'end', 'hour', e.target.value)}
+                                >
+                                  {Array.from({ length: 24 }, (_, i) => i + 1).map(hour => (
+                                    <option key={hour} value={hour}>{String(hour).padStart(2, '0')}</option>
+                                  ))}
+                                </HourSelect>
+                                <span>:</span>
+                                <MinuteSelect
+                                  value={minutesToHourMinute(breakTime.end).minute}
+                                  onChange={(e) => handleBreakTimeDropdownChange(key, index, 'end', 'minute', e.target.value)}
+                                >
+                                  <option value={0}>00</option>
+                                  <option value={30}>30</option>
+                                </MinuteSelect>
+                              </TimeSelectContainer>
                               <RemoveBreakTimeButton onClick={() => handleRemoveBreakTime(key, index)}>
                                 삭제
                               </RemoveBreakTimeButton>
