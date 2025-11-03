@@ -3,7 +3,7 @@ import styled from 'styled-components';
 import { AppColors } from '../../styles/colors';
 import { AppTextStyles } from '../../styles/textStyles';
 import { ScheduleEvent, StaffInfo } from './types';
-import { generateTimeSlots, formatTime, isEventOnDate } from './utils';
+import { generateTimeSlots, formatTime, isEventOnDate, getHolidayStaffNames, formatHolidayInfo } from './utils';
 import type { WeeklyHolidaySettings } from '../../utils/db/types';
 
 interface DayViewProps {
@@ -32,6 +32,26 @@ const DayContainer = styled.div`
   border-radius: 8px;
   background-color: ${AppColors.surface};
   overflow: hidden;
+`;
+
+const DateHeader = styled.div`
+  padding: 16px 24px;
+  background-color: ${AppColors.background};
+  border-bottom: 1px solid ${AppColors.borderLight};
+  text-align: center;
+`;
+
+const DateInfo = styled.div`
+  font-size: ${AppTextStyles.headline2.fontSize};
+  font-weight: 600;
+  color: ${AppColors.onSurface};
+  margin-bottom: 4px;
+`;
+
+const HolidayInfo = styled.div`
+  font-size: ${AppTextStyles.body2.fontSize};
+  color: ${AppColors.error};
+  font-weight: 500;
 `;
 
 const Header = styled.div`
@@ -132,39 +152,36 @@ const StaffColumn = styled.div`
   }
 `;
 
-const StaffTimeSlot = styled.div<{ $isAvailable: boolean; $isBreakTime: boolean; $isPastTime: boolean; $isHolidayTime: boolean }>`
+const StaffTimeSlot = styled.div<{ $isAvailable: boolean; $isBreakTime: boolean; $isPastTime: boolean }>`
   height: 30px;
   border-bottom: 1px solid ${AppColors.borderLight}20;
   position: relative;
-  cursor: ${props => (props.$isPastTime ? 'not-allowed' : 'pointer')};
+  cursor: pointer;
+  transition: background-color 0.2s ease;
   background-color: ${props => {
     if (props.$isPastTime) return AppColors.onSurface + '05';
-    if (props.$isHolidayTime) return '#f8717115'; // 휴일 배경색
-    if (props.$isBreakTime) return AppColors.warning + '10';
-    if (!props.$isAvailable) return AppColors.error + '10';
+    if (props.$isBreakTime) return '#fbbf2415'; // 휴게시간 배경색
+    if (!props.$isAvailable) return AppColors.onSurface + '10';
     return 'transparent';
   }};
-  opacity: ${props => props.$isPastTime ? 0.5 : 1};
-  border-left: ${props => props.$isHolidayTime ? '3px solid #f87171' : 'none'};
-
+  border-left: ${props => props.$isBreakTime ? '3px solid #fbbf24' : 'none'};
+  
   &:hover {
     background-color: ${props => {
-      if (props.$isPastTime) return AppColors.onSurface + '05';
-      if (props.$isHolidayTime) return '#f8717125'; // 휴일 호버 색상
-      if (props.$isBreakTime) return AppColors.warning + '15';
-      if (!props.$isAvailable) return AppColors.error + '15';
-      return AppColors.primary + '05';
+      if (props.$isPastTime) return AppColors.onSurface + '10';
+      if (props.$isBreakTime) return '#fbbf2425'; // 휴게시간 호버 색상
+      return AppColors.primary + '10';
     }};
   }
 
   &::after {
-    content: ${props => props.$isHolidayTime ? '"휴일"' : 'none'};
+    content: ${props => props.$isBreakTime ? '"휴게"' : 'none'};
     position: absolute;
-    left: 8px;
     top: 50%;
-    transform: translateY(-50%);
-    font-size: 11px;
-    color: #dc2626;
+    left: 50%;
+    transform: translate(-50%, -50%);
+    font-size: 10px;
+    color: #fbbf24;
     font-weight: 500;
     pointer-events: none;
   }
@@ -261,13 +278,15 @@ const DayView: React.FC<DayViewProps> = ({
         // 근무시간 외면 예약 불가
         if (daySettings.workingHours) {
           const { start, end } = daySettings.workingHours;
-          if (hour < start || hour >= end) return false;
+          const currentTimeInMinutes = hour * 60 + minute;
+          if (currentTimeInMinutes < start || currentTimeInMinutes >= end) return false;
         }
 
         // 휴게시간이면 예약 불가
         if (daySettings.breakTimes) {
           for (const breakTime of daySettings.breakTimes) {
-            if (hour >= breakTime.start && hour < breakTime.end) return false;
+            const currentTimeInMinutes = hour * 60 + minute;
+            if (currentTimeInMinutes >= breakTime.start && currentTimeInMinutes < breakTime.end) return false;
           }
         }
       }
@@ -279,35 +298,7 @@ const DayView: React.FC<DayViewProps> = ({
     return true;
   };
 
-  // 특정 직원의 특정 시간대가 휴게시간인지 확인하는 함수
-  const isBreakTime = (staffId: string, hour: number, minute: number) => {
-    const dayOfWeek = currentDate.getDay();
-    const weekStartDate = (() => {
-      const monday = new Date(currentDate);
-      monday.setDate(currentDate.getDate() - (dayOfWeek === 0 ? 6 : dayOfWeek - 1));
-      return monday.toISOString().split('T')[0];
-    })();
-
-    const weeklySettings = weeklyHolidaySettings.find(
-      s => s.staffId === staffId && s.weekStartDate === weekStartDate
-    );
-
-    if (weeklySettings) {
-      const dayKeys = ['sunday', 'monday', 'tuesday', 'wednesday', 'thursday', 'friday', 'saturday'];
-      const dayKey = dayKeys[dayOfWeek] as keyof typeof weeklySettings.weekDays;
-      const daySettings = weeklySettings.weekDays[dayKey];
-
-      if (daySettings?.breakTimes) {
-        for (const breakTime of daySettings.breakTimes) {
-          if (hour >= breakTime.start && hour < breakTime.end) return true;
-        }
-      }
-    }
-
-    return false;
-  };
-
-  // 이벤트 위치 계산 (분 단위를 픽셀로 변환)
+  // 특정 직원의 특정 시간대가 휴게시간인지 확인하는 함수 (분 단위)
   const getEventPosition = (startTime: Date, endTime: Date) => {
     const dayStart = new Date(currentDate);
     dayStart.setHours(6, 0, 0, 0); // 오전 6시 시작
@@ -456,9 +447,21 @@ const DayView: React.FC<DayViewProps> = ({
     }
   };
 
+  const dayNames = ['일', '월', '화', '수', '목', '금', '토'];
+  const currentDayName = dayNames[currentDate.getDay()];
+  const currentDateString = `${currentDate.getMonth() + 1}월 ${currentDate.getDate()}일 (${currentDayName})`;
+  
+  // 오늘 날짜의 휴일 정보 가져오기
+  const holidayStaffNames = getHolidayStaffNames(currentDate, weeklyHolidaySettings || [], staffList);
+  const holidayInfo = formatHolidayInfo(holidayStaffNames);
+
   if (!allowEmptyStaff && filteredStaff.length === 0) {
     return (
       <DayContainer>
+        <DateHeader>
+          <DateInfo>{currentDateString}</DateInfo>
+          {holidayInfo && <HolidayInfo>{holidayInfo}</HolidayInfo>}
+        </DateHeader>
         <div style={{ padding: '48px', textAlign: 'center', color: AppColors.onSurface + '60' }}>
           표시할 코치를 선택해주세요.
         </div>
@@ -468,7 +471,13 @@ const DayView: React.FC<DayViewProps> = ({
 
   return (
     <DayContainer>
-      {/* 헤더 */}
+      {/* 날짜 헤더 */}
+      <DateHeader>
+        <DateInfo>{currentDateString}</DateInfo>
+        {holidayInfo && <HolidayInfo>{holidayInfo}</HolidayInfo>}
+      </DateHeader>
+      
+      {/* 스태프 헤더 */}
       <Header>
         <TimeHeader>시간</TimeHeader>
         {filteredStaff.map(staff => (
@@ -496,8 +505,7 @@ const DayView: React.FC<DayViewProps> = ({
             <StaffColumn key={staff.id}>
               {timeSlots.map(slot => {
                 const isAvailable = isTimeSlotAvailable(staff.id, slot.hour, slot.minute);
-                const isBreak = isBreakTime(staff.id, slot.hour, slot.minute);
-                const isHoliday = isTimeInHoliday(staff.id, slot.hour, slot.minute);
+                const isBreak = isTimeInBreak(staff.id, slot.hour, slot.minute);
                 
                 // 과거 시간 체크
                 const isPastTime = disablePastTime && (() => {
@@ -513,7 +521,6 @@ const DayView: React.FC<DayViewProps> = ({
                     $isAvailable={isAvailable}
                     $isBreakTime={isBreak}
                     $isPastTime={isPastTime}
-                    $isHolidayTime={isHoliday}
                     onClick={() => handleSlotClick(slot, staff.id)}
                   />
                 );

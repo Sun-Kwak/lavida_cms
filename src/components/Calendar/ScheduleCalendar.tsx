@@ -34,6 +34,7 @@ const ScheduleCalendar: React.FC<CalendarProps> = ({
   onEventCreate,
   onHolidaySettings,
   weeklyHolidaySettings,
+  staffHolidays = [],
   allowEmptyStaff = false,
   programDuration,
   hideViewOptions = [],
@@ -93,6 +94,8 @@ const ScheduleCalendar: React.FC<CalendarProps> = ({
             allowEmptyStaff={allowEmptyStaff}
             programDuration={programDuration}
             disablePastTime={disablePastTime}
+            staffHolidays={staffHolidays}
+            weeklyHolidaySettings={weeklyHolidaySettings}
           />
         );
       default:

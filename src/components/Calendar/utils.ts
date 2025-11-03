@@ -161,3 +161,50 @@ export const STAFF_COLORS = [
 export const assignStaffColor = (staffId: string, index: number): string => {
   return STAFF_COLORS[index % STAFF_COLORS.length];
 };
+
+// 특정 날짜에 휴일인 코치들을 가져오는 함수
+export const getHolidayStaffNames = (
+  date: Date, 
+  weeklyHolidaySettings: any[], 
+  staffList: any[]
+): string[] => {
+  const dayOfWeek = date.getDay(); // 0: 일요일, 1: 월요일, ..., 6: 토요일
+  const dayKeys = ['sunday', 'monday', 'tuesday', 'wednesday', 'thursday', 'friday', 'saturday'];
+  const dayKey = dayKeys[dayOfWeek];
+  
+  const holidayStaffNames: string[] = [];
+  
+  // 각 주별 휴일 설정을 확인
+  for (const setting of weeklyHolidaySettings) {
+    const staff = staffList.find(s => s.id === setting.staffId);
+    if (!staff) continue;
+    
+    // 해당 날짜가 포함된 주의 설정인지 확인
+    const weekStartDate = new Date(setting.weekStartDate + 'T00:00:00');
+    const weekEndDate = new Date(weekStartDate);
+    weekEndDate.setDate(weekStartDate.getDate() + 6);
+    
+    if (date >= weekStartDate && date <= weekEndDate) {
+      // 해당 요일이 휴일로 설정되어 있는지 확인
+      const daySettings = setting.weekDays[dayKey];
+      if (daySettings?.isHoliday) {
+        holidayStaffNames.push(staff.name);
+      }
+    }
+  }
+  
+  return holidayStaffNames;
+};
+
+// 휴일 정보를 포맷된 문자열로 반환
+export const formatHolidayInfo = (holidayStaffNames: string[]): string => {
+  if (holidayStaffNames.length === 0) {
+    return '';
+  }
+  
+  if (holidayStaffNames.length <= 2) {
+    return `휴일: ${holidayStaffNames.join(', ')}`;
+  } else {
+    return `휴일: ${holidayStaffNames.slice(0, 2).join(', ')} 외 ${holidayStaffNames.length - 2}명`;
+  }
+};

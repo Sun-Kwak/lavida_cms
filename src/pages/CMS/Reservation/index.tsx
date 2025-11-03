@@ -5,9 +5,11 @@ import { AppColors } from '../../../styles/colors';
 import { AppTextStyles } from '../../../styles/textStyles';
 import CustomDropdown from '../../../components/CustomDropdown';
 import ReservationModal from '../../../components/ReservationModal';
+import HolidayManagement from '../../../components/HolidayManagement';
 import { dbManager, type Branch, type Program } from '../../../utils/indexedDB';
 import { getCurrentUser } from '../../../utils/authUtils';
 import { migrateHolidaySettingsToWeekly, checkMigrationStatus } from '../../../utils/holidayMigration';
+import { useStaffHolidays } from '../../../hooks/useStaffHolidays';
 import { 
   ScheduleCalendar, 
   HolidayModal,
@@ -101,6 +103,9 @@ const ReservationPage: React.FC = () => {
   const [currentUser, setCurrentUser] = useState<{ id: string; role: 'master' | 'coach' | 'admin'; name?: string } | undefined>();
   const holidaySettings: HolidaySettings[] = []; // 빈 배열로 고정
   const [weeklyHolidaySettings, setWeeklyHolidaySettings] = useState<WeeklyHolidaySettings[]>([]);
+
+  // 휴일 관리 훅
+  const { staffHolidays, refreshHolidays } = useStaffHolidays(selectedStaffIds);
 
   // 예약 모달 상태
   const [isReservationModalOpen, setIsReservationModalOpen] = useState(false);
@@ -541,9 +546,17 @@ const ReservationPage: React.FC = () => {
     setHolidayModalStaffId(undefined);
   };
 
-  const handleWeeklyHolidayModalClose = () => {
+  const handleWeeklyHolidayModalClose = async () => {
     setIsWeeklyHolidayModalOpen(false);
     setWeeklyHolidayModalStaffId(undefined);
+    
+    // 모달을 닫을 때 데이터 새로고침
+    try {
+      await loadWeeklyHolidaySettings();
+      await loadScheduleEvents();
+    } catch (error) {
+      console.error('데이터 새로고침 실패:', error);
+    }
   };
 
   const handleHolidaySettingsSave = async (settings: Omit<HolidaySettings, 'id' | 'createdAt' | 'updatedAt'>[]) => {
@@ -663,10 +676,11 @@ const ReservationPage: React.FC = () => {
         console.log('스케줄 이벤트 저장 완료');
       }
       
-      // 5. 이벤트 목록 새로고침 (저장된 스케줄 이벤트들 로드)
-      if (scheduleEvents.length > 0) {
-        setEvents(prev => [...prev.filter(e => !e.id.startsWith('holiday-') && !e.id.startsWith('break-')), ...scheduleEvents]);
-      }
+      // 5. 전체 스케줄 이벤트 새로고침 (기존 이벤트들과 함께 다시 로드)
+      await loadScheduleEvents();
+      
+      // 6. 주별 휴일 설정도 새로고침
+      await loadWeeklyHolidaySettings();
       
     } catch (error) {
       console.error('주별 휴일설정 저장 실패:', error);
@@ -827,35 +841,44 @@ const ReservationPage: React.FC = () => {
     // 여기서 이벤트 상세 보기 모달 등을 열 수 있습니다
   };
 
-  // 예약 가능 여부 체크 (금요일 이후에만 다음주 예약 가능)
+  // 예약 가능 여부 체크 
+  // 휴일설정 주가 아닌 경우는 언제든 수정 가능, 휴일설정 주는 해당 권한이 있어야 수정 가능
   const isReservationAllowed = (targetDate: Date): boolean => {
     const today = new Date();
     const dayOfWeek = today.getDay(); // 0: 일요일, 1: 월요일, ..., 5: 금요일, 6: 토요일
     
-    // 대상 날짜가 이번주인지 다음주인지 판단
-    const currentWeekStart = new Date(today);
-    currentWeekStart.setDate(today.getDate() - (dayOfWeek === 0 ? 6 : dayOfWeek - 1));
-    currentWeekStart.setHours(0, 0, 0, 0);
+    // 설정 대상 토요일 계산 (토요일이면 다음주 토요일, 아니면 이번주 토요일)
+    let targetSaturday = new Date(today);
+    if (dayOfWeek === 6) {
+      // 오늘이 토요일인 경우 다음주 토요일부터 설정
+      targetSaturday.setDate(today.getDate() + 7);
+    } else {
+      // 다른 요일인 경우 이번주 토요일부터 설정
+      const daysUntilSaturday = 6 - dayOfWeek;
+      targetSaturday.setDate(today.getDate() + daysUntilSaturday);
+    }
     
-    const nextWeekStart = new Date(currentWeekStart);
-    nextWeekStart.setDate(currentWeekStart.getDate() + 7);
+    // 휴일설정 대상 주의 시작(토요일)과 끝(금요일) 계산
+    const holidaySettingWeekStart = new Date(targetSaturday);
+    holidaySettingWeekStart.setHours(0, 0, 0, 0);
     
-    const targetWeekStart = new Date(targetDate);
-    targetWeekStart.setDate(targetDate.getDate() - (targetDate.getDay() === 0 ? 6 : targetDate.getDay() - 1));
-    targetWeekStart.setHours(0, 0, 0, 0);
+    const holidaySettingWeekEnd = new Date(targetSaturday);
+    holidaySettingWeekEnd.setDate(targetSaturday.getDate() + 6); // 토요일 + 6일 = 금요일
+    holidaySettingWeekEnd.setHours(23, 59, 59, 999);
     
-    // 이번주 예약은 항상 가능
-    if (targetWeekStart.getTime() <= currentWeekStart.getTime()) {
+    // 대상 날짜가 휴일설정 주에 해당하는지 확인
+    const targetDateTime = targetDate.getTime();
+    const isHolidaySettingWeek = targetDateTime >= holidaySettingWeekStart.getTime() && 
+                                targetDateTime <= holidaySettingWeekEnd.getTime();
+    
+    if (isHolidaySettingWeek) {
+      // 휴일설정 주인 경우: 마스터이거나 본인 코치만 수정 가능
+      if (!currentUser) return false;
+      return currentUser.role === 'master' || currentUser.role === 'coach';
+    } else {
+      // 휴일설정 주가 아닌 경우: 모든 권한 있는 사용자가 수정 가능
       return true;
     }
-    
-    // 다음주 예약은 금요일 이후에만 가능
-    if (targetWeekStart.getTime() === nextWeekStart.getTime()) {
-      return dayOfWeek >= 5; // 금요일(5) 이후
-    }
-    
-    // 그 이후 주차는 금요일 이후에만 가능
-    return dayOfWeek >= 5;
   };
 
   const handleEventCreate = (startTime: Date, endTime: Date, staffId?: string, replaceEventId?: string) => {
@@ -951,7 +974,7 @@ const ReservationPage: React.FC = () => {
 
     // 예약 가능 시점 체크
     if (!isReservationAllowed(startTime)) {
-      alert('다음주 예약은 금요일 이후부터 가능합니다.');
+      alert('휴일설정 대상 주에는 관리자 또는 해당 코치만 수정할 수 있습니다.');
       return;
     }
     
@@ -1031,6 +1054,7 @@ const ReservationPage: React.FC = () => {
                       onEventCreate={handleEventCreate}
                       onHolidaySettings={handleHolidaySettings}
                       weeklyHolidaySettings={weeklyHolidaySettings}
+                      staffHolidays={staffHolidays}
                       programDuration={programDuration}
                       disablePastTime={true}
                       currentUser={currentUser}
@@ -1109,6 +1133,10 @@ const ReservationPage: React.FC = () => {
         currentUser={currentUser}
         onSave={handleWeeklyHolidaySettingsSave}
         existingWeeklyHolidays={weeklyHolidaySettings}
+        onRefresh={async () => {
+          await loadWeeklyHolidaySettings();
+          await loadScheduleEvents();
+        }}
       />
 
       {/* 예약 생성 모달 */}

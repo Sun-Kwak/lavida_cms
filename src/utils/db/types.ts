@@ -46,6 +46,7 @@ export interface Staff extends DBRecord {
     start: number; // 기본 근무 시작 시간 (시)
     end: number; // 기본 근무 종료 시간 (시)
   };
+  holidays?: string[]; // 휴일 날짜 배열 (YYYY-MM-DD 형식)
   isActive: boolean; // 활성/비활성 상태
 }
 
@@ -61,6 +62,7 @@ export interface Locker extends DBRecord {
   endDate?: string; // 사용 종료일 (YYYY-MM-DD)
   paymentId?: string; // 관련 결제 ID
   months?: number; // 사용 기간 (개월)
+  changeHistory?: string[]; // 수정 이력 (메모 배열)
   isActive: boolean;
 }
 
@@ -309,13 +311,24 @@ export interface CourseEnrollment extends DBRecord {
   branchName: string; // 지점명
   coach: string; // 담당 코치 ID
   coachName: string; // 담당 코치명
-  enrollmentStatus: 'active' | 'completed' | 'suspended' | 'cancelled' | 'unpaid'; // 수강 상태 확장
+  enrollmentStatus: 'active' | 'completed' | 'suspended' | 'cancelled' | 'unpaid' | 'hold'; // 수강 상태 확장 (홀드 추가)
   paidAmount: number; // 실제 지불한 금액
   unpaidAmount: number; // 미납 금액 (appliedPrice - paidAmount)
   startDate?: Date | null; // 수강 시작일
   endDate?: Date | null; // 수강 종료일 (기간제인 경우)
   sessionCount?: number; // 총 수업 횟수 (횟수제인 경우)
   completedSessions?: number; // 완료된 수업 횟수 (횟수제인 경우, 기본값 0)
+  
+  // 홀드 관련 필드 추가
+  holdInfo?: {
+    isHold: boolean; // 홀드 상태 여부
+    holdStartDate: Date | null; // 홀드 시작일
+    holdEndDate: Date | null; // 홀드 종료일 (예정일)
+    holdReason?: string; // 홀드 사유
+    totalHoldDays: number; // 총 홀드 일수 (자동 계산)
+    originalEndDate?: Date | null; // 원래 종료일 (홀드 시 백업)
+  } | null;
+  
   notes?: string; // 비고
   relatedPaymentId?: string; // 연관된 결제 ID (기존 호환성)
 }

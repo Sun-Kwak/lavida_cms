@@ -2,6 +2,7 @@ import React, { useState, useEffect } from 'react';
 import styled from 'styled-components';
 import { AppColors } from '../../styles/colors';
 import { AppTextStyles } from '../../styles/textStyles';
+import { dbManager } from '../../utils/indexedDB';
 import type { WeeklyHolidaySettings } from '../../utils/db/types';
 
 interface WeeklyHolidayModalProps {
@@ -22,6 +23,7 @@ interface WeeklyHolidayModalProps {
   };
   onSave: (settings: Omit<WeeklyHolidaySettings, 'id' | 'createdAt' | 'updatedAt'>[]) => Promise<void>;
   existingWeeklyHolidays?: WeeklyHolidaySettings[]; // 기존 주별 휴일 설정 데이터
+  onRefresh?: () => Promise<void>; // 데이터 새로고침 콜백
 }
 
 const ModalOverlay = styled.div`
@@ -424,7 +426,8 @@ const WeeklyHolidayModal: React.FC<WeeklyHolidayModalProps> = ({
   staffList,
   currentUser,
   onSave,
-  existingWeeklyHolidays = []
+  existingWeeklyHolidays = [],
+  onRefresh
 }) => {
 
 
@@ -553,44 +556,90 @@ const WeeklyHolidayModal: React.FC<WeeklyHolidayModalProps> = ({
       setError(null);
       setIsLoading(false);
     }
-  }, [isOpen, staffId, currentUser, staffList, selectedStaffIds]);
+  }, [isOpen, staffId, currentUser]);
 
   // 기존 설정 로드
   useEffect(() => {
     console.log('useEffect triggered:', { isOpen, currentWeekStartDate, selectedStaffIds: selectedStaffIds.length });
     
-    if (isOpen && currentWeekStartDate) {
-      if (selectedStaffIds.length > 0) {
-        const existingSetting = existingWeeklyHolidays.find(
-          setting => setting.weekStartDate === currentWeekStartDate && 
-                    selectedStaffIds.includes(setting.staffId)
-        );
+    if (isOpen && currentWeekStartDate && selectedStaffIds.length > 0) {
+      const existingSetting = existingWeeklyHolidays.find(
+        setting => setting.weekStartDate === currentWeekStartDate && 
+                  selectedStaffIds.includes(setting.staffId)
+      );
+      
+      if (existingSetting) {
+        console.log('Found existing setting:', existingSetting);
+        // 기존 설정이 있다면 로드하되, 구조가 맞지 않으면 기본값 사용
+        const normalizedWeekDays = {
+          monday: {
+            isHoliday: existingSetting.weekDays.monday?.isHoliday ?? false,
+            workingHours: existingSetting.weekDays.monday?.workingHours ?? { start: 540, end: 1260 },
+            breakTimes: (existingSetting.weekDays.monday?.breakTimes ?? []).map(bt => ({
+              start: bt.start,
+              end: bt.end,
+              name: bt.name || '휴게시간'
+            }))
+          },
+          tuesday: {
+            isHoliday: existingSetting.weekDays.tuesday?.isHoliday ?? false,
+            workingHours: existingSetting.weekDays.tuesday?.workingHours ?? { start: 540, end: 1260 },
+            breakTimes: (existingSetting.weekDays.tuesday?.breakTimes ?? []).map(bt => ({
+              start: bt.start,
+              end: bt.end,
+              name: bt.name || '휴게시간'
+            }))
+          },
+          wednesday: {
+            isHoliday: existingSetting.weekDays.wednesday?.isHoliday ?? false,
+            workingHours: existingSetting.weekDays.wednesday?.workingHours ?? { start: 540, end: 1260 },
+            breakTimes: (existingSetting.weekDays.wednesday?.breakTimes ?? []).map(bt => ({
+              start: bt.start,
+              end: bt.end,
+              name: bt.name || '휴게시간'
+            }))
+          },
+          thursday: {
+            isHoliday: existingSetting.weekDays.thursday?.isHoliday ?? false,
+            workingHours: existingSetting.weekDays.thursday?.workingHours ?? { start: 540, end: 1260 },
+            breakTimes: (existingSetting.weekDays.thursday?.breakTimes ?? []).map(bt => ({
+              start: bt.start,
+              end: bt.end,
+              name: bt.name || '휴게시간'
+            }))
+          },
+          friday: {
+            isHoliday: existingSetting.weekDays.friday?.isHoliday ?? false,
+            workingHours: existingSetting.weekDays.friday?.workingHours ?? { start: 540, end: 1260 },
+            breakTimes: (existingSetting.weekDays.friday?.breakTimes ?? []).map(bt => ({
+              start: bt.start,
+              end: bt.end,
+              name: bt.name || '휴게시간'
+            }))
+          },
+          saturday: {
+            isHoliday: existingSetting.weekDays.saturday?.isHoliday ?? true,
+            workingHours: existingSetting.weekDays.saturday?.workingHours ?? { start: 540, end: 1260 },
+            breakTimes: (existingSetting.weekDays.saturday?.breakTimes ?? []).map(bt => ({
+              start: bt.start,
+              end: bt.end,
+              name: bt.name || '휴게시간'
+            }))
+          },
+          sunday: {
+            isHoliday: existingSetting.weekDays.sunday?.isHoliday ?? true,
+            workingHours: existingSetting.weekDays.sunday?.workingHours ?? { start: 540, end: 1260 },
+            breakTimes: (existingSetting.weekDays.sunday?.breakTimes ?? []).map(bt => ({
+              start: bt.start,
+              end: bt.end,
+              name: bt.name || '휴게시간'
+            }))
+          }
+        };
         
-        if (existingSetting) {
-          console.log('Found existing setting:', existingSetting);
-          // 기존 설정이 있다면 로드하되, 구조가 맞지 않으면 기본값 사용
-          const normalizedWeekDays = Object.keys(weekDaySettings).reduce((acc, day) => {
-            const dayKey = day as keyof typeof weekDaySettings;
-            const existingDay = existingSetting.weekDays[dayKey];
-            
-            acc[dayKey] = {
-              isHoliday: existingDay?.isHoliday ?? false,
-              workingHours: existingDay?.workingHours ?? { start: 540, end: 1260 }, // 기본값: 09:00 ~ 21:00
-              breakTimes: (existingDay?.breakTimes ?? []).map(bt => ({
-                start: bt.start,
-                end: bt.end,
-                name: bt.name || '휴게시간'
-              }))
-            };
-            
-            return acc;
-          }, {} as typeof weekDaySettings);
-          
-          setWeekDaySettings(normalizedWeekDays);
-        } else {
-          console.log('No existing setting found, using default state');
-        }
+        setWeekDaySettings(normalizedWeekDays);
       } else {
+        console.log('No existing setting found, using default state');
         // 기본값으로 리셋 (주말만 휴일)
         setWeekDaySettings({
           monday: {
@@ -835,6 +884,7 @@ const WeeklyHolidayModal: React.FC<WeeklyHolidayModalProps> = ({
     setError(null);
     
     try {
+      // 1. 기존 주별 휴일 설정 저장
       const settings: Omit<WeeklyHolidaySettings, 'id' | 'createdAt' | 'updatedAt'>[] = [];
       
       selectedStaffIds.forEach(staffId => {
@@ -846,6 +896,49 @@ const WeeklyHolidayModal: React.FC<WeeklyHolidayModalProps> = ({
       });
       
       await onSave(settings);
+
+      // 2. 휴일로 체크된 날짜들을 직원의 holidays 배열에 누적
+      // 체크 해제된 날짜들은 배열에서 제거
+      const weekStart = new Date(currentWeekStartDate);
+      const dayKeys = ['monday', 'tuesday', 'wednesday', 'thursday', 'friday', 'saturday', 'sunday'] as const;
+      
+      for (const staffId of selectedStaffIds) {
+        const holidayDates: string[] = [];
+        const removeDates: string[] = [];
+        
+        // 각 요일별로 휴일인지 확인하고 날짜 계산
+        dayKeys.forEach((dayKey, index) => {
+          const date = new Date(weekStart);
+          // 월요일부터 시작하므로 index를 그대로 사용
+          date.setDate(weekStart.getDate() + index);
+          const dateString = date.toISOString().split('T')[0];
+          
+          if (weekDaySettings[dayKey].isHoliday) {
+            holidayDates.push(dateString);
+          } else {
+            removeDates.push(dateString);
+          }
+        });
+        
+        // 휴일 날짜들을 직원의 holidays 배열에 추가
+        for (const dateString of holidayDates) {
+          await dbManager.addStaffHoliday(staffId, dateString);
+        }
+        
+        // 체크 해제된 날짜들을 직원의 holidays 배열에서 제거
+        for (const dateString of removeDates) {
+          await dbManager.removeStaffHoliday(staffId, dateString);
+        }
+      }
+      
+      // 데이터베이스 작업이 완전히 완료되도록 약간의 지연
+      await new Promise(resolve => setTimeout(resolve, 100));
+      
+      // 부모 컴포넌트에 데이터 새로고침 요청
+      if (onRefresh) {
+        await onRefresh();
+      }
+      
       onClose();
     } catch (error) {
       console.error('주별 휴일 설정 저장 중 오류 발생:', error);

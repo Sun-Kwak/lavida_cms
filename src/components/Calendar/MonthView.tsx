@@ -3,7 +3,8 @@ import styled from 'styled-components';
 import { AppColors } from '../../styles/colors';
 import { AppTextStyles } from '../../styles/textStyles';
 import { ScheduleEvent, StaffInfo } from './types';
-import { getMonthDates, isEventOnDate, isSameMonth } from './utils';
+import { getMonthDates, isEventOnDate, isSameMonth, getHolidayStaffNames, formatHolidayInfo } from './utils';
+import type { WeeklyHolidaySettings } from '../../utils/db/types';
 
 interface MonthViewProps {
   currentDate: Date;
@@ -16,6 +17,8 @@ interface MonthViewProps {
   allowEmptyStaff?: boolean; // 코치가 없어도 달력 표시 허용
   programDuration?: number; // 프로그램 소요시간 (분 단위)
   disablePastTime?: boolean; // 과거 시간 비활성화 여부
+  staffHolidays?: { staffId: string; holidays: string[] }[]; // 직원별 휴일 정보 (기존 방식)
+  weeklyHolidaySettings?: WeeklyHolidaySettings[]; // 새로운 주별 휴일 설정
 }
 
 const MonthContainer = styled.div`
@@ -65,6 +68,7 @@ const DayCell = styled.div<{
   $isWeekend: boolean; 
   $hasEvents: boolean;
   $isPastDate: boolean;
+  $hasHoliday?: boolean;
 }>`
   flex: 1;
   border-right: 1px solid ${AppColors.borderLight};
@@ -74,6 +78,7 @@ const DayCell = styled.div<{
   opacity: ${props => props.$isPastDate ? 0.5 : 1};
   background-color: ${props => 
     props.$isPastDate ? AppColors.onSurface + '05' :
+    props.$hasHoliday ? AppColors.error + '05' :
     props.$isToday ? AppColors.primary + '10' : 
     !props.$isCurrentMonth ? AppColors.surface + '80' :
     'transparent'
@@ -91,6 +96,15 @@ const DayCell = styled.div<{
   }
 `;
 
+const DateHeader = styled.div`
+  display: flex;
+  justify-content: space-between;
+  align-items: flex-start;
+  margin-bottom: 4px;
+  flex-wrap: wrap;
+  gap: 2px;
+`;
+
 const DateNumber = styled.div<{ 
   $isToday: boolean; 
   $isCurrentMonth: boolean; 
@@ -104,7 +118,16 @@ const DateNumber = styled.div<{
     props.$isWeekend ? AppColors.error :
     AppColors.onSurface
   };
-  margin-bottom: 4px;
+`;
+
+const HolidayInfo = styled.div`
+  font-size: 9px;
+  color: ${AppColors.error};
+  font-weight: 500;
+  line-height: 1.1;
+  flex: 1;
+  text-align: right;
+  word-break: break-word;
 `;
 
 const EventsContainer = styled.div`
@@ -200,7 +223,9 @@ const MonthView: React.FC<MonthViewProps> = ({
   onDateClick,
   allowEmptyStaff = false,
   programDuration,
-  disablePastTime = false
+  disablePastTime = false,
+  staffHolidays = [],
+  weeklyHolidaySettings = []
 }) => {
   const monthWeeks = getMonthDates(currentDate);
   const dayNames = ['일', '월', '화', '수', '목', '금', '토'];
@@ -227,6 +252,37 @@ const MonthView: React.FC<MonthViewProps> = ({
   // 특정 날짜의 이벤트 가져오기
   const getDayEvents = (date: Date) => {
     return monthEvents.filter(event => isEventOnDate(event.startTime, event.endTime, date));
+  };
+
+  // 특정 날짜에 휴일인 직원들의 이름 가져오기 (새로운 주별 휴일 설정 우선 사용)
+  const getHolidayStaffInfo = (date: Date) => {
+    const holidayStaffNames = getHolidayStaffNames(date, weeklyHolidaySettings, staffList);
+    
+    // 새로운 주별 설정에서 휴일인 직원들 중 선택된 직원들만 필터링
+    const weeklyHolidayNames = holidayStaffNames.filter(name => {
+      const staff = staffList.find(s => s.name === name);
+      return staff && selectedStaffIds.includes(staff.id);
+    });
+    
+    // 주별 설정이 있으면 그것을 우선 사용
+    if (weeklyHolidayNames.length > 0) {
+      return formatHolidayInfo(weeklyHolidayNames);
+    }
+    
+    // 기존 방식 (하위 호환성)
+    const dateString = date.toISOString().split('T')[0];
+    const legacyHolidayNames = selectedStaffIds
+      .filter(staffId => {
+        const staffHolidayData = staffHolidays.find(data => data.staffId === staffId);
+        return staffHolidayData?.holidays.includes(dateString);
+      })
+      .map(staffId => {
+        const staff = staffList.find(s => s.id === staffId);
+        return staff?.name || '';
+      })
+      .filter(name => name);
+    
+    return formatHolidayInfo(legacyHolidayNames);
   };
 
   const handleDayClick = (date: Date) => {
@@ -304,6 +360,8 @@ const MonthView: React.FC<MonthViewProps> = ({
             const dayEvents = getDayEvents(day.date);
             const visibleEvents = dayEvents.slice(0, 3); // 최대 3개만 표시
             const hiddenCount = dayEvents.length - visibleEvents.length;
+            const holidayInfo = getHolidayStaffInfo(day.date);
+            const isAnyStaffOnHoliday = !!holidayInfo;
 
             // 과거 날짜 체크
             const isPastDate = disablePastTime && (() => {
@@ -321,15 +379,19 @@ const MonthView: React.FC<MonthViewProps> = ({
                 $isWeekend={day.isWeekend}
                 $hasEvents={dayEvents.length > 0}
                 $isPastDate={isPastDate}
+                $hasHoliday={isAnyStaffOnHoliday}
                 onClick={() => handleDayClick(day.date)}
               >
-                <DateNumber
-                  $isToday={day.isToday}
-                  $isCurrentMonth={isSameMonth(day.date, currentDate)}
-                  $isWeekend={day.isWeekend}
-                >
-                  {day.date.getDate()}
-                </DateNumber>
+                <DateHeader>
+                  <DateNumber
+                    $isToday={day.isToday}
+                    $isCurrentMonth={isSameMonth(day.date, currentDate)}
+                    $isWeekend={day.isWeekend}
+                  >
+                    {day.date.getDate()}
+                  </DateNumber>
+                  {holidayInfo && <HolidayInfo>{holidayInfo}</HolidayInfo>}
+                </DateHeader>
 
                 <EventsContainer>
                   {visibleEvents.map(event => {
