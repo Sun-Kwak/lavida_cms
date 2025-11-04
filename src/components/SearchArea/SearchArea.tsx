@@ -8,9 +8,6 @@ export type PeriodOption = '1month' | '3month' | '6month' | 'custom';
 
 // Props 타입 정의
 interface SearchAreaProps {
-  // 메타 정보 영역 (선택적)
-  metaContent?: React.ReactNode;
-  
   // 기간 선택 관련
   selectedPeriod: PeriodOption;
   onPeriodChange: (period: PeriodOption) => void;
@@ -28,6 +25,9 @@ interface SearchAreaProps {
   
   // 자동 검색 옵션
   autoSearchOnDateChange?: boolean;
+  
+  // 좌측 추가 컨텐츠 (미수 필터 등)
+  leftContent?: React.ReactNode;
 }
 
 const SearchContainer = styled.div`
@@ -37,14 +37,6 @@ const SearchContainer = styled.div`
   padding: 20px 24px;
   margin-bottom: 24px;
   box-shadow: 0 1px 2px rgba(16, 24, 40, 0.04);
-`;
-
-const MetaRow = styled.div<{ $hasContent: boolean }>`
-  display: ${props => props.$hasContent ? 'flex' : 'none'};
-  gap: 12px;
-  align-items: center;
-  margin-bottom: 16px;
-  flex-wrap: wrap;
 `;
 
 const MainRow = styled.div`
@@ -58,6 +50,12 @@ const MainRow = styled.div`
     gap: 16px;
     align-items: stretch;
   }
+`;
+
+const LeftSection = styled.div`
+  display: flex;
+  gap: 12px;
+  align-items: center;
 `;
 
 const PeriodSection = styled.div`
@@ -391,7 +389,7 @@ const SearchButton = styled.button`
 `;
 
 const SearchArea: React.FC<SearchAreaProps> = ({
-  metaContent,
+  leftContent,
   selectedPeriod,
   onPeriodChange,
   customStartDate = '',
@@ -598,13 +596,15 @@ const SearchArea: React.FC<SearchAreaProps> = ({
 
   return (
     <SearchContainer>
-      {/* 메타 정보 영역 */}
-      <MetaRow $hasContent={!!metaContent}>
-        {metaContent}
-      </MetaRow>
-
       {/* 메인 검색 영역 */}
       <MainRow>
+        {/* 좌측 컨텐츠 영역 (미수 필터 등) */}
+        {leftContent && (
+          <LeftSection>
+            {leftContent}
+          </LeftSection>
+        )}
+
         {/* 기간 선택 영역 */}
         <PeriodSection>
           <div style={{ position: 'relative' }} ref={datePickerRef}>

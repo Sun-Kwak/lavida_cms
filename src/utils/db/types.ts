@@ -37,6 +37,7 @@ export interface Staff extends DBRecord {
   employmentType: string; // 고용형태
   permission: string; // 권한
   program?: string; // 담당프로그램 (코치일 경우만)
+  workShift?: string; // 근무 시간대 (횟수제 프로그램 코치일 경우만)
   contractStartDate: Date;
   contractEndDate?: Date | null; // 계약종료일 (정규직은 없을 수 있음)
   contractFile?: File | null; // 계약서 파일

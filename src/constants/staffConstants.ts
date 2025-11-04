@@ -38,6 +38,12 @@ export const PERMISSIONS = [
   { value: 'VIEWER', label: 'VIEWER', description: '소속 지점 데이터 조회만 가능' }
 ] as const;
 
+// 근무 시간대 목록 (횟수제 프로그램 코치 전용)
+export const WORK_SHIFTS = [
+  '주간',
+  '야간'
+] as const;
+
 // 시스템 관리자 설정
 export const SYSTEM_ADMIN_CONFIG = {
   // 시스템 관리자 로그인 ID (절대 삭제/권한변경 불가)
@@ -57,3 +63,4 @@ export type Position = typeof POSITIONS[number];
 export type Role = typeof ROLES[number];
 export type EmploymentType = typeof EMPLOYMENT_TYPES[number];
 export type Permission = typeof PERMISSIONS[number]['value'];
+export type WorkShift = typeof WORK_SHIFTS[number];

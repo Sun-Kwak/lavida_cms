@@ -402,4 +402,126 @@ export class StaffService extends BaseDBManager {
       console.error('직원 isActive 필드 초기화 실패:', error);
     }
   }
+
+  /**
+   * 직원의 휴일 목록 조회
+   */
+  async getStaffHolidays(staffId: string): Promise<string[]> {
+    try {
+      const staff = await this.getStaffById(staffId);
+      return staff?.holidays || [];
+    } catch (error) {
+      console.error('직원 휴일 목록 조회 실패:', error);
+      return [];
+    }
+  }
+
+  /**
+   * 직원의 휴일 설정 업데이트
+   */
+  async updateStaffHolidays(staffId: string, holidays: string[]): Promise<boolean> {
+    try {
+      const staff = await this.getStaffById(staffId);
+      if (!staff) {
+        throw new Error('존재하지 않는 직원입니다.');
+      }
+
+      const updatedStaff: Staff = {
+        ...staff,
+        holidays: holidays.sort(), // 날짜순 정렬
+        updatedAt: new Date()
+      };
+
+      await this.executeTransaction('staff', 'readwrite', (store) => 
+        store.put(updatedStaff)
+      );
+
+      console.log('직원 휴일 설정 업데이트 성공:', staffId, holidays);
+      return true;
+    } catch (error) {
+      console.error('직원 휴일 설정 업데이트 실패:', error);
+      throw error;
+    }
+  }
+
+  /**
+   * 직원의 특정 날짜 휴일 추가
+   */
+  async addStaffHoliday(staffId: string, date: string): Promise<boolean> {
+    try {
+      const currentHolidays = await this.getStaffHolidays(staffId);
+      
+      if (!currentHolidays.includes(date)) {
+        const newHolidays = [...currentHolidays, date].sort();
+        return await this.updateStaffHolidays(staffId, newHolidays);
+      }
+      
+      return true; // 이미 존재하는 경우
+    } catch (error) {
+      console.error('직원 휴일 추가 실패:', error);
+      throw error;
+    }
+  }
+
+  /**
+   * 직원의 특정 날짜 휴일 제거
+   */
+  async removeStaffHoliday(staffId: string, date: string): Promise<boolean> {
+    try {
+      const currentHolidays = await this.getStaffHolidays(staffId);
+      const newHolidays = currentHolidays.filter(holiday => holiday !== date);
+      
+      return await this.updateStaffHolidays(staffId, newHolidays);
+    } catch (error) {
+      console.error('직원 휴일 제거 실패:', error);
+      throw error;
+    }
+  }
+
+  /**
+   * 특정 날짜가 직원의 휴일인지 확인
+   */
+  async isStaffHoliday(staffId: string, date: string): Promise<boolean> {
+    try {
+      const holidays = await this.getStaffHolidays(staffId);
+      return holidays.includes(date);
+    } catch (error) {
+      console.error('직원 휴일 확인 실패:', error);
+      return false;
+    }
+  }
+
+  /**
+   * 날짜 범위 내의 직원 휴일 목록 조회
+   */
+  async getStaffHolidaysInRange(staffId: string, startDate: string, endDate: string): Promise<string[]> {
+    try {
+      const holidays = await this.getStaffHolidays(staffId);
+      return holidays.filter(date => date >= startDate && date <= endDate);
+    } catch (error) {
+      console.error('날짜 범위 내 직원 휴일 조회 실패:', error);
+      return [];
+    }
+  }
+
+  /**
+   * 모든 활성 직원의 특정 날짜 휴일 상태 조회
+   */
+  async getAllStaffHolidayStatus(date: string): Promise<{ staffId: string; name: string; isHoliday: boolean }[]> {
+    try {
+      const allStaff = await this.getAllStaff();
+      const activeCoaches = allStaff.filter(staff => staff.isActive && staff.role === '코치');
+      
+      return await Promise.all(
+        activeCoaches.map(async (staff) => ({
+          staffId: staff.id,
+          name: staff.name,
+          isHoliday: await this.isStaffHoliday(staff.id, date)
+        }))
+      );
+    } catch (error) {
+      console.error('전체 직원 휴일 상태 조회 실패:', error);
+      return [];
+    }
+  }
 }

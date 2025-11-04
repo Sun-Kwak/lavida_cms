@@ -1,6 +1,7 @@
 import React, { useState, useEffect, useCallback } from 'react';
 import styled from 'styled-components';
 import { AppColors } from '../../../styles/colors';
+import { AppTextStyles } from '../../../styles/textStyles';
 import { dbManager, Payment } from '../../../utils/indexedDB';
 import { SearchArea, type PeriodOption } from '../../../components/SearchArea';
 import UnpaidFilter from '../../../components/SearchArea/UnpaidFilterButton';
@@ -17,7 +18,7 @@ const Button = styled.button<{ variant?: 'primary' | 'secondary' }>`
   border-radius: 8px;
   background: ${props => props.variant === 'secondary' ? AppColors.surface : AppColors.primary};
   color: ${props => props.variant === 'secondary' ? AppColors.onSurface : AppColors.onPrimary};
-  font-size: 14px;
+  font-size: ${AppTextStyles.body1.fontSize};
   font-weight: 600;
   cursor: pointer;
   transition: all 0.2s;
@@ -30,6 +31,7 @@ const Button = styled.button<{ variant?: 'primary' | 'secondary' }>`
   &:disabled {
     opacity: 0.5;
     cursor: not-allowed;
+    transform: none;
   }
 `;
 
@@ -402,7 +404,7 @@ const MemberPaymentHistory: React.FC = () => {
     <PageContainer>
       {/* 새로운 SearchArea 컴포넌트 사용 */}
       <SearchArea
-        metaContent={
+        leftContent={
           <div style={{ display: 'flex', gap: '12px', alignItems: 'center', flexWrap: 'wrap' }}>
             <Button onClick={handleOpenPaymentRegistrationModal}>
               + 현장 결제 등록

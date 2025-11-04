@@ -3,7 +3,7 @@
     "activeCommit": 0,
     "commits": [
         {
-            "activePatchIndex": 28,
+            "activePatchIndex": 29,
             "patches": [
                 {
                     "date": 1759105835943,
@@ -120,6 +120,10 @@
                 {
                     "date": 1761459201890,
                     "content": "Index: \n===================================================================\n--- \n+++ \n@@ -371,10 +371,10 @@\n               price: product.appliedPrice || product.price, // 적용된 가격 사용\n               programId: productDetails.programId,\n               programName: productDetails.programName,\n               programType: productDetails.programType,\n-              originalPrice: product.originalPrice, // 원래 가격\n-              appliedPrice: product.appliedPrice // 적용된 가격\n+              originalPrice: product.price, // 계산된 정확한 상품 가격\n+              appliedPrice: product.appliedPrice // 사용자가 조정한 적용 가격\n             };\n \n             // 기간제 상품의 경우 기간 정보 추가\n             if (product.programType === '기간제' && product.startDate && product.endDate) {\n"
+                },
+                {
+                    "date": 1762070340265,
+                    "content": "Index: \n===================================================================\n--- \n+++ \n@@ -435,9 +435,8 @@\n             transactionType: 'earn',\n             source: '지인추천 보상',\n             description: `${formData.basicInfo.name} 님 추천으로 적립`,\n             earnedDate: new Date(),\n-            expiryDate: new Date(Date.now() + 365 * 24 * 60 * 60 * 1000), // 1년 후 만료\n             isExpired: false\n           });\n           console.log(`추천인(${referrerName})에게 40,000 포인트 적립 완료`);\n           \n@@ -449,9 +448,8 @@\n             transactionType: 'earn',\n             source: '지인추천 가입 혜택',\n             description: `${referrerName} 님 추천으로 가입`,\n             earnedDate: new Date(),\n-            expiryDate: new Date(Date.now() + 365 * 24 * 60 * 60 * 1000), // 1년 후 만료\n             isExpired: false\n           });\n           console.log(`신규 회원(${formData.basicInfo.name})에게 35,000 포인트 적립 완료`);\n           \n"
                 }
             ],
             "date": 1759105835943,

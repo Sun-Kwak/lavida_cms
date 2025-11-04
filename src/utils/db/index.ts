@@ -282,6 +282,35 @@ export class IndexedDBManager extends BaseDBManager {
     return await this.staff.toggleStaffStatus(id);
   }
 
+  // Staff Holiday 관련 메서드
+  async getStaffHolidays(staffId: string) {
+    return await this.staff.getStaffHolidays(staffId);
+  }
+
+  async updateStaffHolidays(staffId: string, holidays: string[]) {
+    return await this.staff.updateStaffHolidays(staffId, holidays);
+  }
+
+  async addStaffHoliday(staffId: string, date: string) {
+    return await this.staff.addStaffHoliday(staffId, date);
+  }
+
+  async removeStaffHoliday(staffId: string, date: string) {
+    return await this.staff.removeStaffHoliday(staffId, date);
+  }
+
+  async isStaffHoliday(staffId: string, date: string) {
+    return await this.staff.isStaffHoliday(staffId, date);
+  }
+
+  async getStaffHolidaysInRange(staffId: string, startDate: string, endDate: string) {
+    return await this.staff.getStaffHolidaysInRange(staffId, startDate, endDate);
+  }
+
+  async getAllStaffHolidayStatus(date: string) {
+    return await this.staff.getAllStaffHolidayStatus(date);
+  }
+
   // Member 관련 호환성 메서드
   async getAllMembers() {
     return await this.member.getAllMembers();
@@ -480,6 +509,23 @@ export class IndexedDBManager extends BaseDBManager {
     return await this.course.getMemberUnpaidTotal(memberId);
   }
 
+  // 홀드 및 연장 관련 메서드 추가
+  async startHold(enrollmentId: string, holdReason?: string) {
+    return await this.course.startHold(enrollmentId, holdReason);
+  }
+
+  async endHold(enrollmentId: string) {
+    return await this.course.endHold(enrollmentId);
+  }
+
+  async extendCourse(enrollmentId: string, extendDays: number, extendReason?: string) {
+    return await this.course.extendCourse(enrollmentId, extendDays, extendReason);
+  }
+
+  async getHoldCourseEnrollments() {
+    return await this.course.getHoldCourseEnrollments();
+  }
+
   // Terms 관련 호환성 메서드
   async getAllTermsDocuments() {
     return await this.terms.getAllTermsDocuments();
@@ -643,6 +689,10 @@ export class IndexedDBManager extends BaseDBManager {
 
   async assignLockerToUser(lockerId: string, userId: string, userName: string, months: number, paymentId?: string) {
     return await this.locker.assignLockerToUser(lockerId, userId, userName, months, paymentId, this.member);
+  }
+
+  async assignLockerToUserWithDates(lockerId: string, userId: string, userName: string, months: number, startDate: string, endDate: string, paymentId?: string) {
+    return await this.locker.assignLockerToUserWithDates(lockerId, userId, userName, months, startDate, endDate, paymentId, this.member);
   }
 
   async unassignLocker(lockerId: string) {

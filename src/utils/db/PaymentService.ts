@@ -331,8 +331,6 @@ export class OrderService extends BaseDBManager {
       // 4. 초과금 포인트 적립
       if (excessAmount > 0) {
         console.log(`=== 초과금 포인트 적립 시작: ${excessAmount.toLocaleString()}원 ===`);
-        const expiryDate = new Date();
-        expiryDate.setFullYear(expiryDate.getFullYear() + 1);
 
         // 상품 정보 준비
         const products = orderData.products.map(product => ({
@@ -356,7 +354,6 @@ export class OrderService extends BaseDBManager {
             staffId: orderData.memberInfo.coach,  // coach가 담당 직원 ID
             staffName: orderData.memberInfo.coachName,  // coachName이 담당 직원명
             earnedDate: new Date(),
-            expiryDate,
             isExpired: false,
             source: `${orderData.orderType} 초과금액`,
             description: `${orderData.orderType} 초과금액 포인트 적립 - 구매 상품: ${orderData.products.map(p => p.name).join(', ')}`
@@ -385,7 +382,6 @@ export class OrderService extends BaseDBManager {
               staffId: orderData.memberInfo.coach,
               staffName: orderData.memberInfo.coachName,
               earnedDate: new Date(),
-              expiryDate,
               isExpired: false,
               source: '보너스포인트',
               description: `${orderData.orderType} 초과금액 보너스 포인트 (${excessAmount.toLocaleString()}원 → ${millionUnits}개 100만원 단위)`

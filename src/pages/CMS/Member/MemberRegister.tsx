@@ -436,7 +436,6 @@ const MemberRegister: React.FC = () => {
             source: '지인추천 보상',
             description: `${formData.basicInfo.name} 님 추천으로 적립`,
             earnedDate: new Date(),
-            expiryDate: new Date(Date.now() + 365 * 24 * 60 * 60 * 1000), // 1년 후 만료
             isExpired: false
           });
           console.log(`추천인(${referrerName})에게 40,000 포인트 적립 완료`);
@@ -450,7 +449,6 @@ const MemberRegister: React.FC = () => {
             source: '지인추천 가입 혜택',
             description: `${referrerName} 님 추천으로 가입`,
             earnedDate: new Date(),
-            expiryDate: new Date(Date.now() + 365 * 24 * 60 * 60 * 1000), // 1년 후 만료
             isExpired: false
           });
           console.log(`신규 회원(${formData.basicInfo.name})에게 35,000 포인트 적립 완료`);

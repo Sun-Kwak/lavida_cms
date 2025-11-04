@@ -3,7 +3,7 @@
     "activeCommit": 0,
     "commits": [
         {
-            "activePatchIndex": 4,
+            "activePatchIndex": 5,
             "patches": [
                 {
                     "date": 1759901587678,
@@ -24,6 +24,10 @@
                 {
                     "date": 1760755816561,
                     "content": "Index: \n===================================================================\n--- \n+++ \n@@ -42,11 +42,15 @@\n export const SYSTEM_ADMIN_CONFIG = {\n   // 시스템 관리자 로그인 ID (절대 삭제/권한변경 불가)\n   SYSTEM_ADMIN_LOGIN_ID: 'master01',\n   // 시스템 관리자 계정 표시명\n-  SYSTEM_ADMIN_DISPLAY_NAME: '시스템 관리자',\n+  SYSTEM_ADMIN_DISPLAY_NAME: '임성근',\n   // 시스템 관리자 임시 비밀번호 (최초 생성 시)\n-  TEMP_PASSWORD: 'lavida1901!'\n+  TEMP_PASSWORD: 'lavida1901!',\n+  // 시스템 관리자 기본 정보\n+  DEFAULT_EMAIL: 'sg.lim@theprimavera.co.kr',\n+  DEFAULT_PHONE: '010-3759-6790',\n+  DEFAULT_POSITION: '대표'\n } as const;\n \n // 타입 정의\n export type Position = typeof POSITIONS[number];\n"
+                },
+                {
+                    "date": 1762256980582,
+                    "content": "Index: \n===================================================================\n--- \n+++ \n@@ -37,8 +37,14 @@\n   { value: 'EDITOR', label: 'EDITOR', description: '소속 지점 데이터 편집 및 조회 가능' },\n   { value: 'VIEWER', label: 'VIEWER', description: '소속 지점 데이터 조회만 가능' }\n ] as const;\n \n+// 근무 시간대 목록 (횟수제 프로그램 코치 전용)\n+export const WORK_SHIFTS = [\n+  '주간',\n+  '야간'\n+] as const;\n+\n // 시스템 관리자 설정\n export const SYSTEM_ADMIN_CONFIG = {\n   // 시스템 관리자 로그인 ID (절대 삭제/권한변경 불가)\n   SYSTEM_ADMIN_LOGIN_ID: 'master01',\n@@ -56,4 +62,5 @@\n export type Position = typeof POSITIONS[number];\n export type Role = typeof ROLES[number];\n export type EmploymentType = typeof EMPLOYMENT_TYPES[number];\n export type Permission = typeof PERMISSIONS[number]['value'];\n+export type WorkShift = typeof WORK_SHIFTS[number];\n"
                 }
             ],
             "date": 1759901587678,

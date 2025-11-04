@@ -3,7 +3,7 @@
     "activeCommit": 0,
     "commits": [
         {
-            "activePatchIndex": 2,
+            "activePatchIndex": 3,
             "patches": [
                 {
                     "date": 1760154018684,
@@ -16,6 +16,10 @@
                 {
                     "date": 1761738930798,
                     "content": "Index: \n===================================================================\n--- \n+++ \n@@ -3,39 +3,19 @@\n  */\n \n import { DayColumn, TimeSlot } from './types';\n \n-// 시간대 생성 (오전 6시 ~ 오후 10시)\n+// 시간대 생성 (오전 6시 ~ 오후 10시) - 항상 30분 단위\n export const generateTimeSlots = (duration?: number): TimeSlot[] => {\n   const slots: TimeSlot[] = [];\n   \n-  // 프로그램 소요시간에 따른 시간 간격 결정\n-  let timeInterval = 30; // 기본 30분\n-  \n-  if (duration) {\n-    if (duration <= 30) {\n-      timeInterval = 30; // 30분 이하는 30분 간격\n-    } else {\n-      timeInterval = 60; // 50분 등 30분 초과는 1시간 간격\n-    }\n-  }\n-  \n+  // 항상 30분 간격으로 시간 슬롯 생성\n   for (let hour = 6; hour <= 22; hour++) {\n-    if (timeInterval === 30) {\n-      // 30분 간격\n-      for (let minute = 0; minute < 60; minute += 30) {\n-        slots.push({\n-          hour,\n-          minute,\n-          display: `${hour.toString().padStart(2, '0')}:${minute.toString().padStart(2, '0')}`\n-        });\n-      }\n-    } else {\n-      // 1시간 간격\n+    for (let minute = 0; minute < 60; minute += 30) {\n       slots.push({\n         hour,\n-        minute: 0,\n-        display: `${hour.toString().padStart(2, '0')}:00`\n+        minute,\n+        display: `${hour.toString().padStart(2, '0')}:${minute.toString().padStart(2, '0')}`\n       });\n     }\n   }\n   return slots;\n"
+                },
+                {
+                    "date": 1762171198257,
+                    "content": "Index: \n===================================================================\n--- \n+++ \n@@ -160,4 +160,51 @@\n // 직원에게 색상 할당\n export const assignStaffColor = (staffId: string, index: number): string => {\n   return STAFF_COLORS[index % STAFF_COLORS.length];\n };\n+\n+// 특정 날짜에 휴일인 코치들을 가져오는 함수\n+export const getHolidayStaffNames = (\n+  date: Date, \n+  weeklyHolidaySettings: any[], \n+  staffList: any[]\n+): string[] => {\n+  const dayOfWeek = date.getDay(); // 0: 일요일, 1: 월요일, ..., 6: 토요일\n+  const dayKeys = ['sunday', 'monday', 'tuesday', 'wednesday', 'thursday', 'friday', 'saturday'];\n+  const dayKey = dayKeys[dayOfWeek];\n+  \n+  const holidayStaffNames: string[] = [];\n+  \n+  // 각 주별 휴일 설정을 확인\n+  for (const setting of weeklyHolidaySettings) {\n+    const staff = staffList.find(s => s.id === setting.staffId);\n+    if (!staff) continue;\n+    \n+    // 해당 날짜가 포함된 주의 설정인지 확인\n+    const weekStartDate = new Date(setting.weekStartDate + 'T00:00:00');\n+    const weekEndDate = new Date(weekStartDate);\n+    weekEndDate.setDate(weekStartDate.getDate() + 6);\n+    \n+    if (date >= weekStartDate && date <= weekEndDate) {\n+      // 해당 요일이 휴일로 설정되어 있는지 확인\n+      const daySettings = setting.weekDays[dayKey];\n+      if (daySettings?.isHoliday) {\n+        holidayStaffNames.push(staff.name);\n+      }\n+    }\n+  }\n+  \n+  return holidayStaffNames;\n+};\n+\n+// 휴일 정보를 포맷된 문자열로 반환\n+export const formatHolidayInfo = (holidayStaffNames: string[]): string => {\n+  if (holidayStaffNames.length === 0) {\n+    return '';\n+  }\n+  \n+  if (holidayStaffNames.length <= 2) {\n+    return `휴일: ${holidayStaffNames.join(', ')}`;\n+  } else {\n+    return `휴일: ${holidayStaffNames.slice(0, 2).join(', ')} 외 ${holidayStaffNames.length - 2}명`;\n+  }\n+};\n"
                 }
             ],
             "date": 1760154018684,

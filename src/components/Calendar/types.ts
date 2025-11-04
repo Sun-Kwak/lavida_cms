@@ -35,6 +35,7 @@ export interface StaffInfo {
   name: string;
   role: string;
   program?: string;
+  workShift?: string; // 근무 시간대 (주간/야간)
   isActive: boolean;
   color?: string; // 달력에서 구분용 색상
   contractStartDate?: Date; // 계약 시작일

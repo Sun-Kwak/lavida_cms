@@ -1,0 +1,18 @@
+{
+    "sourceFile": "src/utils/shiftUtils.ts",
+    "activeCommit": 0,
+    "commits": [
+        {
+            "activePatchIndex": 0,
+            "patches": [
+                {
+                    "date": 1762258138422,
+                    "content": "Index: \n===================================================================\n--- \n+++ \n"
+                }
+            ],
+            "date": 1762258138422,
+            "name": "Commit-0",
+            "content": "/**\n * 근무 시간대(shift)에 따른 기본 설정 유틸리티\n */\n\n// 시간을 분으로 변환하는 헬퍼 함수\nconst timeToMinutes = (hour: number, minute: number = 0): number => {\n  return hour * 60 + minute;\n};\n\n// 근무 시간대별 기본 설정\nexport interface ShiftSettings {\n  workingHours: {\n    start: number; // 분 단위\n    end: number;   // 분 단위\n  };\n  defaultBreakTime: {\n    start: number; // 분 단위\n    end: number;   // 분 단위\n    name: string;\n  };\n}\n\n/**\n * 주간/야간 shift에 따른 기본 근무시간과 휴게시간 반환\n * @param shift - '주간' 또는 '야간'\n * @returns ShiftSettings 객체\n */\nexport const getShiftDefaultSettings = (shift: string): ShiftSettings => {\n  switch (shift) {\n    case '주간':\n      return {\n        workingHours: {\n          start: timeToMinutes(9, 0),   // 09:00\n          end: timeToMinutes(18, 0)     // 18:00\n        },\n        defaultBreakTime: {\n          start: timeToMinutes(14, 0),  // 14:00\n          end: timeToMinutes(15, 0),    // 15:00\n          name: '기본 휴게시간'\n        }\n      };\n    \n    case '야간':\n      return {\n        workingHours: {\n          start: timeToMinutes(12, 30), // 12:30\n          end: timeToMinutes(21, 30)    // 21:30\n        },\n        defaultBreakTime: {\n          start: timeToMinutes(16, 0),  // 16:00\n          end: timeToMinutes(17, 0),    // 17:00\n          name: '기본 휴게시간'\n        }\n      };\n    \n    default:\n      // 기본값 (현재 설정과 동일)\n      return {\n        workingHours: {\n          start: timeToMinutes(9, 0),   // 09:00\n          end: timeToMinutes(21, 0)     // 21:00\n        },\n        defaultBreakTime: {\n          start: timeToMinutes(12, 0),  // 12:00\n          end: timeToMinutes(13, 0),    // 13:00\n          name: '점심시간'\n        }\n      };\n  }\n};\n\n/**\n * 여러 직원의 shift 정보를 기반으로 통합 기본 설정 반환\n * 모든 직원이 같은 shift면 해당 shift 설정 반환\n * 다른 shift가 섞여있으면 기본값 반환\n * @param staffShifts - 직원들의 shift 정보 배열\n * @returns ShiftSettings 객체\n */\nexport const getUnifiedShiftSettings = (staffShifts: string[]): ShiftSettings => {\n  // 빈 배열이거나 shift 정보가 없으면 기본값\n  if (!staffShifts || staffShifts.length === 0) {\n    return getShiftDefaultSettings('');\n  }\n\n  // 유효한 shift 정보만 필터링\n  const validShifts = staffShifts.filter(shift => shift === '주간' || shift === '야간');\n  \n  // 유효한 shift가 없으면 기본값\n  if (validShifts.length === 0) {\n    return getShiftDefaultSettings('');\n  }\n\n  // 모든 직원이 같은 shift인지 확인\n  const uniqueShifts = Array.from(new Set(validShifts));\n  if (uniqueShifts.length === 1) {\n    return getShiftDefaultSettings(uniqueShifts[0]);\n  }\n\n  // 다른 shift가 섞여있으면 기본값\n  return getShiftDefaultSettings('');\n};\n\n/**\n * 분을 시:분 형태의 문자열로 변환\n * @param minutes - 분 단위 시간\n * @returns \"HH:MM\" 형태의 문자열\n */\nexport const minutesToTimeString = (minutes: number): string => {\n  const hours = Math.floor(minutes / 60);\n  const mins = minutes % 60;\n  return `${hours.toString().padStart(2, '0')}:${mins.toString().padStart(2, '0')}`;\n};"
+        }
+    ]
+}

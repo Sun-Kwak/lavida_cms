@@ -3,7 +3,7 @@
     "activeCommit": 0,
     "commits": [
         {
-            "activePatchIndex": 3,
+            "activePatchIndex": 4,
             "patches": [
                 {
                     "date": 1761374852720,
@@ -20,6 +20,10 @@
                 {
                     "date": 1761375753706,
                     "content": "Index: \n===================================================================\n--- \n+++ \n@@ -189,33 +189,45 @@\n interface PaymentRegistrationModalProps {\n   isOpen: boolean;\n   onClose: () => void;\n   onSuccess: () => void;\n+  preselectedMember?: Member | null; // 미리 선택된 회원\n }\n \n const PaymentRegistrationModal: React.FC<PaymentRegistrationModalProps> = ({\n   isOpen,\n   onClose,\n-  onSuccess\n+  onSuccess,\n+  preselectedMember = null\n }) => {\n   const [selectedMember, setSelectedMember] = useState<Member | null>(null);\n   const [memberPointBalance, setMemberPointBalance] = useState<number>(0);\n   const [paymentMethod, setPaymentMethod] = useState<'cash' | 'card' | 'transfer'>('cash');\n   const [amount, setAmount] = useState<string>('');\n   const [memo, setMemo] = useState('');\n   const [isProcessing, setIsProcessing] = useState(false);\n \n+  // 미리 선택된 회원이 있으면 설정하고 포인트 잔액 로드\n+  useEffect(() => {\n+    if (preselectedMember && isOpen) {\n+      handleMemberSelect(preselectedMember);\n+    }\n+  }, [preselectedMember, isOpen]);\n+\n   // 모달이 닫힐 때 상태 초기화\n   useEffect(() => {\n     if (!isOpen) {\n-      setSelectedMember(null);\n-      setMemberPointBalance(0);\n+      // 미리 선택된 회원이 없는 경우에만 초기화\n+      if (!preselectedMember) {\n+        setSelectedMember(null);\n+        setMemberPointBalance(0);\n+      }\n       setPaymentMethod('cash');\n       setAmount('');\n       setMemo('');\n       setIsProcessing(false);\n     }\n-  }, [isOpen]);\n+  }, [isOpen, preselectedMember]);\n \n   // 회원 선택 시 포인트 잔액 로드\n   const handleMemberSelect = async (member: Member) => {\n     setSelectedMember(member);\n@@ -377,8 +389,10 @@\n             <MemberSearchPanel\n               selectedMember={selectedMember}\n               onMemberSelect={handleMemberSelect}\n               memberPointBalance={memberPointBalance}\n+              preselectedMember={preselectedMember}\n+              readonly={!!preselectedMember}\n             />\n           </LeftPanel>\n           \n           <RightPanel>\n"
+                },
+                {
+                    "date": 1762070340233,
+                    "content": "Index: \n===================================================================\n--- \n+++ \n@@ -299,11 +299,8 @@\n         memo: memo || `현장 결제 등록 - ${paymentMethod} ${baseAmount.toLocaleString()}원`\n       });\n \n       // 2. 기본 포인트 적립\n-      const expiryDate = new Date();\n-      expiryDate.setFullYear(expiryDate.getFullYear() + 1);\n-\n       await dbManager.point.addPointTransaction({\n         memberId: selectedMember.id,\n         memberName: selectedMember.name,\n         amount: baseAmount,\n@@ -315,9 +312,8 @@\n         branchName: selectedMember.branchName,\n         staffId: selectedMember.coach,\n         staffName: selectedMember.coachName,\n         earnedDate: new Date(),\n-        expiryDate,\n         isExpired: false,\n         source: '현장결제',\n         description: `현장 결제 등록 - ${paymentMethod} ${baseAmount.toLocaleString()}원${memo ? ` (${memo})` : ''}`\n       });\n@@ -336,9 +332,8 @@\n           branchName: selectedMember.branchName,\n           staffId: selectedMember.coach,\n           staffName: selectedMember.coachName,\n           earnedDate: new Date(),\n-          expiryDate,\n           isExpired: false,\n           source: '보너스포인트',\n           description: `현장 결제 등록 보너스 포인트 (${baseAmount.toLocaleString()}원 → ${Math.floor(baseAmount / 1000000)}개 100만원 단위)`\n         });\n"
                 }
             ],
             "date": 1761374852720,

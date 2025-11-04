@@ -5,6 +5,7 @@ import { AppColors } from '../../../styles/colors';
 import { AppTextStyles } from '../../../styles/textStyles';
 import { dbManager, type Branch, type Member, type Locker } from '../../../utils/indexedDB';
 import CustomDropdown from '../../../components/CustomDropdown';
+import CustomDateInput from '../../../components/CustomDateInput';
 import { SYSTEM_ADMIN_CONFIG } from '../../../constants/staffConstants';
 import Modal from '../../../components/Modal';
 
@@ -447,6 +448,42 @@ const WarningText = styled.div`
   text-align: left;
 `;
 
+const LockerInfoRow = styled.div`
+  display: flex;
+  gap: 24px;
+  margin-bottom: 12px;
+`;
+
+const LockerInfoItem = styled.div`
+  flex: 1;
+  text-align: left;
+  
+  strong {
+    font-weight: 600;
+    color: ${AppColors.onSurface};
+    margin-right: 8px;
+  }
+  
+  span {
+    color: ${AppColors.onInput1};
+  }
+`;
+
+const FieldRow = styled.div`
+  display: flex;
+  gap: 16px;
+  margin-bottom: 16px;
+`;
+
+const FieldColumn = styled.div`
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  min-width: 0;
+  overflow: hidden;
+`;
+
 // 사용자 정보 타입
 interface UserInfo {
   id: string;
@@ -467,6 +504,16 @@ const LockerManagement: React.FC = () => {
   const [currentUserInfo, setCurrentUserInfo] = useState<UserInfo | null>(null);
   const [hasPermission, setHasPermission] = useState(false);
 
+  // 라커 수정 관련 상태
+  const [isEditMode, setIsEditMode] = useState(false);
+  const [editMember, setEditMember] = useState<Member | null>(null);
+  const [editStartDate, setEditStartDate] = useState('');
+  const [editEndDate, setEditEndDate] = useState('');
+  const [editMonths, setEditMonths] = useState(1);
+  const [editSearchQuery, setEditSearchQuery] = useState('');
+  const [editSearchResults, setEditSearchResults] = useState<Member[]>([]);
+  const [editMemo, setEditMemo] = useState('');
+
   // 라커 배정 관련 상태
   const [isAssignmentModalOpen, setIsAssignmentModalOpen] = useState(false);
   const [selectedLockerForAssignment, setSelectedLockerForAssignment] = useState<Locker | null>(null);
@@ -475,6 +522,12 @@ const LockerManagement: React.FC = () => {
   const [selectedMember, setSelectedMember] = useState<Member | null>(null);
   const [selectedMonths, setSelectedMonths] = useState(1);
   const [paymentMethod, setPaymentMethod] = useState('card');
+  const [startDate, setStartDate] = useState(new Date().toISOString().split('T')[0]);
+  const [endDate, setEndDate] = useState(() => {
+    const date = new Date();
+    date.setMonth(date.getMonth() + 1);
+    return date.toISOString().split('T')[0];
+  });
 
   // 현재 선택된 지점의 라커 가격을 동기화하여 가져오기
   const getCurrentBranchLockerPrice = (): number => {
@@ -721,7 +774,25 @@ const LockerManagement: React.FC = () => {
 
     if (window.confirm(`라커 ${locker.number}번의 배정을 해제하시겠습니까?`)) {
       try {
-        await dbManager.unassignLocker(locker.id);
+        // 해제 이력 추가
+        const changeDate = new Date().toLocaleString('ko-KR');
+        const changedBy = currentUserInfo?.name || 'Unknown';
+        const unassignMemo = `[${changeDate}] ${changedBy} - 라커 해제\n` +
+          `해제 전: ${locker.userName || '없음'} (${locker.startDate || '없음'} ~ ${locker.endDate || '없음'})`;
+
+        const existingHistory = locker.changeHistory || [];
+        const updatedHistory = [...existingHistory, unassignMemo];
+
+        await dbManager.updateLocker(locker.id, {
+          status: 'available',
+          userId: undefined,
+          userName: undefined,
+          startDate: undefined,
+          endDate: undefined,
+          months: undefined,
+          paymentId: undefined,
+          changeHistory: updatedHistory
+        });
         
         // 라커 목록 새로고침
         await loadLockers();
@@ -744,6 +815,12 @@ const LockerManagement: React.FC = () => {
       setSearchResults([]);
       setSelectedMonths(1);
       setPaymentMethod('card');
+      // 시작일과 종료일 초기화
+      const today = new Date().toISOString().split('T')[0];
+      setStartDate(today);
+      const defaultEndDate = new Date();
+      defaultEndDate.setMonth(defaultEndDate.getMonth() + 1);
+      setEndDate(defaultEndDate.toISOString().split('T')[0]);
     } else {
       // 기존 상세 모달 열기
       setSelectedLocker(locker);
@@ -782,6 +859,24 @@ const LockerManagement: React.FC = () => {
     setSearchResults([]);
   };
 
+  // 개월 수 변경 시 종료일 자동 계산
+  const handleMonthsChange = (months: number) => {
+    setSelectedMonths(months);
+    const start = new Date(startDate);
+    const end = new Date(start);
+    end.setMonth(end.getMonth() + months);
+    setEndDate(end.toISOString().split('T')[0]);
+  };
+
+  // 시작일 변경 시 종료일 자동 계산
+  const handleStartDateChange = (date: string) => {
+    setStartDate(date);
+    const start = new Date(date);
+    const end = new Date(start);
+    end.setMonth(end.getMonth() + selectedMonths);
+    setEndDate(end.toISOString().split('T')[0]);
+  };
+
   // 라커 배정 처리 함수
   const handleAssignLocker = async () => {
     if (!selectedMember || !selectedLockerForAssignment) {
@@ -806,7 +901,7 @@ const LockerManagement: React.FC = () => {
           name: `라커 ${selectedLockerForAssignment.number}번 (${selectedMonths}개월)`,
           price: totalAmount,
           quantity: 1,
-          description: `라커 ${selectedLockerForAssignment.number}번 ${selectedMonths}개월 이용`
+          description: `라커 ${selectedLockerForAssignment.number}번 ${selectedMonths}개월 이용 (${startDate} ~ ${endDate})`
         }],
         totalAmount: totalAmount,
         paidAmount: totalAmount,
@@ -815,21 +910,38 @@ const LockerManagement: React.FC = () => {
         paymentMethod: paymentMethod,
         paymentDate: new Date(),
         paymentType: 'asset' as const,
-        memo: `라커 ${selectedLockerForAssignment.number}번 배정`
+        memo: `라커 ${selectedLockerForAssignment.number}번 배정 (${startDate} ~ ${endDate})`
       };
 
       // 결제 정보 저장
       const paymentId = await dbManager.addPayment(paymentData);
       console.log('결제 정보 저장 완료:', paymentId);
 
-      // 라커 배정
-      await dbManager.assignLockerToUser(
+      // 라커 배정 (사용자 정의 시작일/종료일 사용)
+      await dbManager.assignLockerToUserWithDates(
         selectedLockerForAssignment.id,
         selectedMember.id,
         selectedMember.name,
         selectedMonths,
+        startDate,
+        endDate,
         paymentId
       );
+
+      // 배정 이력 추가
+      const changeDate = new Date().toLocaleString('ko-KR');
+      const changedBy = currentUserInfo?.name || 'Unknown';
+      const assignMemo = `[${changeDate}] ${changedBy} - 라커 최초 배정\n` +
+        `배정: ${selectedMember.name} (${startDate} ~ ${endDate}, ${selectedMonths}개월)`;
+
+      // 라커에 이력 추가
+      const currentLocker = await dbManager.getLockerById(selectedLockerForAssignment.id);
+      const existingHistory = currentLocker?.changeHistory || [];
+      const updatedHistory = [...existingHistory, assignMemo];
+
+      await dbManager.updateLocker(selectedLockerForAssignment.id, {
+        changeHistory: updatedHistory
+      });
 
       // 라커 목록 새로고침
       await loadLockers();
@@ -842,6 +954,144 @@ const LockerManagement: React.FC = () => {
     } catch (error) {
       console.error('라커 배정 실패:', error);
       toast.error('라커 배정 중 오류가 발생했습니다.');
+    }
+  };
+
+  // 라커 정보 수정을 위한 헬퍼 함수들
+  const initializeEditData = async (locker: Locker) => {
+    if (locker.userId) {
+      try {
+        const members = await dbManager.getAllMembers();
+        const member = members.find(m => m.id === locker.userId);
+        if (member) {
+          setEditMember(member);
+          setEditSearchQuery(member.name);
+        }
+      } catch (error) {
+        console.error('회원 정보 로드 실패:', error);
+      }
+    }
+    
+    setEditStartDate(locker.startDate || '');
+    setEditEndDate(locker.endDate || '');
+    setEditMonths(locker.months || 1);
+    setEditMemo('');
+    setEditSearchResults([]);
+  };
+
+  // 수정용 회원 검색
+  const handleEditMemberSearch = async (query: string) => {
+    setEditSearchQuery(query);
+    
+    if (!query.trim()) {
+      setEditSearchResults([]);
+      return;
+    }
+
+    try {
+      const members = await dbManager.getAllMembers();
+      const filtered = members.filter(member => 
+        member.isActive && (
+          member.name.toLowerCase().includes(query.toLowerCase()) ||
+          member.phone?.includes(query) ||
+          member.email?.toLowerCase().includes(query.toLowerCase())
+        )
+      );
+      setEditSearchResults(filtered.slice(0, 10));
+    } catch (error) {
+      console.error('회원 검색 실패:', error);
+      setEditSearchResults([]);
+    }
+  };
+
+  // 수정용 회원 선택
+  const handleEditMemberSelect = (member: Member) => {
+    setEditMember(member);
+    setEditSearchQuery(member.name);
+    setEditSearchResults([]);
+  };
+
+  // 수정용 개월 수 변경 시 종료일 자동 계산
+  const handleEditMonthsChange = (months: number) => {
+    setEditMonths(months);
+    if (editStartDate) {
+      const start = new Date(editStartDate);
+      const end = new Date(start);
+      end.setMonth(end.getMonth() + months);
+      setEditEndDate(end.toISOString().split('T')[0]);
+    }
+  };
+
+  // 수정용 시작일 변경 시 종료일 자동 계산
+  const handleEditStartDateChange = (date: string) => {
+    setEditStartDate(date);
+    const start = new Date(date);
+    const end = new Date(start);
+    end.setMonth(end.getMonth() + editMonths);
+    setEditEndDate(end.toISOString().split('T')[0]);
+  };
+
+  // 라커 정보 수정 처리
+  const handleUpdateLocker = async () => {
+    if (!selectedLocker || !editMember) {
+      toast.warning('필수 정보를 입력해주세요.');
+      return;
+    }
+
+    if (!editMemo.trim()) {
+      toast.warning('수정 사유를 입력해주세요.');
+      return;
+    }
+
+    try {
+      const oldData = {
+        userId: selectedLocker.userId,
+        userName: selectedLocker.userName,
+        startDate: selectedLocker.startDate,
+        endDate: selectedLocker.endDate,
+        months: selectedLocker.months
+      };
+
+      const newData = {
+        userId: editMember.id,
+        userName: editMember.name,
+        startDate: editStartDate,
+        endDate: editEndDate,
+        months: editMonths
+      };
+
+      // 수정 이력 메모 생성
+      const changeDate = new Date().toLocaleString('ko-KR');
+      const changedBy = currentUserInfo?.name || 'Unknown';
+      
+      const historyMemo = `[${changeDate}] ${changedBy} - ${editMemo.trim()}\n` +
+        `변경 전: ${oldData.userName || '없음'} (${oldData.startDate || '없음'} ~ ${oldData.endDate || '없음'})\n` +
+        `변경 후: ${newData.userName} (${newData.startDate} ~ ${newData.endDate})`;
+
+      // 기존 이력에 새 이력 추가
+      const existingHistory = selectedLocker.changeHistory || [];
+      const updatedHistory = [...existingHistory, historyMemo];
+
+      // 라커 정보 업데이트 (이력 포함)
+      await dbManager.updateLocker(selectedLocker.id, {
+        ...newData,
+        changeHistory: updatedHistory
+      });
+
+      // 라커 목록 새로고침
+      await loadLockers();
+
+      // 모달 닫기 및 상태 초기화
+      setSelectedLocker(null);
+      setIsEditMode(false);
+      setEditMember(null);
+      setEditSearchQuery('');
+      setEditMemo('');
+      
+      toast.success(`라커 ${selectedLocker.number}번 정보가 수정되었습니다.`);
+    } catch (error) {
+      console.error('라커 정보 수정 실패:', error);
+      toast.error('라커 정보 수정 중 오류가 발생했습니다.');
     }
   };
 
@@ -1154,21 +1404,12 @@ const LockerManagement: React.FC = () => {
                   </WarningText>
                 ) : (
                   <>
-                    <FormGroup>
-                      <FormLabel>라커 번호</FormLabel>
-                      <PriceInput
-                        type="text"
-                        value={selectedLockerForAssignment?.number || ''}
-                        readOnly
-                        style={{ backgroundColor: AppColors.borderLight }}
-                      />
-                    </FormGroup>
 
                     <FormGroup>
                       <FormLabel>이용 기간</FormLabel>
                       <CustomDropdown
                         value={selectedMonths.toString()}
-                        onChange={(value: string) => setSelectedMonths(parseInt(value))}
+                        onChange={(value: string) => handleMonthsChange(parseInt(value))}
                         options={[
                           { value: '1', label: '1개월' },
                           { value: '2', label: '2개월' },
@@ -1181,6 +1422,27 @@ const LockerManagement: React.FC = () => {
                         inModal={true}
                       />
                     </FormGroup>
+
+                    <FieldRow>
+                      <FieldColumn>
+                        <FormLabel>시작일</FormLabel>
+                        <CustomDateInput
+                          value={startDate}
+                          onChange={handleStartDateChange}
+                          placeholder="시작일을 선택하세요"
+                        />
+                      </FieldColumn>
+
+                      <FieldColumn>
+                        <FormLabel>종료일</FormLabel>
+                        <CustomDateInput
+                          value={endDate}
+                          onChange={(value: string) => setEndDate(value)}
+                          placeholder="종료일을 선택하세요"
+                          min={startDate}
+                        />
+                      </FieldColumn>
+                    </FieldRow>
 
                     <FormGroup>
                       <FormLabel>결제 방법</FormLabel>
@@ -1205,8 +1467,11 @@ const LockerManagement: React.FC = () => {
                     </AmountDisplay>
 
                     <div style={{ fontSize: AppTextStyles.body3.fontSize, color: AppColors.onInput1, textAlign: 'left' }}>
-                      <div>시작일: {new Date().toLocaleDateString('ko-KR')}</div>
-                      <div>종료일: {new Date(Date.now() + selectedMonths * 30 * 24 * 60 * 60 * 1000).toLocaleDateString('ko-KR')}</div>
+                      <div>시작일: {new Date(startDate).toLocaleDateString('ko-KR')}</div>
+                      <div>종료일: {new Date(endDate).toLocaleDateString('ko-KR')}</div>
+                      <div style={{ marginTop: '8px', color: AppColors.onInput2 }}>
+                        총 이용 기간: {Math.ceil((new Date(endDate).getTime() - new Date(startDate).getTime()) / (1000 * 60 * 60 * 24))}일
+                      </div>
                     </div>
                   </>
                 )}
@@ -1221,6 +1486,10 @@ const LockerManagement: React.FC = () => {
                 setSelectedMember(null);
                 setSearchQuery('');
                 setSearchResults([]);
+                setStartDate(new Date().toISOString().split('T')[0]);
+                const defaultEndDate = new Date();
+                defaultEndDate.setMonth(defaultEndDate.getMonth() + 1);
+                setEndDate(defaultEndDate.toISOString().split('T')[0]);
               }}>
                 취소
               </SecondaryButton>
@@ -1234,59 +1503,307 @@ const LockerManagement: React.FC = () => {
           }
         />
 
-        {/* 라커 상세 모달 */}
-        <ModalOverlay $isOpen={!!selectedLocker}>
-          <ModalContent>
-            <ModalTitle>라커 {selectedLocker?.number}번</ModalTitle>
-            <p>상태: {selectedLocker ? getStatusText(selectedLocker.status) : ''}</p>
-            <p>가격: {formatPrice(getCurrentBranchLockerPrice())}</p>
-            {selectedLocker?.userName && (
-              <>
-                <p>사용자: {selectedLocker.userName}</p>
-                {selectedLocker.startDate && <p>시작일: {selectedLocker.startDate}</p>}
-                {selectedLocker.endDate && <p>종료일: {selectedLocker.endDate}</p>}
-                {selectedLocker.months && <p>이용기간: {selectedLocker.months}개월</p>}
-              </>
-            )}
-            <ModalButtons>
-              <SecondaryButton onClick={() => setSelectedLocker(null)}>
-                닫기
+        {/* 라커 상세/수정 모달 */}
+        <Modal
+          isOpen={!!selectedLocker}
+          onClose={() => {
+            setSelectedLocker(null);
+            setIsEditMode(false);
+            setEditMember(null);
+            setEditSearchQuery('');
+            setEditSearchResults([]);
+            setEditMemo('');
+          }}
+          width="min(95vw, 600px)"
+          header={`라커 ${selectedLocker?.number}번 ${isEditMode ? '수정' : '정보'}`}
+          body={
+            selectedLocker && (
+              <div style={{ padding: '8px 0' }}>
+                {!isEditMode ? (
+                  // 정보 표시 모드
+                  <div>
+                    <LockerInfoRow>
+                      <LockerInfoItem>
+                        <strong>상태:</strong>
+                        <span>{selectedLocker ? getStatusText(selectedLocker.status) : ''}</span>
+                      </LockerInfoItem>
+                      <LockerInfoItem>
+                        <strong>가격:</strong>
+                        <span>{formatPrice(getCurrentBranchLockerPrice())}</span>
+                      </LockerInfoItem>
+                    </LockerInfoRow>
+                    
+                    {selectedLocker.userName && (
+                      <>
+                        <LockerInfoRow>
+                          <LockerInfoItem>
+                            <strong>사용자:</strong>
+                            <span>{selectedLocker.userName}</span>
+                          </LockerInfoItem>
+                          <LockerInfoItem>
+                            <strong>이용기간:</strong>
+                            <span>{selectedLocker.months}개월</span>
+                          </LockerInfoItem>
+                        </LockerInfoRow>
+                        
+                        {selectedLocker.startDate && selectedLocker.endDate && (
+                          <LockerInfoRow>
+                            <LockerInfoItem>
+                              <strong>시작일:</strong>
+                              <span>{new Date(selectedLocker.startDate).toLocaleDateString('ko-KR')}</span>
+                            </LockerInfoItem>
+                            <LockerInfoItem>
+                              <strong>종료일:</strong>
+                              <span>{new Date(selectedLocker.endDate).toLocaleDateString('ko-KR')}</span>
+                            </LockerInfoItem>
+                          </LockerInfoRow>
+                        )}
+                      </>
+                    )}
+                    
+                    {selectedLocker.changeHistory && selectedLocker.changeHistory.length > 0 && (
+                      <div style={{ marginTop: '20px', textAlign: 'left' }}>
+                        <strong>수정 이력:</strong>
+                        <div style={{ 
+                          marginTop: '8px',
+                          padding: '12px',
+                          backgroundColor: AppColors.surface,
+                          borderRadius: '6px',
+                          border: `1px solid ${AppColors.borderLight}`,
+                          maxHeight: '200px',
+                          overflowY: 'auto',
+                          textAlign: 'left'
+                        }}>
+                          {selectedLocker.changeHistory.map((history, index) => (
+                            <div 
+                              key={index} 
+                              style={{ 
+                                fontSize: AppTextStyles.body3.fontSize,
+                                color: AppColors.onInput1,
+                                marginBottom: index < selectedLocker.changeHistory!.length - 1 ? '12px' : '0',
+                                paddingBottom: index < selectedLocker.changeHistory!.length - 1 ? '12px' : '0',
+                                borderBottom: index < selectedLocker.changeHistory!.length - 1 ? `1px solid ${AppColors.borderLight}` : 'none',
+                                whiteSpace: 'pre-line',
+                                textAlign: 'left'
+                              }}
+                            >
+                              {history}
+                            </div>
+                          ))}
+                        </div>
+                      </div>
+                    )}
+                  </div>
+                ) : (
+                  // 수정 모드
+                  <div>
+                    <FormGroup>
+                      <FormLabel>사용자 변경</FormLabel>
+                      {!editMember ? (
+                        <>
+                          <SearchInput
+                            type="text"
+                            placeholder="회원명, 전화번호, 이메일로 검색..."
+                            value={editSearchQuery}
+                            onChange={(e) => handleEditMemberSearch(e.target.value)}
+                          />
+                          
+                          {editSearchResults.length > 0 && (
+                            <SearchResults style={{ maxHeight: '150px' }}>
+                              {editSearchResults.map((member) => (
+                                <MemberItem
+                                  key={member.id}
+                                  $selected={false}
+                                  onClick={() => handleEditMemberSelect(member)}
+                                >
+                                  <MemberName>{member.name}</MemberName>
+                                  <MemberInfo>
+                                    {member.phone && <div>전화: {member.phone}</div>}
+                                    {member.email && <div>이메일: {member.email}</div>}
+                                  </MemberInfo>
+                                </MemberItem>
+                              ))}
+                            </SearchResults>
+                          )}
+                        </>
+                      ) : (
+                        <SelectedMemberCard>
+                          <SelectedMemberName>
+                            {editMember.name}
+                            <button 
+                              onClick={() => {
+                                setEditMember(null);
+                                setEditSearchQuery('');
+                                setEditSearchResults([]);
+                              }}
+                              style={{ 
+                                float: 'right', 
+                                background: 'none', 
+                                border: 'none', 
+                                fontSize: '14px', 
+                                cursor: 'pointer',
+                                color: AppColors.primary
+                              }}
+                            >
+                              변경
+                            </button>
+                          </SelectedMemberName>
+                          <SelectedMemberDetails>
+                            {editMember.phone && <div>전화: {editMember.phone}</div>}
+                            {editMember.email && <div>이메일: {editMember.email}</div>}
+                          </SelectedMemberDetails>
+                        </SelectedMemberCard>
+                      )}
+                    </FormGroup>
+
+                    <FormGroup>
+                      <FormLabel>이용 기간</FormLabel>
+                      <CustomDropdown
+                        value={editMonths.toString()}
+                        onChange={(value: string) => handleEditMonthsChange(parseInt(value))}
+                        options={[
+                          { value: '1', label: '1개월' },
+                          { value: '2', label: '2개월' },
+                          { value: '3', label: '3개월' },
+                          { value: '4', label: '4개월' },
+                          { value: '5', label: '5개월' },
+                          { value: '6', label: '6개월' },
+                          { value: '12', label: '12개월' }
+                        ]}
+                        inModal={true}
+                      />
+                    </FormGroup>
+
+                    <FieldRow>
+                      <FieldColumn>
+                        <FormLabel>시작일</FormLabel>
+                        <CustomDateInput
+                          value={editStartDate}
+                          onChange={handleEditStartDateChange}
+                          placeholder="시작일을 선택하세요"
+                        />
+                      </FieldColumn>
+
+                      <FieldColumn>
+                        <FormLabel>종료일</FormLabel>
+                        <CustomDateInput
+                          value={editEndDate}
+                          onChange={(value: string) => setEditEndDate(value)}
+                          placeholder="종료일을 선택하세요"
+                          min={editStartDate}
+                        />
+                      </FieldColumn>
+                    </FieldRow>
+
+                    <FormGroup>
+                      <FormLabel>수정 사유 (필수)</FormLabel>
+                      <textarea
+                        value={editMemo}
+                        onChange={(e) => setEditMemo(e.target.value)}
+                        placeholder="수정 사유를 입력해주세요"
+                        style={{
+                          width: '100%',
+                          height: '80px',
+                          padding: '8px 12px',
+                          border: `1px solid ${AppColors.borderLight}`,
+                          borderRadius: '6px',
+                          backgroundColor: AppColors.surface,
+                          color: AppColors.onSurface,
+                          fontSize: AppTextStyles.body2.fontSize,
+                          resize: 'vertical',
+                          boxSizing: 'border-box'
+                        }}
+                      />
+                    </FormGroup>
+
+                    {editMember && editStartDate && editEndDate && (
+                      <AmountDisplay>
+                        <AmountText>수정 후 정보</AmountText>
+                        <div style={{ fontSize: AppTextStyles.body2.fontSize, color: AppColors.onSurface }}>
+                          <div>사용자: {editMember.name}</div>
+                          <div>기간: {new Date(editStartDate).toLocaleDateString('ko-KR')} ~ {new Date(editEndDate).toLocaleDateString('ko-KR')}</div>
+                          <div>이용기간: {editMonths}개월</div>
+                        </div>
+                      </AmountDisplay>
+                    )}
+                  </div>
+                )}
+              </div>
+            )
+          }
+          footer={
+            <div style={{ display: 'flex', justifyContent: 'flex-end', gap: '12px' }}>
+              <SecondaryButton onClick={() => {
+                if (isEditMode) {
+                  setIsEditMode(false);
+                  setEditMember(null);
+                  setEditSearchQuery('');
+                  setEditSearchResults([]);
+                  setEditMemo('');
+                } else {
+                  setSelectedLocker(null);
+                }
+              }}>
+                {isEditMode ? '취소' : '닫기'}
               </SecondaryButton>
-              {selectedLocker && hasPermission && canEditBranch(selectedLocker.branchId) && selectedLocker.status === 'occupied' && (
+              
+              {selectedLocker && hasPermission && canEditBranch(selectedLocker.branchId) && selectedLocker.status === 'occupied' && !isEditMode && (
+                <>
+                  <ActionButton 
+                    onClick={async () => {
+                      setIsEditMode(true);
+                      await initializeEditData(selectedLocker);
+                    }}
+                  >
+                    수정
+                  </ActionButton>
+                  <ActionButton 
+                    onClick={() => {
+                      handleUnassignLocker(selectedLocker);
+                      setSelectedLocker(null);
+                    }}
+                    style={{ backgroundColor: AppColors.warning }}
+                  >
+                    라커 해제
+                  </ActionButton>
+                </>
+              )}
+              
+              {selectedLocker && hasPermission && canEditBranch(selectedLocker.branchId) && selectedLocker.status !== 'occupied' && !isEditMode && (
+                <>
+                  <ActionButton 
+                    onClick={() => {
+                      handleToggleMaintenance(selectedLocker);
+                      setSelectedLocker(null);
+                    }}
+                  >
+                    {selectedLocker.status === 'maintenance' ? '점검 완료' : '점검중으로 변경'}
+                  </ActionButton>
+                  {selectedLocker.status === 'available' && (
+                    <ActionButton 
+                      onClick={() => {
+                        handleDeleteLocker(selectedLocker);
+                        setSelectedLocker(null);
+                      }}
+                      style={{ backgroundColor: AppColors.error }}
+                    >
+                      삭제
+                    </ActionButton>
+                  )}
+                </>
+              )}
+              
+              {isEditMode && (
                 <ActionButton 
-                  onClick={() => {
-                    handleUnassignLocker(selectedLocker);
-                    setSelectedLocker(null);
-                  }}
-                  style={{ backgroundColor: AppColors.warning }}
+                  onClick={handleUpdateLocker}
+                  disabled={!editMember || !editMemo.trim()}
                 >
-                  라커 해제
+                  수정 완료
                 </ActionButton>
               )}
-              {selectedLocker && hasPermission && canEditBranch(selectedLocker.branchId) && selectedLocker.status !== 'occupied' && (
-                <ActionButton 
-                  onClick={() => {
-                    handleToggleMaintenance(selectedLocker);
-                    setSelectedLocker(null);
-                  }}
-                >
-                  {selectedLocker.status === 'maintenance' ? '점검 완료' : '점검중으로 변경'}
-                </ActionButton>
-              )}
-              {selectedLocker && hasPermission && canEditBranch(selectedLocker.branchId) && selectedLocker.status === 'available' && (
-                <ActionButton 
-                  onClick={() => {
-                    handleDeleteLocker(selectedLocker);
-                    setSelectedLocker(null);
-                  }}
-                  style={{ backgroundColor: AppColors.error }}
-                >
-                  삭제
-                </ActionButton>
-              )}
-            </ModalButtons>
-          </ModalContent>
-        </ModalOverlay>
+            </div>
+          }
+        />
       </Content>
     </Container>
   );

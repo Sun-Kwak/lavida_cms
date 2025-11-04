@@ -297,6 +297,29 @@ const MonthView: React.FC<MonthViewProps> = ({
       }
     }
 
+    // 계약 기간 체크 (선택된 코치들이 있는 경우)
+    if (onEventCreate && selectedStaffIds.length > 0) {
+      const canCreateReservation = selectedStaffIds.every(staffId => {
+        const staff = staffList.find(s => s.id === staffId);
+        if (!staff?.contractStartDate || !staff?.contractEndDate) return true;
+        
+        const contractStart = new Date(staff.contractStartDate);
+        contractStart.setHours(0, 0, 0, 0);
+        const contractEnd = new Date(staff.contractEndDate);
+        contractEnd.setHours(0, 0, 0, 0);
+        
+        const selectedDate = new Date(date);
+        selectedDate.setHours(0, 0, 0, 0);
+        
+        return selectedDate >= contractStart && selectedDate <= contractEnd;
+      });
+
+      if (!canCreateReservation) {
+        alert('선택된 코치(들)의 계약 기간 외입니다. 예약을 생성할 수 없습니다.');
+        return;
+      }
+    }
+
     if (onDateClick) {
       onDateClick(date);
     } else if (onEventCreate) {

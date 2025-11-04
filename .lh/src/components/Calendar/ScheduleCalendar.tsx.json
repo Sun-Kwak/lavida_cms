@@ -3,7 +3,7 @@
     "activeCommit": 0,
     "commits": [
         {
-            "activePatchIndex": 8,
+            "activePatchIndex": 10,
             "patches": [
                 {
                     "date": 1760154018694,
@@ -40,6 +40,14 @@
                 {
                     "date": 1761741441376,
                     "content": "Index: \n===================================================================\n--- \n+++ \n@@ -75,8 +75,9 @@\n             onEventCreate={onEventCreate}\n             allowEmptyStaff={allowEmptyStaff}\n             programDuration={programDuration}\n             disablePastTime={disablePastTime}\n+            weeklyHolidaySettings={weeklyHolidaySettings}\n             currentUser={currentUser}\n           />\n         );\n       case 'month':\n"
+                },
+                {
+                    "date": 1762169896945,
+                    "content": "Index: \n===================================================================\n--- \n+++ \n@@ -33,8 +33,9 @@\n   onEventClick,\n   onEventCreate,\n   onHolidaySettings,\n   weeklyHolidaySettings,\n+  staffHolidays = [],\n   allowEmptyStaff = false,\n   programDuration,\n   hideViewOptions = [],\n   disablePastTime = false,\n@@ -92,8 +93,9 @@\n             onDateClick={handleDateClick}\n             allowEmptyStaff={allowEmptyStaff}\n             programDuration={programDuration}\n             disablePastTime={disablePastTime}\n+            staffHolidays={staffHolidays}\n           />\n         );\n       default:\n         return null;\n"
+                },
+                {
+                    "date": 1762171198368,
+                    "content": "Index: \n===================================================================\n--- \n+++ \n@@ -94,8 +94,9 @@\n             allowEmptyStaff={allowEmptyStaff}\n             programDuration={programDuration}\n             disablePastTime={disablePastTime}\n             staffHolidays={staffHolidays}\n+            weeklyHolidaySettings={weeklyHolidaySettings}\n           />\n         );\n       default:\n         return null;\n"
                 }
             ],
             "date": 1760154018694,

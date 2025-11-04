@@ -10,13 +10,18 @@ interface DaumAddressSearchProps {
 }
 
 const SearchContainer = styled.div`
+  width: 100%;
+`;
+
+const SearchInputContainer = styled.div`
   position: relative;
   width: 100%;
+  height: 48px;
 `;
 
 const SearchInput = styled.input`
   width: 100%;
-  height: 48px;
+  height: 100%;
   padding: 0 100px 0 16px;
   border: 1px solid #ddd;
   border-radius: 12px;
@@ -173,21 +178,23 @@ const DaumAddressSearch: React.FC<DaumAddressSearchProps> = ({
 
   return (
     <SearchContainer>
-      <SearchInput
-        type="text"
-        value={address}
-        onClick={handleSearch}
-        placeholder={placeholder}
-        disabled={disabled}
-        readOnly
-      />
-      <SearchButton
-        type="button"
-        onClick={handleSearch}
-        disabled={disabled || !isScriptLoaded}
-      >
-        {!isScriptLoaded ? '로딩중...' : '주소검색'}
-      </SearchButton>
+      <SearchInputContainer>
+        <SearchInput
+          type="text"
+          value={address}
+          onClick={handleSearch}
+          placeholder={placeholder}
+          disabled={disabled}
+          readOnly
+        />
+        <SearchButton
+          type="button"
+          onClick={handleSearch}
+          disabled={disabled || !isScriptLoaded}
+        >
+          {!isScriptLoaded ? '로딩중...' : '주소검색'}
+        </SearchButton>
+      </SearchInputContainer>
       
       {addressDetails && (
         <AddressDetails>

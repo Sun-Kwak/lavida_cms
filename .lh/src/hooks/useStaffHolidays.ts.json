@@ -1,0 +1,18 @@
+{
+    "sourceFile": "src/hooks/useStaffHolidays.ts",
+    "activeCommit": 0,
+    "commits": [
+        {
+            "activePatchIndex": 0,
+            "patches": [
+                {
+                    "date": 1762169896752,
+                    "content": "Index: \n===================================================================\n--- \n+++ \n"
+                }
+            ],
+            "date": 1762169896752,
+            "name": "Commit-0",
+            "content": "import { useState, useEffect, useCallback } from 'react';\nimport { dbManager } from '../utils/indexedDB';\n\ninterface StaffHolidayData {\n  staffId: string;\n  holidays: string[];\n}\n\n/**\n * 직원별 휴일 정보를 관리하는 Hook\n */\nexport const useStaffHolidays = (staffIds: string[]) => {\n  const [staffHolidays, setStaffHolidays] = useState<StaffHolidayData[]>([]);\n  const [loading, setLoading] = useState(false);\n\n  const loadStaffHolidays = useCallback(async () => {\n    if (staffIds.length === 0) {\n      setStaffHolidays([]);\n      return;\n    }\n\n    try {\n      setLoading(true);\n      const holidayData = await Promise.all(\n        staffIds.map(async (staffId) => ({\n          staffId,\n          holidays: await dbManager.getStaffHolidays(staffId)\n        }))\n      );\n      setStaffHolidays(holidayData);\n    } catch (error) {\n      console.error('직원 휴일 정보 로드 실패:', error);\n      setStaffHolidays([]);\n    } finally {\n      setLoading(false);\n    }\n  }, [staffIds]);\n\n  useEffect(() => {\n    loadStaffHolidays();\n  }, [loadStaffHolidays]);\n\n  /**\n   * 특정 직원의 특정 날짜가 휴일인지 확인\n   */\n  const isStaffHoliday = useCallback((staffId: string, date: Date): boolean => {\n    const dateString = date.toISOString().split('T')[0];\n    const staffData = staffHolidays.find(data => data.staffId === staffId);\n    return staffData?.holidays.includes(dateString) || false;\n  }, [staffHolidays]);\n\n  /**\n   * 특정 날짜에 휴일인 직원 목록 반환\n   */\n  const getHolidayStaff = useCallback((date: Date): string[] => {\n    const dateString = date.toISOString().split('T')[0];\n    return staffHolidays\n      .filter(data => data.holidays.includes(dateString))\n      .map(data => data.staffId);\n  }, [staffHolidays]);\n\n  /**\n   * 전체 휴일 정보 재로드\n   */\n  const refreshHolidays = useCallback(async () => {\n    await loadStaffHolidays();\n  }, [loadStaffHolidays]);\n\n  return {\n    staffHolidays,\n    loading,\n    isStaffHoliday,\n    getHolidayStaff,\n    refreshHolidays\n  };\n};"
+        }
+    ]
+}

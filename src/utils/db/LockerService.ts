@@ -205,6 +205,51 @@ export class LockerService extends BaseDBManager {
   }
 
   /**
+   * 라커 배정 (사용자 정의 시작일/종료일로 할당)
+   */
+  async assignLockerToUserWithDates(
+    lockerId: string, 
+    userId: string, 
+    userName: string, 
+    months: number,
+    startDateString: string,
+    endDateString: string,
+    paymentId?: string,
+    memberService?: any
+  ): Promise<Locker> {
+    // 라커 정보 업데이트
+    const updatedLocker = await this.updateLocker(lockerId, {
+      status: 'occupied',
+      userId,
+      userName,
+      startDate: startDateString,
+      endDate: endDateString,
+      months,
+      paymentId
+    });
+
+    // 회원 정보에도 라커 정보 추가 (MemberService가 있는 경우)
+    if (memberService) {
+      try {
+        await memberService.updateMemberLockerInfo(userId, {
+          lockerId,
+          lockerNumber: updatedLocker.number,
+          startDate: startDateString,
+          endDate: endDateString,
+          months,
+          paymentId
+        });
+        console.log('회원 라커 정보 업데이트 완료:', userId);
+      } catch (error) {
+        console.error('회원 라커 정보 업데이트 실패:', error);
+        // 라커 배정은 성공했으므로 에러를 throw하지 않고 로그만 남김
+      }
+    }
+
+    return updatedLocker;
+  }
+
+  /**
    * 라커 해제 (사용자 할당 해제 및 회원 정보 업데이트)
    */
   async unassignLocker(lockerId: string, memberService?: any): Promise<Locker> {

@@ -4,6 +4,7 @@ import { AppColors } from '../../styles/colors';
 import { AppTextStyles } from '../../styles/textStyles';
 import { dbManager } from '../../utils/indexedDB';
 import type { WeeklyHolidaySettings } from '../../utils/db/types';
+import { getUnifiedShiftSettings } from '../../utils/shiftUtils';
 
 interface WeeklyHolidayModalProps {
   isOpen: boolean;
@@ -12,6 +13,9 @@ interface WeeklyHolidayModalProps {
   staffList: Array<{
     id: string;
     name: string;
+    workShift?: string; // 근무 시간대 (주간/야간)
+    contractStartDate?: Date; // 계약 시작일
+    contractEndDate?: Date; // 계약 종료일
     workingHours?: {
       start: number;
       end: number;
@@ -134,10 +138,11 @@ const WeekSection = styled.div`
   margin-bottom: 24px;
 `;
 
-const WeekHeader = styled.div`
+const WeekNavigationContainer = styled.div`
   display: flex;
-  justify-content: center;
   align-items: center;
+  justify-content: center;
+  gap: 16px;
   margin-bottom: 16px;
 `;
 
@@ -146,6 +151,8 @@ const WeekTitle = styled.h3`
   font-weight: 600;
   color: ${AppColors.onSurface};
   margin: 0;
+  text-align: center;
+  min-width: 250px;
 `;
 
 const WeekDaysContainer = styled.div`
@@ -443,51 +450,74 @@ const WeeklyHolidayModal: React.FC<WeeklyHolidayModalProps> = ({
     return hour * 60 + minute;
   };
 
+  // 선택된 직원들의 shift 정보를 기반으로 기본 설정 생성
+  const getDefaultSettingsForSelectedStaff = () => {
+    const selectedStaffs = staffList.filter(staff => selectedStaffIds.includes(staff.id));
+    const staffShifts = selectedStaffs.map(staff => staff.workShift || '').filter(Boolean);
+    const shiftSettings = getUnifiedShiftSettings(staffShifts);
+    
+    console.log('Selected staffs:', selectedStaffs.map(s => ({ id: s.id, name: s.name, workShift: s.workShift })));
+    console.log('Staff shifts:', staffShifts);
+    console.log('Unified shift settings:', shiftSettings);
+    
+    return {
+      workingHours: shiftSettings.workingHours,
+      defaultBreakTime: shiftSettings.defaultBreakTime
+    };
+  };
+
 
   const [selectedStaffIds, setSelectedStaffIds] = useState<string[]>([]);
   const [currentWeekStartDate, setCurrentWeekStartDate] = useState('');
   const [weekDaySettings, setWeekDaySettings] = useState<{
-    monday: { isHoliday: boolean; workingHours: { start: number; end: number; }; breakTimes: { start: number; end: number; name: string; }[]; };
-    tuesday: { isHoliday: boolean; workingHours: { start: number; end: number; }; breakTimes: { start: number; end: number; name: string; }[]; };
-    wednesday: { isHoliday: boolean; workingHours: { start: number; end: number; }; breakTimes: { start: number; end: number; name: string; }[]; };
-    thursday: { isHoliday: boolean; workingHours: { start: number; end: number; }; breakTimes: { start: number; end: number; name: string; }[]; };
-    friday: { isHoliday: boolean; workingHours: { start: number; end: number; }; breakTimes: { start: number; end: number; name: string; }[]; };
-    saturday: { isHoliday: boolean; workingHours: { start: number; end: number; }; breakTimes: { start: number; end: number; name: string; }[]; };
-    sunday: { isHoliday: boolean; workingHours: { start: number; end: number; }; breakTimes: { start: number; end: number; name: string; }[]; };
+    monday: { isHoliday: boolean; workingHours: { start: number; end: number; }; lunchTime: { start: number; end: number; name: string; }; breakTimes: { start: number; end: number; name: string; }[]; };
+    tuesday: { isHoliday: boolean; workingHours: { start: number; end: number; }; lunchTime: { start: number; end: number; name: string; }; breakTimes: { start: number; end: number; name: string; }[]; };
+    wednesday: { isHoliday: boolean; workingHours: { start: number; end: number; }; lunchTime: { start: number; end: number; name: string; }; breakTimes: { start: number; end: number; name: string; }[]; };
+    thursday: { isHoliday: boolean; workingHours: { start: number; end: number; }; lunchTime: { start: number; end: number; name: string; }; breakTimes: { start: number; end: number; name: string; }[]; };
+    friday: { isHoliday: boolean; workingHours: { start: number; end: number; }; lunchTime: { start: number; end: number; name: string; }; breakTimes: { start: number; end: number; name: string; }[]; };
+    saturday: { isHoliday: boolean; workingHours: { start: number; end: number; }; lunchTime: { start: number; end: number; name: string; }; breakTimes: { start: number; end: number; name: string; }[]; };
+    sunday: { isHoliday: boolean; workingHours: { start: number; end: number; }; lunchTime: { start: number; end: number; name: string; }; breakTimes: { start: number; end: number; name: string; }[]; };
   }>({
     monday: {
       isHoliday: false,
       workingHours: { start: 540, end: 1260 }, // 09:00 ~ 21:00 (분 단위)
+      lunchTime: { start: 720, end: 780, name: '점심시간' }, // 12:00 ~ 13:00 기본 점심시간
       breakTimes: []
     },
     tuesday: {
       isHoliday: false,
       workingHours: { start: 540, end: 1260 },
+      lunchTime: { start: 720, end: 780, name: '점심시간' },
       breakTimes: []
     },
     wednesday: {
       isHoliday: false,
       workingHours: { start: 540, end: 1260 },
+      lunchTime: { start: 720, end: 780, name: '점심시간' },
       breakTimes: []
     },
     thursday: {
       isHoliday: false,
       workingHours: { start: 540, end: 1260 },
+      lunchTime: { start: 720, end: 780, name: '점심시간' },
       breakTimes: []
     },
     friday: {
       isHoliday: false,
       workingHours: { start: 540, end: 1260 },
+      lunchTime: { start: 720, end: 780, name: '점심시간' },
       breakTimes: []
     },
     saturday: {
       isHoliday: true,  // 기본값: 주말 휴일
       workingHours: { start: 540, end: 1260 },
+      lunchTime: { start: 720, end: 780, name: '점심시간' },
       breakTimes: []
     },
     sunday: {
       isHoliday: true,  // 기본값: 주말 휴일
       workingHours: { start: 540, end: 1260 },
+      lunchTime: { start: 720, end: 780, name: '점심시간' },
       breakTimes: []
     }
   });
@@ -510,11 +540,12 @@ const WeeklyHolidayModal: React.FC<WeeklyHolidayModalProps> = ({
     targetMonday.setDate(thisWeekSaturday.getDate() + 2); // 토요일 + 2일 = 월요일
     
     return targetMonday.toISOString().split('T')[0];
-  };
-  
-  // 주 날짜 범위 표시 (토요일부터 금요일까지)
+  };  // 주 날짜 범위 표시 (토요일부터 금요일까지)
   const getWeekDateRange = (): string => {
+    if (!currentWeekStartDate) return '';
+    
     const mondayDate = new Date(currentWeekStartDate + 'T00:00:00');
+    if (isNaN(mondayDate.getTime())) return '';
     
     // 월요일에서 토요일로 이동 (월요일 - 2일 = 토요일)
     const saturdayDate = new Date(mondayDate);
@@ -570,11 +601,16 @@ const WeeklyHolidayModal: React.FC<WeeklyHolidayModalProps> = ({
       
       if (existingSetting) {
         console.log('Found existing setting:', existingSetting);
-        // 기존 설정이 있다면 로드하되, 구조가 맞지 않으면 기본값 사용
+        
+        // 선택된 직원들의 shift 정보를 기반으로 기본 설정 생성
+        const defaultSettings = getDefaultSettingsForSelectedStaff();
+        
+        // 기존 설정이 있다면 로드하되, 구조가 맞지 않으면 shift 기반 기본값 사용
         const normalizedWeekDays = {
           monday: {
             isHoliday: existingSetting.weekDays.monday?.isHoliday ?? false,
-            workingHours: existingSetting.weekDays.monday?.workingHours ?? { start: 540, end: 1260 },
+            workingHours: existingSetting.weekDays.monday?.workingHours ?? defaultSettings.workingHours,
+            lunchTime: defaultSettings.defaultBreakTime, // 항상 shift 기반 기본값 사용
             breakTimes: (existingSetting.weekDays.monday?.breakTimes ?? []).map(bt => ({
               start: bt.start,
               end: bt.end,
@@ -583,7 +619,8 @@ const WeeklyHolidayModal: React.FC<WeeklyHolidayModalProps> = ({
           },
           tuesday: {
             isHoliday: existingSetting.weekDays.tuesday?.isHoliday ?? false,
-            workingHours: existingSetting.weekDays.tuesday?.workingHours ?? { start: 540, end: 1260 },
+            workingHours: existingSetting.weekDays.tuesday?.workingHours ?? defaultSettings.workingHours,
+            lunchTime: defaultSettings.defaultBreakTime,
             breakTimes: (existingSetting.weekDays.tuesday?.breakTimes ?? []).map(bt => ({
               start: bt.start,
               end: bt.end,
@@ -592,7 +629,8 @@ const WeeklyHolidayModal: React.FC<WeeklyHolidayModalProps> = ({
           },
           wednesday: {
             isHoliday: existingSetting.weekDays.wednesday?.isHoliday ?? false,
-            workingHours: existingSetting.weekDays.wednesday?.workingHours ?? { start: 540, end: 1260 },
+            workingHours: existingSetting.weekDays.wednesday?.workingHours ?? defaultSettings.workingHours,
+            lunchTime: defaultSettings.defaultBreakTime,
             breakTimes: (existingSetting.weekDays.wednesday?.breakTimes ?? []).map(bt => ({
               start: bt.start,
               end: bt.end,
@@ -601,7 +639,8 @@ const WeeklyHolidayModal: React.FC<WeeklyHolidayModalProps> = ({
           },
           thursday: {
             isHoliday: existingSetting.weekDays.thursday?.isHoliday ?? false,
-            workingHours: existingSetting.weekDays.thursday?.workingHours ?? { start: 540, end: 1260 },
+            workingHours: existingSetting.weekDays.thursday?.workingHours ?? defaultSettings.workingHours,
+            lunchTime: defaultSettings.defaultBreakTime,
             breakTimes: (existingSetting.weekDays.thursday?.breakTimes ?? []).map(bt => ({
               start: bt.start,
               end: bt.end,
@@ -610,7 +649,8 @@ const WeeklyHolidayModal: React.FC<WeeklyHolidayModalProps> = ({
           },
           friday: {
             isHoliday: existingSetting.weekDays.friday?.isHoliday ?? false,
-            workingHours: existingSetting.weekDays.friday?.workingHours ?? { start: 540, end: 1260 },
+            workingHours: existingSetting.weekDays.friday?.workingHours ?? defaultSettings.workingHours,
+            lunchTime: defaultSettings.defaultBreakTime,
             breakTimes: (existingSetting.weekDays.friday?.breakTimes ?? []).map(bt => ({
               start: bt.start,
               end: bt.end,
@@ -619,7 +659,8 @@ const WeeklyHolidayModal: React.FC<WeeklyHolidayModalProps> = ({
           },
           saturday: {
             isHoliday: existingSetting.weekDays.saturday?.isHoliday ?? true,
-            workingHours: existingSetting.weekDays.saturday?.workingHours ?? { start: 540, end: 1260 },
+            workingHours: existingSetting.weekDays.saturday?.workingHours ?? defaultSettings.workingHours,
+            lunchTime: defaultSettings.defaultBreakTime,
             breakTimes: (existingSetting.weekDays.saturday?.breakTimes ?? []).map(bt => ({
               start: bt.start,
               end: bt.end,
@@ -628,7 +669,8 @@ const WeeklyHolidayModal: React.FC<WeeklyHolidayModalProps> = ({
           },
           sunday: {
             isHoliday: existingSetting.weekDays.sunday?.isHoliday ?? true,
-            workingHours: existingSetting.weekDays.sunday?.workingHours ?? { start: 540, end: 1260 },
+            workingHours: existingSetting.weekDays.sunday?.workingHours ?? defaultSettings.workingHours,
+            lunchTime: defaultSettings.defaultBreakTime,
             breakTimes: (existingSetting.weekDays.sunday?.breakTimes ?? []).map(bt => ({
               start: bt.start,
               end: bt.end,
@@ -639,42 +681,53 @@ const WeeklyHolidayModal: React.FC<WeeklyHolidayModalProps> = ({
         
         setWeekDaySettings(normalizedWeekDays);
       } else {
-        console.log('No existing setting found, using default state');
+        console.log('No existing setting found, using shift-based default state');
+        
+        // 선택된 직원들의 shift 정보를 기반으로 기본 설정 생성
+        const defaultSettings = getDefaultSettingsForSelectedStaff();
+        
         // 기본값으로 리셋 (주말만 휴일)
         setWeekDaySettings({
           monday: {
             isHoliday: false,
-            workingHours: { start: 540, end: 1260 }, // 09:00 ~ 21:00
+            workingHours: defaultSettings.workingHours,
+            lunchTime: defaultSettings.defaultBreakTime,
             breakTimes: []
           },
           tuesday: {
             isHoliday: false,
-            workingHours: { start: 540, end: 1260 },
+            workingHours: defaultSettings.workingHours,
+            lunchTime: defaultSettings.defaultBreakTime,
             breakTimes: []
           },
           wednesday: {
             isHoliday: false,
-            workingHours: { start: 540, end: 1260 },
+            workingHours: defaultSettings.workingHours,
+            lunchTime: defaultSettings.defaultBreakTime,
             breakTimes: []
           },
           thursday: {
             isHoliday: false,
-            workingHours: { start: 540, end: 1260 },
+            workingHours: defaultSettings.workingHours,
+            lunchTime: defaultSettings.defaultBreakTime,
             breakTimes: []
           },
           friday: {
             isHoliday: false,
-            workingHours: { start: 540, end: 1260 },
+            workingHours: defaultSettings.workingHours,
+            lunchTime: defaultSettings.defaultBreakTime,
             breakTimes: []
           },
           saturday: {
             isHoliday: true,
-            workingHours: { start: 540, end: 1260 },
+            workingHours: defaultSettings.workingHours,
+            lunchTime: defaultSettings.defaultBreakTime,
             breakTimes: []
           },
           sunday: {
             isHoliday: true,
-            workingHours: { start: 540, end: 1260 },
+            workingHours: defaultSettings.workingHours,
+            lunchTime: defaultSettings.defaultBreakTime,
             breakTimes: []
           }
         });
@@ -694,11 +747,31 @@ const WeeklyHolidayModal: React.FC<WeeklyHolidayModalProps> = ({
   const handleDayToggle = (day: keyof typeof weekDaySettings) => {
     console.log('handleDayToggle called:', day, 'current state:', weekDaySettings[day]);
     setWeekDaySettings(prev => {
+      const currentDay = prev[day];
+      const newIsHoliday = !currentDay.isHoliday;
+      
+      // 선택된 직원들의 shift 정보를 기반으로 기본 설정 생성
+      const defaultSettings = getDefaultSettingsForSelectedStaff();
+      
       const newState = {
         ...prev,
         [day]: {
-          ...prev[day],
-          isHoliday: !prev[day].isHoliday
+          ...currentDay,
+          isHoliday: newIsHoliday,
+          // 휴일로 설정할 때 근무시간과 휴게시간을 비움
+          // 휴일 해제할 때는 shift 기반 기본 근무시간으로 설정
+          workingHours: newIsHoliday 
+            ? { start: 0, end: 0 } 
+            : (currentDay.workingHours.start === 0 && currentDay.workingHours.end === 0 
+               ? defaultSettings.workingHours
+               : currentDay.workingHours),
+          // 휴일로 설정할 때 휴게시간 비움, 해제할 때 shift 기반 기본 휴게시간
+          lunchTime: newIsHoliday 
+            ? { start: 0, end: 0, name: defaultSettings.defaultBreakTime.name }
+            : (currentDay.lunchTime.start === 0 && currentDay.lunchTime.end === 0
+               ? defaultSettings.defaultBreakTime
+               : currentDay.lunchTime),
+          breakTimes: newIsHoliday ? [] : currentDay.breakTimes
         }
       };
       console.log('new state for', day, ':', newState[day]);
@@ -740,6 +813,16 @@ const WeeklyHolidayModal: React.FC<WeeklyHolidayModalProps> = ({
       if (finalMinutes >= 24 * 60) finalMinutes = 24 * 60 - 30;
     }
     
+    // 새로운 근무시간이 다른 시간들과 겹치는지 체크 (경고만 표시)
+    const newStart = field === 'start' ? finalMinutes : weekDaySettings[day].workingHours.start;
+    const newEnd = field === 'end' ? finalMinutes : weekDaySettings[day].workingHours.end;
+    const overlapError = checkTimeOverlap(day, newStart, newEnd, 'working');
+    
+    if (overlapError) {
+      console.warn('근무시간 겹침 경고:', overlapError);
+      // alert을 제거하고 경고만 표시 - 저장 시점에 검증
+    }
+    
     setWeekDaySettings(prev => ({
       ...prev,
       [day]: {
@@ -752,18 +835,192 @@ const WeeklyHolidayModal: React.FC<WeeklyHolidayModalProps> = ({
     }));
   };
 
+  // 점심시간 변경 핸들러
+  const handleLunchTimeDropdownChange = (
+    day: keyof typeof weekDaySettings, 
+    field: 'start' | 'end', 
+    type: 'hour' | 'minute', 
+    value: string
+  ) => {
+    const currentLunchTime = weekDaySettings[day].lunchTime;
+    const currentHour = field === 'start' ? 
+      Math.floor(currentLunchTime.start / 60) : Math.floor(currentLunchTime.end / 60);
+    const currentMinute = field === 'start' ? 
+      currentLunchTime.start % 60 : currentLunchTime.end % 60;
+    
+    const newHour = type === 'hour' ? parseInt(value) : currentHour;
+    const newMinute = type === 'minute' ? parseInt(value) : currentMinute;
+    
+    // 유효성 검사
+    if (newHour < 0 || newHour > 23 || newMinute < 0 || newMinute > 59) {
+      return;
+    }
+    
+    const newMinutes = hourMinuteToMinutes(newHour, newMinute);
+    
+    // 시작 시간이 종료 시간보다 늦지 않도록 검증
+    const otherField = field === 'start' ? 'end' : 'start';
+    const otherTime = weekDaySettings[day].lunchTime[otherField];
+    
+    let finalMinutes = newMinutes;
+    if (field === 'start' && newMinutes >= otherTime) {
+      finalMinutes = otherTime - 30; // 최소 30분 차이
+      if (finalMinutes < 0) finalMinutes = 0;
+    } else if (field === 'end' && newMinutes <= otherTime) {
+      finalMinutes = otherTime + 30; // 최소 30분 차이
+      if (finalMinutes >= 24 * 60) finalMinutes = 24 * 60 - 30;
+    }
+    
+    // 새로운 기본 휴게시간이 다른 시간들과 겹치는지 체크 (경고만 표시)
+    const newStart = field === 'start' ? finalMinutes : weekDaySettings[day].lunchTime.start;
+    const newEnd = field === 'end' ? finalMinutes : weekDaySettings[day].lunchTime.end;
+    const overlapError = checkTimeOverlap(day, newStart, newEnd, 'lunch');
+    
+    if (overlapError) {
+      console.warn('기본 휴게시간 겹침 경고:', overlapError);
+      // alert을 제거하고 경고만 표시 - 저장 시점에 검증
+    }
+    
+    setWeekDaySettings(prev => ({
+      ...prev,
+      [day]: {
+        ...prev[day],
+        lunchTime: {
+          ...prev[day].lunchTime,
+          [field]: finalMinutes
+        }
+      }
+    }));
+  };
+
+  // 시간 중복 체크 함수
+  const checkTimeOverlap = (day: keyof typeof weekDaySettings, newStart: number, newEnd: number, excludeType?: 'working' | 'lunch' | 'break', excludeIndex?: number): string | null => {
+    const daySettings = weekDaySettings[day];
+    
+    // 새로운 시간이 유효한지 체크
+    if (newStart >= newEnd) {
+      return '시작 시간이 종료 시간보다 늦거나 같을 수 없습니다.';
+    }
+    
+    // 휴게시간은 근무시간 내에 있어야 함 (근무시간 수정이 아닌 경우)
+    if (excludeType === 'lunch' || excludeType === 'break') {
+      const workingHours = daySettings.workingHours;
+      if (workingHours.start < workingHours.end) { // 유효한 근무시간이 있는 경우
+        if (newStart < workingHours.start || newEnd > workingHours.end) {
+          return '휴게시간은 근무시간 내에 있어야 합니다.';
+        }
+      }
+    }
+    
+    // 기본 휴게시간(lunchTime)과 겹치는지 체크 (기본 휴게시간 수정 시에는 제외)
+    if (excludeType !== 'lunch') {
+      const lunchTime = daySettings.lunchTime;
+      if (lunchTime.start > 0 && lunchTime.start < lunchTime.end) { // 유효한 기본 휴게시간이 있는 경우
+        if (!(newEnd <= lunchTime.start || newStart >= lunchTime.end)) {
+          return `기본 휴게시간(${lunchTime.name})과 겹칠 수 없습니다.`;
+        }
+      }
+    }
+    
+    // 다른 휴게시간들과 겹치는지 체크 (해당 휴게시간 수정 시에는 제외)
+    if (excludeType !== 'break') {
+      for (let i = 0; i < daySettings.breakTimes.length; i++) {
+        const breakTime = daySettings.breakTimes[i];
+        if (breakTime.start > 0 && breakTime.start < breakTime.end) { // 유효한 휴게시간인 경우
+          if (!(newEnd <= breakTime.start || newStart >= breakTime.end)) {
+            return `휴게시간 "${breakTime.name || `휴게${i+1}`}"과 겹칠 수 없습니다.`;
+          }
+        }
+      }
+    } else if (typeof excludeIndex === 'number') {
+      // 특정 휴게시간 수정 시 다른 휴게시간들과만 체크
+      for (let i = 0; i < daySettings.breakTimes.length; i++) {
+        if (i === excludeIndex) continue; // 자기 자신은 제외
+        const breakTime = daySettings.breakTimes[i];
+        if (breakTime.start > 0 && breakTime.start < breakTime.end) {
+          if (!(newEnd <= breakTime.start || newStart >= breakTime.end)) {
+            return `휴게시간 "${breakTime.name || `휴게${i+1}`}"과 겹칠 수 없습니다.`;
+          }
+        }
+      }
+    }
+    
+    return null; // 겹치지 않음
+  };
+
 
 
 
 
   const handleAddBreakTime = (day: keyof typeof weekDaySettings) => {
+    // 겹치지 않는 시간을 자동으로 찾는 함수
+    const findAvailableTimeSlot = (daySettings: any): { start: number; end: number } => {
+      const workStart = daySettings.workingHours.start;
+      const workEnd = daySettings.workingHours.end;
+      const existingTimes: { start: number; end: number }[] = [];
+      
+      // 기본 휴게시간(lunchTime) 추가
+      if (daySettings.lunchTime.start > 0 && daySettings.lunchTime.end > 0) {
+        existingTimes.push({
+          start: daySettings.lunchTime.start,
+          end: daySettings.lunchTime.end
+        });
+      }
+      
+      // 기존 휴게시간들 추가
+      daySettings.breakTimes.forEach((bt: any) => {
+        existingTimes.push({
+          start: bt.start,
+          end: bt.end
+        });
+      });
+      
+      // 시간을 오름차순으로 정렬
+      existingTimes.sort((a, b) => a.start - b.start);
+      
+      // 30분 슬롯으로 사용 가능한 시간 찾기
+      const slotDuration = 30; // 30분
+      
+      // 근무 시작 시간부터 첫 번째 휴게시간 사이 확인
+      if (existingTimes.length === 0) {
+        return { start: workStart + 60, end: workStart + 60 + slotDuration }; // 근무 시작 1시간 후
+      }
+      
+      // 근무 시작부터 첫 번째 휴게시간까지 공간 확인
+      if (existingTimes[0].start - workStart >= slotDuration) {
+        return { start: workStart + 30, end: workStart + 30 + slotDuration };
+      }
+      
+      // 기존 휴게시간들 사이의 공간 확인
+      for (let i = 0; i < existingTimes.length - 1; i++) {
+        const gapStart = existingTimes[i].end;
+        const gapEnd = existingTimes[i + 1].start;
+        
+        if (gapEnd - gapStart >= slotDuration) {
+          return { start: gapStart, end: gapStart + slotDuration };
+        }
+      }
+      
+      // 마지막 휴게시간 이후부터 근무 종료까지 공간 확인
+      const lastEnd = existingTimes[existingTimes.length - 1].end;
+      if (workEnd - lastEnd >= slotDuration) {
+        return { start: lastEnd, end: lastEnd + slotDuration };
+      }
+      
+      // 공간이 없으면 마지막 휴게시간 30분 후로 설정 (겹침 허용)
+      return { start: lastEnd + 30, end: lastEnd + 30 + slotDuration };
+    };
+    
+    const daySettings = weekDaySettings[day];
+    const { start: newStart, end: newEnd } = findAvailableTimeSlot(daySettings);
+    
     setWeekDaySettings(prev => ({
       ...prev,
       [day]: {
         ...prev[day],
         breakTimes: [
           ...prev[day].breakTimes,
-          { start: 720, end: 780, name: '점심시간' } // 12:00 ~ 13:00
+          { start: newStart, end: newEnd, name: '휴게시간' }
         ]
       }
     }));
@@ -832,6 +1089,16 @@ const WeeklyHolidayModal: React.FC<WeeklyHolidayModalProps> = ({
       if (finalMinutes >= 24 * 60) finalMinutes = 24 * 60 - 30;
     }
     
+    // 새로운 휴게시간이 다른 시간들과 겹치는지 체크 (경고만 표시)
+    const newStart = field === 'start' ? finalMinutes : breakTime.start;
+    const newEnd = field === 'end' ? finalMinutes : breakTime.end;
+    const overlapError = checkTimeOverlap(day, newStart, newEnd, 'break', index);
+    
+    if (overlapError) {
+      console.warn('휴게시간 겹침 경고:', overlapError);
+      // alert을 제거하고 경고만 표시 - 저장 시점에 검증
+    }
+    
     setWeekDaySettings(prev => ({
       ...prev,
       [day]: {
@@ -864,6 +1131,28 @@ const WeeklyHolidayModal: React.FC<WeeklyHolidayModalProps> = ({
     });
   };
 
+  // 기본 휴게시간을 모든 비휴일 요일에 적용하는 함수
+  const handleApplyLunchTimeToAll = (sourceDay: keyof typeof weekDaySettings) => {
+    const sourceLunchTime = weekDaySettings[sourceDay].lunchTime;
+    const allDayKeys: (keyof typeof weekDaySettings)[] = ['monday', 'tuesday', 'wednesday', 'thursday', 'friday', 'saturday', 'sunday'];
+    
+    setWeekDaySettings(prev => {
+      const newSettings = { ...prev };
+      
+      allDayKeys.forEach(dayKey => {
+        // 휴일이 아닌 요일에만 적용
+        if (dayKey !== sourceDay && !newSettings[dayKey].isHoliday) {
+          newSettings[dayKey] = {
+            ...newSettings[dayKey],
+            lunchTime: { ...sourceLunchTime }
+          };
+        }
+      });
+      
+      return newSettings;
+    });
+  };
+
   const handleRemoveBreakTime = (day: keyof typeof weekDaySettings, index: number) => {
     setWeekDaySettings(prev => ({
       ...prev,
@@ -884,14 +1173,80 @@ const WeeklyHolidayModal: React.FC<WeeklyHolidayModalProps> = ({
     setError(null);
     
     try {
+      // 저장 전 종합 검증
+      const validationErrors: string[] = [];
+      
+      Object.entries(weekDaySettings).forEach(([dayKey, daySettings]) => {
+        if (daySettings.isHoliday) return; // 휴일은 검증하지 않음
+        
+        const dayName = {
+          monday: '월요일',
+          tuesday: '화요일', 
+          wednesday: '수요일',
+          thursday: '목요일',
+          friday: '금요일',
+          saturday: '토요일',
+          sunday: '일요일'
+        }[dayKey] || dayKey;
+        
+        // 기본 휴게시간 검증
+        if (daySettings.lunchTime.start > 0 && daySettings.lunchTime.end > 0) {
+          const lunchError = checkTimeOverlap(dayKey as keyof typeof weekDaySettings, 
+            daySettings.lunchTime.start, daySettings.lunchTime.end, 'lunch');
+          if (lunchError) {
+            validationErrors.push(`${dayName}: ${lunchError}`);
+          }
+        }
+        
+        // 휴게시간들 검증
+        daySettings.breakTimes.forEach((breakTime, index) => {
+          if (breakTime.start > 0 && breakTime.end > 0) {
+            const breakError = checkTimeOverlap(dayKey as keyof typeof weekDaySettings,
+              breakTime.start, breakTime.end, 'break', index);
+            if (breakError) {
+              validationErrors.push(`${dayName}: ${breakError}`);
+            }
+          }
+        });
+      });
+      
+      // 검증 오류가 있으면 저장 중단
+      if (validationErrors.length > 0) {
+        setError(`다음 오류를 수정해주세요:\n${validationErrors.join('\n')}`);
+        setIsLoading(false);
+        return;
+      }
+
       // 1. 기존 주별 휴일 설정 저장
       const settings: Omit<WeeklyHolidaySettings, 'id' | 'createdAt' | 'updatedAt'>[] = [];
       
       selectedStaffIds.forEach(staffId => {
+        // lunchTime을 breakTimes에 포함하여 저장
+        const processedWeekDays = Object.entries(weekDaySettings).reduce((acc, [dayKey, daySettings]) => {
+          const allBreakTimes = [...daySettings.breakTimes];
+          
+          // lunchTime이 유효한 경우에만 breakTimes에 추가
+          if (daySettings.lunchTime.start > 0 && daySettings.lunchTime.end > 0 && !daySettings.isHoliday) {
+            allBreakTimes.unshift({
+              start: daySettings.lunchTime.start,
+              end: daySettings.lunchTime.end,
+              name: daySettings.lunchTime.name
+            });
+          }
+          
+          acc[dayKey as keyof typeof weekDaySettings] = {
+            isHoliday: daySettings.isHoliday,
+            workingHours: daySettings.workingHours,
+            breakTimes: allBreakTimes
+          };
+          
+          return acc;
+        }, {} as any);
+        
         settings.push({
           staffId,
           weekStartDate: currentWeekStartDate,
-          weekDays: weekDaySettings
+          weekDays: processedWeekDays
         });
       });
       
@@ -998,11 +1353,11 @@ const WeeklyHolidayModal: React.FC<WeeklyHolidayModalProps> = ({
 
           {/* 주별 휴일설정 */}
           <WeekSection>
-            <WeekHeader>
+            <WeekNavigationContainer>
               <WeekTitle>
                 설정 대상 주: {getWeekDateRange()}
               </WeekTitle>
-            </WeekHeader>
+            </WeekNavigationContainer>
             
             <div style={{ fontSize: '14px', marginBottom: '12px', color: AppColors.onSurface + '80' }}>
               휴일설정은 다음 토요일부터 그 다음주 금요일까지에 대한 결정입니다.
@@ -1092,6 +1447,57 @@ const WeeklyHolidayModal: React.FC<WeeklyHolidayModalProps> = ({
                             </ApplyToAllButton>
                           </div>
                         </WorkingHoursLabel>
+                        
+                        {/* 기본 휴게시간 섹션 추가 */}
+                        <BreakTimesSection>
+                          <WorkingHoursLabel>
+                            {daySettings.lunchTime.name}
+                            <div style={{ display: 'flex', alignItems: 'center' }}>
+                              <WorkingHoursInputs>
+                                <TimeSelectContainer>
+                                  <HourSelect
+                                    value={minutesToHourMinute(daySettings.lunchTime.start).hour}
+                                    onChange={(e) => handleLunchTimeDropdownChange(key, 'start', 'hour', e.target.value)}
+                                  >
+                                    {Array.from({ length: 24 }, (_, i) => i + 1).map(hour => (
+                                      <option key={hour} value={hour}>{String(hour).padStart(2, '0')}</option>
+                                    ))}
+                                  </HourSelect>
+                                  <span>:</span>
+                                  <MinuteSelect
+                                    value={minutesToHourMinute(daySettings.lunchTime.start).minute}
+                                    onChange={(e) => handleLunchTimeDropdownChange(key, 'start', 'minute', e.target.value)}
+                                  >
+                                    <option value={0}>00</option>
+                                    <option value={30}>30</option>
+                                  </MinuteSelect>
+                                </TimeSelectContainer>
+                                <span>~</span>
+                                <TimeSelectContainer>
+                                  <HourSelect
+                                    value={minutesToHourMinute(daySettings.lunchTime.end).hour}
+                                    onChange={(e) => handleLunchTimeDropdownChange(key, 'end', 'hour', e.target.value)}
+                                  >
+                                    {Array.from({ length: 24 }, (_, i) => i + 1).map(hour => (
+                                      <option key={hour} value={hour}>{String(hour).padStart(2, '0')}</option>
+                                    ))}
+                                  </HourSelect>
+                                  <span>:</span>
+                                  <MinuteSelect
+                                    value={minutesToHourMinute(daySettings.lunchTime.end).minute}
+                                    onChange={(e) => handleLunchTimeDropdownChange(key, 'end', 'minute', e.target.value)}
+                                  >
+                                    <option value={0}>00</option>
+                                    <option value={30}>30</option>
+                                  </MinuteSelect>
+                                </TimeSelectContainer>
+                              </WorkingHoursInputs>
+                              <ApplyToAllButton onClick={() => handleApplyLunchTimeToAll(key)}>
+                                모두적용
+                              </ApplyToAllButton>
+                            </div>
+                          </WorkingHoursLabel>
+                        </BreakTimesSection>
                         
                         <BreakTimesSection>
                           <BreakTimesLabel>

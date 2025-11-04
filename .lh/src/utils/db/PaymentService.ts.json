@@ -3,7 +3,7 @@
     "activeCommit": 0,
     "commits": [
         {
-            "activePatchIndex": 6,
+            "activePatchIndex": 7,
             "patches": [
                 {
                     "date": 1761368450509,
@@ -32,6 +32,10 @@
                 {
                     "date": 1761459341660,
                     "content": "Index: \n===================================================================\n--- \n+++ \n@@ -448,9 +448,9 @@\n           memberName: orderData.memberInfo.name,\n           productId: product.id,\n           productName: product.name,\n           productPrice: product.originalPrice || product.price, // 계산된 정확한 상품 가격\n-          appliedPrice: product.price, // 사용자가 조정한 적용 가격\n+          appliedPrice: product.price, // 사용자가 조정한 적용 가격 (required)\n           programId: product.programId,\n           programName: product.programName,\n           programType: product.programType,\n           branchId: orderData.memberInfo.branchId,\n"
+                },
+                {
+                    "date": 1762070340292,
+                    "content": "Index: \n===================================================================\n--- \n+++ \n@@ -330,10 +330,8 @@\n \n       // 4. 초과금 포인트 적립\n       if (excessAmount > 0) {\n         console.log(`=== 초과금 포인트 적립 시작: ${excessAmount.toLocaleString()}원 ===`);\n-        const expiryDate = new Date();\n-        expiryDate.setFullYear(expiryDate.getFullYear() + 1);\n \n         // 상품 정보 준비\n         const products = orderData.products.map(product => ({\n           productId: product.id,\n@@ -355,9 +353,8 @@\n             branchName: orderData.memberInfo.branchName,\n             staffId: orderData.memberInfo.coach,  // coach가 담당 직원 ID\n             staffName: orderData.memberInfo.coachName,  // coachName이 담당 직원명\n             earnedDate: new Date(),\n-            expiryDate,\n             isExpired: false,\n             source: `${orderData.orderType} 초과금액`,\n             description: `${orderData.orderType} 초과금액 포인트 적립 - 구매 상품: ${orderData.products.map(p => p.name).join(', ')}`\n           });\n@@ -384,9 +381,8 @@\n               branchName: orderData.memberInfo.branchName,\n               staffId: orderData.memberInfo.coach,\n               staffName: orderData.memberInfo.coachName,\n               earnedDate: new Date(),\n-              expiryDate,\n               isExpired: false,\n               source: '보너스포인트',\n               description: `${orderData.orderType} 초과금액 보너스 포인트 (${excessAmount.toLocaleString()}원 → ${millionUnits}개 100만원 단위)`\n             });\n"
                 }
             ],
             "date": 1761368450509,

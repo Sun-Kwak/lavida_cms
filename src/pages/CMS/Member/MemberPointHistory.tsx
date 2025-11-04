@@ -6,6 +6,7 @@ import { AppTextStyles } from '../../../styles/textStyles';
 import { dbManager, Point } from '../../../utils/indexedDB';
 import { SearchArea, type PeriodOption } from '../../../components/SearchArea';
 import DataTable, { type TableColumn } from '../../../components/DataTable';
+import PointAddModal from './PointAddModal';
 
 // 스타일 컴포넌트들
 const PageContainer = styled.div`
@@ -91,6 +92,29 @@ const Badge = styled.span<{ type: 'earned' | 'used' | 'expired' | 'adjusted' }>`
   }}
 `;
 
+const Button = styled.button<{ variant?: 'primary' | 'secondary' }>`
+  padding: 12px 18px;
+  border: ${props => props.variant === 'secondary' ? `1px solid ${AppColors.borderLight}` : 'none'};
+  border-radius: 8px;
+  background: ${props => props.variant === 'secondary' ? AppColors.surface : AppColors.primary};
+  color: ${props => props.variant === 'secondary' ? AppColors.onSurface : AppColors.onPrimary};
+  font-size: ${AppTextStyles.body1.fontSize};
+  font-weight: 600;
+  cursor: pointer;
+  transition: all 0.2s;
+  
+  &:hover {
+    opacity: 0.9;
+    transform: translateY(-1px);
+  }
+  
+  &:disabled {
+    opacity: 0.5;
+    cursor: not-allowed;
+    transform: none;
+  }
+`;
+
 // 포인트 타입 한글 매핑
 const pointTypeLabels: Record<Point['type'], string> = {
   earned: '적립',
@@ -120,6 +144,9 @@ const MemberPointHistory: React.FC = () => {
   
   // 추가 필터 상태
   const [selectedStatCard, setSelectedStatCard] = useState<'all' | 'earned' | 'used' | 'expired' | 'balance'>('all');
+  
+  // 포인트 추가 모달 상태
+  const [isPointAddModalOpen, setIsPointAddModalOpen] = useState(false);
   
   const [stats, setStats] = useState<MemberStats>({
     totalEarned: 0,
@@ -328,6 +355,12 @@ const MemberPointHistory: React.FC = () => {
     await loadPointHistory(selectedPeriod, customStartDate, customEndDate);
   };
 
+  // 포인트 추가 성공 핸들러
+  const handlePointAddSuccess = async () => {
+    // 포인트 추가 후 데이터 새로고침
+    await loadPointHistory(selectedPeriod, customStartDate, customEndDate);
+  };
+
   // 테이블 컬럼 정의
   const columns: TableColumn<Point>[] = [
     {
@@ -417,13 +450,6 @@ const MemberPointHistory: React.FC = () => {
       title: '설명',
       width: '200px',
       render: (value, record) => record.description || '-'
-    },
-    {
-      key: 'expiryDate',
-      title: '만료일',
-      width: '150px',
-      render: (value, record) => 
-        record.expiryDate ? formatDate(record.expiryDate) : '-'
     }
   ];
 
@@ -484,6 +510,11 @@ const MemberPointHistory: React.FC = () => {
     <PageContainer>
       {/* 새로운 SearchArea 컴포넌트 사용 */}
       <SearchArea
+        leftContent={
+          <Button onClick={() => setIsPointAddModalOpen(true)}>
+            + 포인트 추가
+          </Button>
+        }
         selectedPeriod={selectedPeriod}
         onPeriodChange={setSelectedPeriod}
         customStartDate={customStartDate}
@@ -568,6 +599,13 @@ const MemberPointHistory: React.FC = () => {
           pageSizeOptions: [15, 30, 100],
           showTotal: true
         }}
+      />
+
+      {/* 포인트 추가 모달 */}
+      <PointAddModal
+        isOpen={isPointAddModalOpen}
+        onClose={() => setIsPointAddModalOpen(false)}
+        onSuccess={handlePointAddSuccess}
       />
     </PageContainer>
   );

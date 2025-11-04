@@ -150,22 +150,43 @@ const DayGridColumn = styled.div<{ $isToday: boolean; $isWeekend: boolean }>`
   }
 `;
 
-const DayTimeSlot = styled.div<{ $isPastTime?: boolean }>`
+const DayTimeSlot = styled.div<{ 
+  $isPastTime?: boolean; 
+  $isAvailable?: boolean; 
+  $isBreakTime?: boolean; 
+}>`
   height: 30px;
   border-bottom: 1px solid ${AppColors.borderLight}20;
   position: relative;
   cursor: ${props => props.$isPastTime ? 'not-allowed' : 'pointer'};
-  opacity: ${props => props.$isPastTime ? 0.5 : 1};
+  transition: background-color 0.2s ease;
   background-color: ${props => {
     if (props.$isPastTime) return AppColors.onSurface + '05';
+    if (props.$isBreakTime) return '#fbbf2415'; // 휴게시간 배경색
+    if (props.$isAvailable === false) return AppColors.onSurface + '10'; // 근무시간 외
     return 'transparent';
   }};
+  border-left: ${props => props.$isBreakTime ? '3px solid #fbbf24' : 'none'};
 
   &:hover {
     background-color: ${props => {
-      if (props.$isPastTime) return AppColors.onSurface + '05';
+      if (props.$isPastTime) return AppColors.onSurface + '10';
+      if (props.$isBreakTime) return '#fbbf2425'; // 휴게시간 호버 색상
+      if (props.$isAvailable === false) return AppColors.onSurface + '15';
       return AppColors.primary + '08';
     }};
+  }
+
+  &::after {
+    content: ${props => props.$isBreakTime ? '"휴게"' : 'none'};
+    position: absolute;
+    top: 50%;
+    left: 50%;
+    transform: translate(-50%, -50%);
+    font-size: 10px;
+    color: #fbbf24;
+    font-weight: 500;
+    pointer-events: none;
   }
 `;
 
@@ -362,7 +383,76 @@ const WeekView: React.FC<WeekViewProps> = ({
     );
   };
 
+  // 특정 직원의 특정 시간대가 예약 가능한지 확인하는 함수 (휴일 제외, 근무시간과 휴게시간만 체크)
+  const isTimeSlotAvailable = (staffId: string, hour: number, minute: number, targetDate: Date) => {
+    const dayOfWeek = targetDate.getDay();
+    const weekStartDate = (() => {
+      const monday = new Date(targetDate);
+      monday.setDate(targetDate.getDate() - (dayOfWeek === 0 ? 6 : dayOfWeek - 1));
+      return monday.toISOString().split('T')[0];
+    })();
+
+    if (!weeklyHolidaySettings) return true;
+
+    const weeklySettings = weeklyHolidaySettings.find(
+      s => s.staffId === staffId && s.weekStartDate === weekStartDate
+    );
+
+    if (weeklySettings) {
+      const dayKeys = ['sunday', 'monday', 'tuesday', 'wednesday', 'thursday', 'friday', 'saturday'];
+      const dayKey = dayKeys[dayOfWeek] as keyof typeof weeklySettings.weekDays;
+      const daySettings = weeklySettings.weekDays[dayKey];
+
+      if (daySettings) {
+        // 휴일이면 근무시간 체크 안함 (항상 true 반환)
+        if (daySettings.isHoliday) return true;
+
+        // 근무시간 외면 예약 불가
+        if (daySettings.workingHours) {
+          const { start, end } = daySettings.workingHours;
+          const currentTimeInMinutes = hour * 60 + minute;
+          if (currentTimeInMinutes < start || currentTimeInMinutes >= end) return false;
+        }
+
+        // 휴게시간이면 예약 불가
+        if (daySettings.breakTimes) {
+          for (const breakTime of daySettings.breakTimes) {
+            const currentTimeInMinutes = hour * 60 + minute;
+            if (currentTimeInMinutes >= breakTime.start && currentTimeInMinutes < breakTime.end) return false;
+          }
+        }
+      }
+    }
+
+    return true;
+  };
+
   const handleSlotClick = (dayDate: Date, slot: { hour: number; minute: number }) => {
+    // WeekView에서는 선택된 코치가 하나일 때만 예약 생성
+    if (filteredStaff.length !== 1) {
+      alert('예약을 생성하려면 코치를 하나만 선택해주세요.');
+      return;
+    }
+
+    const staffId = filteredStaff[0].id;
+    const staff = staffList.find(s => s.id === staffId);
+
+    // 계약 기간 체크
+    if (staff?.contractStartDate && staff?.contractEndDate) {
+      const contractStart = new Date(staff.contractStartDate);
+      contractStart.setHours(0, 0, 0, 0);
+      const contractEnd = new Date(staff.contractEndDate);
+      contractEnd.setHours(0, 0, 0, 0);
+      
+      const selectedDate = new Date(dayDate);
+      selectedDate.setHours(0, 0, 0, 0);
+      
+      if (selectedDate < contractStart || selectedDate > contractEnd) {
+        alert('해당 코치의 계약 기간 외입니다. 예약을 생성할 수 없습니다.');
+        return;
+      }
+    }
+
     // 과거 시간 체크 (disablePastTime이 true인 경우)
     if (disablePastTime) {
       const now = new Date();
@@ -373,14 +463,6 @@ const WeekView: React.FC<WeekViewProps> = ({
         return; // 과거 시간인 경우 클릭 이벤트 무시
       }
     }
-
-    // WeekView에서는 선택된 코치가 하나일 때만 예약 생성
-    if (filteredStaff.length !== 1) {
-      alert('예약을 생성하려면 코치를 하나만 선택해주세요.');
-      return;
-    }
-
-    const staffId = filteredStaff[0].id;
 
     // 해당 날짜가 휴일인지 확인 (날짜 레벨에서)
     const holidayStaffNames = getHolidayStaffNames(dayDate, weeklyHolidaySettings || [], staffList);
@@ -411,11 +493,27 @@ const WeekView: React.FC<WeekViewProps> = ({
       return;
     }
 
-    // 휴게시간 체크
+    // 휴게시간 체크 (마스터나 본인 코치는 예외)
     const isInBreak = isTimeInBreak(staffId, dayDate, slot.hour, slot.minute);
     if (isInBreak) {
-      alert('휴게시간에는 예약을 생성할 수 없습니다.');
-      return;
+      if (currentUser && (currentUser.role === 'master' || currentUser.id === staffId)) {
+        // 마스터이거나 본인 코치인 경우 허용 (확인 없이 바로 진행)
+      } else {
+        alert('휴게시간에는 예약을 생성할 수 없습니다.');
+        return;
+      }
+    }
+
+    // 근무시간 체크 (마스터나 본인 코치는 예외)
+    const isAvailable = isTimeSlotAvailable(staffId, slot.hour, slot.minute, dayDate);
+    if (!isAvailable) {
+      if (currentUser && (currentUser.role === 'master' || currentUser.id === staffId)) {
+        // 마스터이거나 본인 코치인 경우 허용 (확인 없이 바로 진행)
+      } else {
+        // 일반 사용자는 근무시간 외/휴일/휴게시간에 예약 불가
+        alert('이 시간대는 예약할 수 없습니다.');
+        return;
+      }
     }
 
     if (onEventCreate) {
@@ -506,10 +604,22 @@ const WeekView: React.FC<WeekViewProps> = ({
                     return slotTime < now;
                   })();
 
+                  // 코치가 하나만 선택된 경우에만 시간 가용성 체크
+                  let isAvailable = true;
+                  let isInBreak = false;
+
+                  if (filteredStaff.length === 1) {
+                    const staff = filteredStaff[0];
+                    isAvailable = isTimeSlotAvailable(staff.id, slot.hour, slot.minute, day.date);
+                    isInBreak = isTimeInBreak(staff.id, day.date, slot.hour, slot.minute);
+                  }
+
                   return (
                     <DayTimeSlot
                       key={`${day.date.toISOString()}-${slot.hour}-${slot.minute}`}
                       $isPastTime={isPastTime}
+                      $isAvailable={filteredStaff.length === 1 ? isAvailable : true}
+                      $isBreakTime={filteredStaff.length === 1 ? isInBreak : false}
                       onClick={() => handleSlotClick(day.date, slot)}
                     />
                   );

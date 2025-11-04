@@ -240,7 +240,8 @@ const ReservationPage: React.FC = () => {
         workingHours: {
           start: 9, // 기본 근무 시간 (필요시 직원별 설정으로 확장 가능)
           end: 21
-        }
+        },
+        workShift: (staff as any).workShift || '' // 근무 시간대 정보 추가
       }));
       
       setStaffList(staffInfo);

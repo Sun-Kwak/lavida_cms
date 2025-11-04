@@ -9,7 +9,7 @@ import { StaffFileUploadField } from '../../../components/StaffFormComponents';
 import { AppColors } from '../../../styles/colors';
 import { AppTextStyles } from '../../../styles/textStyles';
 import { dbManager, type Branch } from '../../../utils/indexedDB';
-import { POSITIONS, ROLES, EMPLOYMENT_TYPES, PERMISSIONS, SYSTEM_ADMIN_CONFIG } from '../../../constants/staffConstants';
+import { POSITIONS, ROLES, EMPLOYMENT_TYPES, PERMISSIONS, SYSTEM_ADMIN_CONFIG, WORK_SHIFTS } from '../../../constants/staffConstants';
 
 const Label = styled.label<{ $required?: boolean }>`
   font-size: ${AppTextStyles.label1.fontSize};
@@ -178,6 +178,7 @@ interface StaffFormData {
   employmentType: string;
   permission: string;
   program: string; // 담당프로그램 필드 추가
+  workShift: string; // 근무 시간대 필드 추가 (횟수제 프로그램 전용)
   contractStartDate: string;
   contractEndDate: string;
   contractFile: File | null;
@@ -201,6 +202,7 @@ const StaffRegister: React.FC = () => {
     employmentType: '',
     permission: '',
     program: '',
+    workShift: '',
     contractStartDate: '',
     contractEndDate: '',
     contractFile: null
@@ -304,14 +306,33 @@ const StaffRegister: React.FC = () => {
       }
     }
 
-    // 직책이 변경되고 코치가 아닌 경우 담당프로그램 초기화
+    // 직책이 변경되고 코치가 아닌 경우 담당프로그램과 근무시간대 초기화
     if (field === 'role' && typeof value === 'string' && value !== '코치') {
       setFormData(prev => ({
         ...prev,
         role: value as string,
-        program: ''
+        program: '',
+        workShift: ''
       }));
     } 
+    // 담당프로그램이 변경된 경우 근무시간대 처리
+    else if (field === 'program' && typeof value === 'string') {
+      // 선택된 프로그램의 타입을 찾아서 횟수제인지 확인
+      const selectedProgram = programs.find(program => program.name === value);
+      // 횟수제 프로그램이 아닌 경우 근무시간대 초기화
+      if (!selectedProgram || selectedProgram.type !== '횟수제') {
+        setFormData(prev => ({
+          ...prev,
+          program: value as string,
+          workShift: ''
+        }));
+      } else {
+        setFormData(prev => ({
+          ...prev,
+          program: value as string
+        }));
+      }
+    }
     // 고용형태가 정규직으로 변경되면 계약종료일 초기화
     else if (field === 'employmentType' && typeof value === 'string' && value === '정규직') {
       setFormData(prev => ({
@@ -383,6 +404,14 @@ const StaffRegister: React.FC = () => {
     // 코치일 경우 담당프로그램 필수
     if (formData.role === '코치' && !formData.program) {
       newErrors.program = '코치는 담당프로그램 선택이 필수입니다.';
+    }
+    
+    // 횟수제 프로그램 선택 시 근무시간대 필수
+    if (formData.role === '코치' && formData.program) {
+      const selectedProgram = programs.find(program => program.name === formData.program);
+      if (selectedProgram && selectedProgram.type === '횟수제' && !formData.workShift) {
+        newErrors.workShift = '횟수제 프로그램은 근무시간대 선택이 필수입니다.';
+      }
     }
 
     // 로그인 ID 형식 검증 (영문, 숫자만 허용, 4-20자)
@@ -461,6 +490,7 @@ const StaffRegister: React.FC = () => {
         employmentType: '',
         permission: '',
         program: '',
+        workShift: '',
         contractStartDate: '',
         contractEndDate: '',
         contractFile: null
@@ -488,6 +518,7 @@ const StaffRegister: React.FC = () => {
       employmentType: '',
       permission: '',
       program: '',
+      workShift: '',
       contractStartDate: '',
       contractEndDate: '',
       contractFile: null
@@ -555,6 +586,13 @@ const StaffRegister: React.FC = () => {
     return programs.map(program => ({
       value: program.name,
       label: program.name
+    }));
+  };
+
+  const getWorkShiftOptions = () => {
+    return WORK_SHIFTS.map(shift => ({
+      value: shift,
+      label: shift
     }));
   };
 
@@ -777,6 +815,30 @@ const StaffRegister: React.FC = () => {
                 {errors.program && <div style={{ color: AppColors.error, fontSize: AppTextStyles.label3.fontSize, marginTop: '4px' }}>{errors.program}</div>}
               </FieldColumn>
             </FieldRow>
+
+            {/* 근무시간대 (횟수제 프로그램 선택 시에만 표시) */}
+            {(() => {
+              const selectedProgram = programs.find(program => program.name === formData.program);
+              return formData.role === '코치' && selectedProgram && selectedProgram.type === '횟수제';
+            })() && (
+              <FieldRow>
+                <FieldColumn>
+                  <Label $required>근무시간대</Label>
+                  <CustomDropdown
+                    value={formData.workShift}
+                    onChange={(value: string) => handleInputChange('workShift', value)}
+                    options={getWorkShiftOptions()}
+                    placeholder="근무시간대를 선택하세요"
+                    error={!!errors.workShift}
+                    required
+                  />
+                  {errors.workShift && <div style={{ color: AppColors.error, fontSize: AppTextStyles.label3.fontSize, marginTop: '4px' }}>{errors.workShift}</div>}
+                </FieldColumn>
+                <FieldColumn>
+                  {/* 빈 칸 */}
+                </FieldColumn>
+              </FieldRow>
+            )}
           </FormSection>
 
           {/* 계약 정보 섹션 */}

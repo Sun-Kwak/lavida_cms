@@ -11,7 +11,8 @@ import MemberSearchPanel from './MemberSearchPanel';
 const ModalContainer = styled.div`
   display: flex;
   gap: 24px;
-  height: 600px;
+  height: auto;
+  min-height: 500px;
   min-width: 900px;
   width: 100%;
   overflow: hidden;
@@ -47,7 +48,6 @@ const FormContainer = styled.div`
   flex-direction: column;
   gap: 24px;
   flex: 1;
-  overflow-y: auto;
 `;
 
 const FormGroup = styled.div`
@@ -105,7 +105,25 @@ const TextInput = styled.input`
   }
 `;
 
-const PaymentSummary = styled.div`
+const TextArea = styled.textarea`
+  padding: 12px 16px;
+  border: 1px solid ${AppColors.borderLight};
+  border-radius: 8px;
+  font-size: 14px;
+  min-height: 80px;
+  resize: vertical;
+  
+  &:focus {
+    outline: none;
+    border-color: ${AppColors.primary};
+  }
+  
+  &::placeholder {
+    color: ${AppColors.onInput1};
+  }
+`;
+
+const PointSummary = styled.div`
   padding: 16px;
   background: #e3f2fd;
   border-radius: 8px;
@@ -161,17 +179,18 @@ const ButtonGroup = styled.div`
   margin-top: 24px;
 `;
 
-const BonusInfo = styled.div`
+const InfoCard = styled.div`
   padding: 12px;
-  background: #e8f5e8;
-  border: 1px solid ${AppColors.success};
+  background: #f8f9fa;
+  border: 1px solid ${AppColors.borderLight};
   border-radius: 8px;
   font-size: 14px;
-  color: ${AppColors.success};
+  color: ${AppColors.onSurface};
   
-  .bonus-title {
+  .info-title {
     font-weight: 600;
     margin-bottom: 4px;
+    color: ${AppColors.primary};
   }
 `;
 
@@ -186,14 +205,14 @@ const WarningText = styled.div`
   text-align: center;
 `;
 
-interface PaymentRegistrationModalProps {
+interface PointAddModalProps {
   isOpen: boolean;
   onClose: () => void;
   onSuccess: () => void;
   preselectedMember?: Member | null; // 미리 선택된 회원
 }
 
-const PaymentRegistrationModal: React.FC<PaymentRegistrationModalProps> = ({
+const PointAddModal: React.FC<PointAddModalProps> = ({
   isOpen,
   onClose,
   onSuccess,
@@ -201,9 +220,10 @@ const PaymentRegistrationModal: React.FC<PaymentRegistrationModalProps> = ({
 }) => {
   const [selectedMember, setSelectedMember] = useState<Member | null>(null);
   const [memberPointBalance, setMemberPointBalance] = useState<number>(0);
-  const [paymentMethod, setPaymentMethod] = useState<'cash' | 'card' | 'transfer'>('cash');
+  const [pointType, setPointType] = useState<'earned' | 'adjusted'>('earned');
   const [amount, setAmount] = useState<string>('');
-  const [memo, setMemo] = useState('');
+  const [description, setDescription] = useState('');
+  const [source, setSource] = useState('');
   const [isProcessing, setIsProcessing] = useState(false);
 
   // 미리 선택된 회원이 있으면 설정하고 포인트 잔액 로드
@@ -221,9 +241,10 @@ const PaymentRegistrationModal: React.FC<PaymentRegistrationModalProps> = ({
         setSelectedMember(null);
         setMemberPointBalance(0);
       }
-      setPaymentMethod('cash');
+      setPointType('earned');
       setAmount('');
-      setMemo('');
+      setDescription('');
+      setSource('');
       setIsProcessing(false);
     }
   }, [isOpen, preselectedMember]);
@@ -242,71 +263,58 @@ const PaymentRegistrationModal: React.FC<PaymentRegistrationModalProps> = ({
 
   // 금액 포맷팅
   const formatAmount = (value: string) => {
-    const numericValue = value.replace(/[^\d]/g, '');
-    return numericValue ? parseInt(numericValue).toLocaleString() : '';
+    const numericValue = value.replace(/[^\d-]/g, '');
+    if (numericValue === '' || numericValue === '-') return numericValue;
+    return parseInt(numericValue).toLocaleString();
   };
 
   // 금액 입력 처리
   const handleAmountChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-    const value = e.target.value.replace(/[^\d]/g, '');
+    const value = e.target.value.replace(/[^\d-]/g, '');
     setAmount(value);
   };
 
-  // 보너스 포인트 계산
-  const calculateBonus = (baseAmount: number) => {
-    if (baseAmount >= 1000000) {
-      const millionUnits = Math.floor(baseAmount / 1000000);
-      return millionUnits * 100000; // 100만원당 10만원(10%) 보너스
-    }
-    return 0;
-  };
-
-  // 결제 등록 처리
+  // 포인트 추가 처리
   const handleSubmit = async () => {
     if (!selectedMember) {
       toast.error('회원을 선택해주세요.');
       return;
     }
 
-    if (!amount || parseInt(amount) <= 0) {
-      toast.error('유효한 금액을 입력해주세요.');
+    if (!amount || parseInt(amount) === 0) {
+      toast.error('유효한 포인트 금액을 입력해주세요.');
       return;
     }
 
-    const baseAmount = parseInt(amount);
-    const bonusAmount = calculateBonus(baseAmount);
-    const totalAmount = baseAmount + bonusAmount;
+    if (!source.trim()) {
+      toast.error('포인트 출처를 입력해주세요.');
+      return;
+    }
+
+    if (!description.trim()) {
+      toast.error('포인트 설명을 입력해주세요.');
+      return;
+    }
+
+    const pointAmount = parseInt(amount);
+    const isNegative = pointAmount < 0;
+
+    // 음수 포인트인 경우 잔액 확인
+    if (isNegative && Math.abs(pointAmount) > memberPointBalance) {
+      toast.error(`포인트 잔액이 부족합니다. (현재 잔액: ${memberPointBalance.toLocaleString()}원)`);
+      return;
+    }
 
     setIsProcessing(true);
     try {
-      // 1. 결제 정보 기록 생성
-      const paymentId = await dbManager.addPayment({
-        memberId: selectedMember.id,
-        memberName: selectedMember.name,
-        branchId: selectedMember.branchId,
-        branchName: selectedMember.branchName,
-        coach: selectedMember.coach,
-        coachName: selectedMember.coachName,
-        products: [], // 상품 없음
-        totalAmount: baseAmount,
-        paidAmount: baseAmount,
-        unpaidAmount: 0,
-        paymentStatus: 'completed',
-        paymentMethod: paymentMethod,
-        paymentDate: new Date(),
-        paymentType: 'other',
-        amount: baseAmount,
-        memo: memo || `현장 결제 등록 - ${paymentMethod} ${baseAmount.toLocaleString()}원`
-      });
-
-      // 2. 기본 포인트 적립
+      // 포인트 트랜잭션 추가
       await dbManager.point.addPointTransaction({
         memberId: selectedMember.id,
         memberName: selectedMember.name,
-        amount: baseAmount,
-        transactionType: 'earn',
+        amount: pointAmount,
+        transactionType: pointAmount > 0 ? 'earn' : 'adjust',
         relatedOrderId: undefined,
-        relatedPaymentId: paymentId,
+        relatedPaymentId: undefined,
         products: [],
         branchId: selectedMember.branchId,
         branchName: selectedMember.branchName,
@@ -314,41 +322,17 @@ const PaymentRegistrationModal: React.FC<PaymentRegistrationModalProps> = ({
         staffName: selectedMember.coachName,
         earnedDate: new Date(),
         isExpired: false,
-        source: '현장결제',
-        description: `현장 결제 등록 - ${paymentMethod} ${baseAmount.toLocaleString()}원${memo ? ` (${memo})` : ''}`
+        source: source.trim(),
+        description: description.trim()
       });
 
-      // 3. 보너스 포인트 적립 (100만원 이상인 경우)
-      if (bonusAmount > 0) {
-        await dbManager.point.addPointTransaction({
-          memberId: selectedMember.id,
-          memberName: selectedMember.name,
-          amount: bonusAmount,
-          transactionType: 'earn',
-          relatedOrderId: undefined,
-          relatedPaymentId: paymentId,
-          products: [],
-          branchId: selectedMember.branchId,
-          branchName: selectedMember.branchName,
-          staffId: selectedMember.coach,
-          staffName: selectedMember.coachName,
-          earnedDate: new Date(),
-          isExpired: false,
-          source: '보너스포인트',
-          description: `현장 결제 등록 보너스 포인트 (${baseAmount.toLocaleString()}원 → ${Math.floor(baseAmount / 1000000)}개 100만원 단위)`
-        });
-      }
-
-      const successMessage = bonusAmount > 0 
-        ? `현장 결제가 등록되었습니다!\n결제금액: ${baseAmount.toLocaleString()}원\n기본 포인트: ${baseAmount.toLocaleString()}원\n보너스 포인트: ${bonusAmount.toLocaleString()}원\n총 적립: ${totalAmount.toLocaleString()}원`
-        : `현장 결제가 등록되었습니다!\n결제금액: ${baseAmount.toLocaleString()}원\n포인트 적립: ${baseAmount.toLocaleString()}원`;
-
-      toast.success(successMessage);
+      const actionText = isNegative ? '차감' : '적립';
+      toast.success(`포인트 ${actionText}이 완료되었습니다. (${pointAmount > 0 ? '+' : ''}${pointAmount.toLocaleString()}원)`);
       onSuccess();
       onClose();
     } catch (error) {
-      console.error('현장 결제 등록 실패:', error);
-      toast.error('현장 결제 등록 중 오류가 발생했습니다.');
+      console.error('포인트 추가 실패:', error);
+      toast.error('포인트 추가 중 오류가 발생했습니다.');
     } finally {
       setIsProcessing(false);
     }
@@ -360,23 +344,21 @@ const PaymentRegistrationModal: React.FC<PaymentRegistrationModalProps> = ({
     onClose();
   };
 
-  const paymentMethodOptions = [
-    { value: 'cash', label: '현금' },
-    { value: 'card', label: '카드' },
-    { value: 'transfer', label: '계좌이체' }
+  const pointTypeOptions = [
+    { value: 'earned', label: '포인트 적립' },
+    { value: 'adjusted', label: '포인트 조정' }
   ];
 
-  const baseAmount = amount ? parseInt(amount) : 0;
-  const bonusAmount = calculateBonus(baseAmount);
-  const totalAmount = baseAmount + bonusAmount;
-  const isValid = selectedMember && baseAmount > 0;
+  const pointAmount = amount ? parseInt(amount) : 0;
+  const isValid = selectedMember && pointAmount !== 0 && source.trim() && description.trim();
+  const isNegative = pointAmount < 0;
 
   return (
     <Modal
       isOpen={isOpen}
       onClose={handleClose}
       width="min(95vw, 1000px)"
-      header="현장 결제 등록"
+      header="포인트 추가/조정"
       body={
         <ModalContainer>
           <LeftPanel>
@@ -391,81 +373,88 @@ const PaymentRegistrationModal: React.FC<PaymentRegistrationModalProps> = ({
           </LeftPanel>
           
           <RightPanel>
-            <PanelTitle>결제 정보</PanelTitle>
+            <PanelTitle>포인트 정보</PanelTitle>
             {!selectedMember ? (
               <WarningText>
                 먼저 왼쪽에서 회원을 선택해주세요.
               </WarningText>
             ) : (
               <FormContainer>
-                {/* 결제 방식 */}
+                {/* 포인트 타입 */}
                 <FormGroup>
                   <Label>
-                    결제 방식<RequiredMark>*</RequiredMark>
+                    포인트 타입<RequiredMark>*</RequiredMark>
                   </Label>
                   <CustomDropdown
-                    value={paymentMethod}
-                    onChange={(value) => setPaymentMethod(value as 'cash' | 'card' | 'transfer')}
-                    options={paymentMethodOptions}
-                    placeholder="결제 방식 선택"
+                    value={pointType}
+                    onChange={(value) => setPointType(value as 'earned' | 'adjusted')}
+                    options={pointTypeOptions}
+                    placeholder="포인트 타입 선택"
                     inModal={true}
                   />
                 </FormGroup>
 
-                {/* 금액 */}
+                {/* 포인트 금액 */}
                 <FormGroup>
                   <Label>
-                    금액<RequiredMark>*</RequiredMark>
+                    포인트 금액<RequiredMark>*</RequiredMark>
                   </Label>
                   <AmountInput
                     type="text"
                     value={formatAmount(amount)}
                     onChange={handleAmountChange}
-                    placeholder="금액을 입력하세요"
+                    placeholder="포인트 금액 입력 (음수 입력 시 차감)"
                   />
+                  <InfoCard>
+                    <div className="info-title">💡 입력 안내</div>
+                    <div>• 양수: 포인트 적립 (+100,000)</div>
+                    <div>• 음수: 포인트 차감 (-50,000)</div>
+                  </InfoCard>
                 </FormGroup>
 
-                {/* 메모 */}
+                {/* 포인트 출처 */}
                 <FormGroup>
-                  <Label>메모</Label>
+                  <Label>
+                    포인트 출처<RequiredMark>*</RequiredMark>
+                  </Label>
                   <TextInput
-                    value={memo}
-                    onChange={(e: React.ChangeEvent<HTMLInputElement>) => setMemo(e.target.value)}
-                    placeholder="추가 메모 (선택사항)"
+                    value={source}
+                    onChange={(e) => setSource(e.target.value)}
+                    placeholder="예: 이벤트 참여, 고객 불만 보상, 시스템 오류 수정 등"
                   />
                 </FormGroup>
 
-                {/* 100만원 이상일 때 보너스 정보 표시 */}
-                {bonusAmount > 0 && (
-                  <BonusInfo>
-                    <div className="bonus-title">🎉 보너스 포인트 적용!</div>
-                    <div>100만원 단위마다 10% 추가 적립됩니다.</div>
-                  </BonusInfo>
-                )}
+                {/* 상세 설명 */}
+                <FormGroup>
+                  <Label>
+                    상세 설명<RequiredMark>*</RequiredMark>
+                  </Label>
+                  <TextArea
+                    value={description}
+                    onChange={(e) => setDescription(e.target.value)}
+                    placeholder="포인트 추가/차감 사유를 상세히 입력해주세요"
+                  />
+                </FormGroup>
 
-                {/* 적립 요약 */}
-                {baseAmount > 0 && (
-                  <PaymentSummary>
-                    <div className="summary-title">결제 및 포인트 적립 요약</div>
+                {/* 포인트 요약 */}
+                {pointAmount !== 0 && (
+                  <PointSummary>
+                    <div className="summary-title">포인트 변경 요약</div>
                     <div className="summary-item">
-                      <span>결제 금액</span>
-                      <span>{baseAmount.toLocaleString()}원</span>
+                      <span>현재 포인트 잔액</span>
+                      <span>{memberPointBalance.toLocaleString()}원</span>
                     </div>
                     <div className="summary-item">
-                      <span>기본 포인트 적립</span>
-                      <span>{baseAmount.toLocaleString()}원</span>
+                      <span>{isNegative ? '차감' : '적립'} 포인트</span>
+                      <span style={{ color: isNegative ? '#dc3545' : '#28a745' }}>
+                        {pointAmount > 0 ? '+' : ''}{pointAmount.toLocaleString()}원
+                      </span>
                     </div>
-                    {bonusAmount > 0 && (
-                      <div className="summary-item">
-                        <span>보너스 포인트 ({Math.floor(baseAmount / 1000000)}개 100만원 단위)</span>
-                        <span>{bonusAmount.toLocaleString()}원</span>
-                      </div>
-                    )}
                     <div className="summary-item total">
-                      <span>총 포인트 적립</span>
-                      <span>{totalAmount.toLocaleString()}원</span>
+                      <span>변경 후 예상 잔액</span>
+                      <span>{(memberPointBalance + pointAmount).toLocaleString()}원</span>
                     </div>
-                  </PaymentSummary>
+                  </PointSummary>
                 )}
               </FormContainer>
             )}
@@ -481,7 +470,7 @@ const PaymentRegistrationModal: React.FC<PaymentRegistrationModalProps> = ({
             onClick={handleSubmit} 
             disabled={!isValid || isProcessing}
           >
-            {isProcessing ? '등록 중...' : '현장 결제 등록'}
+            {isProcessing ? '처리 중...' : '포인트 추가'}
           </Button>
         </ButtonGroup>
       }
@@ -489,4 +478,4 @@ const PaymentRegistrationModal: React.FC<PaymentRegistrationModalProps> = ({
   );
 };
 
-export default PaymentRegistrationModal;
+export default PointAddModal;

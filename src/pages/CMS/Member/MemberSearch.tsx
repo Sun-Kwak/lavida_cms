@@ -1018,15 +1018,13 @@ const MemberSearch: React.FC = () => {
     <PageContainer>
       {/* 새로운 SearchArea 컴포넌트 사용 */}
       <SearchArea
-        metaContent={
-          <div style={{ display: 'flex', gap: '12px', alignItems: 'center', flexWrap: 'wrap' }}>
-            <UnpaidFilter
-              active={showUnpaidOnly}
-              unpaidCount={unpaidMetaInfo.unpaidMemberCount}
-              totalAmount={unpaidMetaInfo.totalUnpaidAmount}
-              onClick={() => setShowUnpaidOnly(!showUnpaidOnly)}
-            />
-          </div>
+        leftContent={
+          <UnpaidFilter
+            active={showUnpaidOnly}
+            unpaidCount={unpaidMetaInfo.unpaidMemberCount}
+            totalAmount={unpaidMetaInfo.totalUnpaidAmount}
+            onClick={() => setShowUnpaidOnly(!showUnpaidOnly)}
+          />
         }
         selectedPeriod={selectedPeriod}
         onPeriodChange={setSelectedPeriod}

@@ -272,8 +272,8 @@ const DayView: React.FC<DayViewProps> = ({
       const daySettings = weeklySettings.weekDays[dayKey];
 
       if (daySettings) {
-        // 휴일이면 예약 불가
-        if (daySettings.isHoliday) return false;
+        // 휴일이면 근무시간 체크 안함 (항상 true 반환)
+        if (daySettings.isHoliday) return true;
 
         // 근무시간 외면 예약 불가
         if (daySettings.workingHours) {
@@ -380,6 +380,23 @@ const DayView: React.FC<DayViewProps> = ({
   };
 
   const handleSlotClick = (timeSlot: any, staffId: string) => {
+    // 계약 기간 체크
+    const staff = staffList.find(s => s.id === staffId);
+    if (staff?.contractStartDate && staff?.contractEndDate) {
+      const contractStart = new Date(staff.contractStartDate);
+      contractStart.setHours(0, 0, 0, 0);
+      const contractEnd = new Date(staff.contractEndDate);
+      contractEnd.setHours(0, 0, 0, 0);
+      
+      const selectedDate = new Date(currentDate);
+      selectedDate.setHours(0, 0, 0, 0);
+      
+      if (selectedDate < contractStart || selectedDate > contractEnd) {
+        alert('해당 코치의 계약 기간 외입니다. 예약을 생성할 수 없습니다.');
+        return;
+      }
+    }
+
     // 과거 시간 체크 (disablePastTime이 true인 경우)
     if (disablePastTime) {
       const now = new Date();
@@ -419,18 +436,27 @@ const DayView: React.FC<DayViewProps> = ({
       return;
     }
 
-    // 휴게시간 체크
+    // 휴게시간 체크 (마스터나 본인 코치는 예외)
     const isInBreak = isTimeInBreak(staffId, timeSlot.hour, timeSlot.minute);
     if (isInBreak) {
-      alert('휴게시간에는 예약을 생성할 수 없습니다.');
-      return;
+      if (currentUser && (currentUser.role === 'master' || currentUser.id === staffId)) {
+        // 마스터이거나 본인 코치인 경우 허용 (확인 없이 바로 진행)
+      } else {
+        alert('휴게시간에는 예약을 생성할 수 없습니다.');
+        return;
+      }
     }
 
-    // 일반적인 시간 가용성 체크 (근무시간 등)
+    // 근무시간 체크 (마스터나 본인 코치는 예외)
     const isAvailable = isTimeSlotAvailable(staffId, timeSlot.hour, timeSlot.minute);
     if (!isAvailable) {
-      alert('이 시간대는 예약할 수 없습니다. (근무시간 외)');
-      return;
+      if (currentUser && (currentUser.role === 'master' || currentUser.id === staffId)) {
+        // 마스터이거나 본인 코치인 경우 허용 (확인 없이 바로 진행)
+      } else {
+        // 일반 사용자는 근무시간 외/휴일/휴게시간에 예약 불가
+        alert('이 시간대는 예약할 수 없습니다.');
+        return;
+      }
     }
 
     // 정상적인 예약 생성

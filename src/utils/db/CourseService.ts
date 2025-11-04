@@ -439,33 +439,178 @@ export class CourseService extends BaseDBManager {
    */
   async migrateAppliedPriceField(): Promise<void> {
     try {
-      console.log('CourseEnrollment appliedPrice 필드 마이그레이션 시작...');
+      const allEnrollments = await this.getAllCourseEnrollments();
       
-      const enrollments = await this.getAllCourseEnrollments();
-      let migratedCount = 0;
-      
-      for (const enrollment of enrollments) {
+      for (const enrollment of allEnrollments) {
         if (enrollment.appliedPrice === undefined) {
-          // appliedPrice가 없는 경우 paidAmount + unpaidAmount로 설정
-          const appliedPrice = enrollment.paidAmount + (enrollment.unpaidAmount || 0);
-          
-          const updatedEnrollment = {
-            ...enrollment,
-            appliedPrice: appliedPrice,
-            updatedAt: new Date()
-          };
-          
-          await this.executeTransaction('courseEnrollments', 'readwrite', (store) =>
-            store.put(updatedEnrollment)
-          );
-          
-          migratedCount++;
+          await this.updateCourseEnrollment(enrollment.id, {
+            appliedPrice: enrollment.productPrice
+          });
         }
       }
       
-      console.log(`CourseEnrollment appliedPrice 필드 마이그레이션 완료: ${migratedCount}건 업데이트`);
+      console.log('appliedPrice 필드 마이그레이션 완료');
     } catch (error) {
-      console.error('CourseEnrollment appliedPrice 필드 마이그레이션 실패:', error);
+      console.error('appliedPrice 필드 마이그레이션 실패:', error);
+      throw error;
+    }
+  }
+
+  /**
+   * 홀드 시작 (기간제 프로그램만 가능)
+   */
+  async startHold(enrollmentId: string, holdReason?: string): Promise<boolean> {
+    try {
+      const enrollment = await this.getCourseEnrollmentById(enrollmentId);
+      if (!enrollment) {
+        throw new Error('수강정보를 찾을 수 없습니다.');
+      }
+
+      if (enrollment.programType !== '기간제') {
+        throw new Error('기간제 프로그램만 홀드가 가능합니다.');
+      }
+
+      if (enrollment.enrollmentStatus !== 'active') {
+        throw new Error('활성 상태의 수강권만 홀드가 가능합니다.');
+      }
+
+      if (enrollment.holdInfo?.isHold) {
+        throw new Error('이미 홀드 상태입니다.');
+      }
+
+      const holdStartDate = new Date();
+      
+      const updatedEnrollment = {
+        enrollmentStatus: 'hold' as const,
+        holdInfo: {
+          isHold: true,
+          holdStartDate,
+          holdEndDate: null,
+          holdReason: holdReason || '',
+          totalHoldDays: 0,
+          originalEndDate: enrollment.endDate
+        }
+      };
+
+      await this.updateCourseEnrollment(enrollmentId, updatedEnrollment);
+      console.log('홀드 시작 성공:', enrollmentId);
+      return true;
+    } catch (error) {
+      console.error('홀드 시작 실패:', error);
+      throw error;
+    }
+  }
+
+  /**
+   * 홀드 종료 (종료일 자동 연장)
+   */
+  async endHold(enrollmentId: string): Promise<boolean> {
+    try {
+      const enrollment = await this.getCourseEnrollmentById(enrollmentId);
+      if (!enrollment) {
+        throw new Error('수강정보를 찾을 수 없습니다.');
+      }
+
+      if (!enrollment.holdInfo?.isHold) {
+        throw new Error('홀드 상태가 아닙니다.');
+      }
+
+      const holdEndDate = new Date();
+      const holdStartDate = enrollment.holdInfo.holdStartDate;
+      
+      if (!holdStartDate) {
+        throw new Error('홀드 시작일 정보가 없습니다.');
+      }
+
+      // 홀드 기간 계산 (일 단위)
+      const holdDays = Math.ceil((holdEndDate.getTime() - holdStartDate.getTime()) / (1000 * 60 * 60 * 24));
+      
+      // 기존 종료일에 홀드 기간만큼 연장
+      const originalEndDate = enrollment.holdInfo.originalEndDate || enrollment.endDate;
+      let newEndDate = null;
+      
+      if (originalEndDate) {
+        newEndDate = new Date(originalEndDate);
+        newEndDate.setDate(newEndDate.getDate() + holdDays);
+      }
+
+      const updatedEnrollment = {
+        enrollmentStatus: 'active' as const,
+        endDate: newEndDate,
+        holdInfo: {
+          isHold: false,
+          holdStartDate,
+          holdEndDate,
+          holdReason: enrollment.holdInfo.holdReason,
+          totalHoldDays: holdDays,
+          originalEndDate: enrollment.holdInfo.originalEndDate
+        }
+      };
+
+      await this.updateCourseEnrollment(enrollmentId, updatedEnrollment);
+      console.log('홀드 종료 성공:', enrollmentId, `${holdDays}일 연장`);
+      return true;
+    } catch (error) {
+      console.error('홀드 종료 실패:', error);
+      throw error;
+    }
+  }
+
+  /**
+   * 수강 기간 연장 (기간제 프로그램만 가능)
+   */
+  async extendCourse(enrollmentId: string, extendDays: number, extendReason?: string): Promise<boolean> {
+    try {
+      const enrollment = await this.getCourseEnrollmentById(enrollmentId);
+      if (!enrollment) {
+        throw new Error('수강정보를 찾을 수 없습니다.');
+      }
+
+      if (enrollment.programType !== '기간제') {
+        throw new Error('기간제 프로그램만 연장이 가능합니다.');
+      }
+
+      if (enrollment.enrollmentStatus === 'hold') {
+        throw new Error('홀드 상태의 수강권은 연장할 수 없습니다. 먼저 홀드를 해제해주세요.');
+      }
+
+      if (!enrollment.endDate) {
+        throw new Error('종료일이 설정되지 않은 수강권입니다.');
+      }
+
+      // 현재 종료일에 연장 일수 추가
+      const newEndDate = new Date(enrollment.endDate);
+      newEndDate.setDate(newEndDate.getDate() + extendDays);
+
+      // 노트에 연장 이력 추가
+      const extendNote = `[연장] ${new Date().toLocaleDateString()} ${extendDays}일 연장${extendReason ? ` (${extendReason})` : ''}`;
+      const updatedNotes = enrollment.notes ? `${enrollment.notes}\n${extendNote}` : extendNote;
+
+      await this.updateCourseEnrollment(enrollmentId, {
+        endDate: newEndDate,
+        notes: updatedNotes
+      });
+
+      console.log('수강 연장 성공:', enrollmentId, `${extendDays}일 연장`);
+      return true;
+    } catch (error) {
+      console.error('수강 연장 실패:', error);
+      throw error;
+    }
+  }
+
+  /**
+   * 홀드 중인 수강정보 조회
+   */
+  async getHoldCourseEnrollments(): Promise<CourseEnrollment[]> {
+    try {
+      return await this.executeTransaction('courseEnrollments', 'readonly', (store) => {
+        const index = store.index('enrollmentStatus');
+        return index.getAll('hold');
+      });
+    } catch (error) {
+      console.error('홀드 수강정보 조회 실패:', error);
+      return [];
     }
   }
 }

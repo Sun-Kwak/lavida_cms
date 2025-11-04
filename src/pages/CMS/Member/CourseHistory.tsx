@@ -10,12 +10,13 @@ import Modal from '../../../components/Modal';
 import CustomDropdown from '../../../components/CustomDropdown';
 import DataTable, { type TableColumn } from '../../../components/DataTable';
 import CourseRegistrationModal from './CourseRegistrationModal';
+import CourseManagementModal from './CourseManagementModal';
 
 const PageContainer = styled.div`
   width: 100%;
 `;
 
-const StatusBadge = styled.span<{ $status: 'active' | 'completed' | 'suspended' | 'cancelled' | 'unpaid'; $clickable?: boolean }>`
+const StatusBadge = styled.span<{ $status: 'active' | 'completed' | 'suspended' | 'cancelled' | 'unpaid' | 'hold'; $clickable?: boolean }>`
   padding: 4px 8px;
   border-radius: 12px;
   font-size: 12px;
@@ -27,6 +28,7 @@ const StatusBadge = styled.span<{ $status: 'active' | 'completed' | 'suspended' 
       case 'suspended': return '#fff3e0';
       case 'cancelled': return '#fce4ec';
       case 'unpaid': return '#fff2f2';
+      case 'hold': return '#fff3e0';
       default: return '#f5f5f5';
     }
   }};
@@ -37,6 +39,7 @@ const StatusBadge = styled.span<{ $status: 'active' | 'completed' | 'suspended' 
       case 'suspended': return '#ef6c00';
       case 'cancelled': return '#c2185b';
       case 'unpaid': return '#8b1538';
+      case 'hold': return '#ef6c00';
       default: return '#424242';
     }
   }};
@@ -129,10 +132,29 @@ const WarningText = styled.div`
   border: 1px solid #ffeaa7;
   border-radius: 8px;
   padding: 12px;
-  margin: 16px 0;
   color: #856404;
   font-size: 14px;
   text-align: center;
+`;
+
+const TransferBadge = styled.span<{ $type: 'transferred' | 'received' }>`
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  padding: 2px 6px;
+  border-radius: 4px;
+  font-size: 10px;
+  font-weight: 600;
+  background: ${props => props.$type === 'transferred' ? '#fff3e0' : '#e8f5e8'};
+  color: ${props => props.$type === 'transferred' ? '#ef6c00' : '#2e7d32'};
+  border: 1px solid ${props => props.$type === 'transferred' ? '#ffcc02' : '#81c784'};
+  margin-bottom: 2px;
+`;
+
+const MemberNameContainer = styled.div`
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
 `;
 
 const CourseHistory: React.FC = () => {
@@ -162,6 +184,10 @@ const CourseHistory: React.FC = () => {
   // 새 수강 등록 모달 관련 상태
   const [showRegistrationModal, setShowRegistrationModal] = useState<boolean>(false);
 
+  // 양도 모달 관련 상태
+  const [showTransferModal, setShowTransferModal] = useState<boolean>(false);
+  const [selectedForTransfer, setSelectedForTransfer] = useState<CourseEnrollment | null>(null);
+
   // 새 수강 등록 성공 처리
   const handleRegistrationSuccess = async () => {
     // 데이터 새로고침
@@ -180,6 +206,28 @@ const CourseHistory: React.FC = () => {
   // 새 수강 등록 모달 닫기
   const handleCloseRegistrationModal = () => {
     setShowRegistrationModal(false);
+  };
+
+  // 양도 모달 열기
+  const handleOpenTransferModal = (enrollment: CourseEnrollment) => {
+    setSelectedForTransfer(enrollment);
+    setShowTransferModal(true);
+  };
+
+  // 양도 모달 닫기
+  const handleCloseTransferModal = () => {
+    setShowTransferModal(false);
+    setSelectedForTransfer(null);
+  };
+
+  // 양도 성공 처리
+  const handleTransferSuccess = async () => {
+    // 데이터 새로고침
+    await loadCourseEnrollments();
+    // 현재 검색 조건으로 다시 필터링
+    setTimeout(() => {
+      handleSearch();
+    }, 100);
   };
 
   // 미수 메타정보 로드
@@ -458,6 +506,39 @@ const CourseHistory: React.FC = () => {
     return date ? new Date(date).toLocaleDateString() : '-';
   };
 
+  // 양도 정보 확인 함수
+  const getTransferInfo = (enrollment: CourseEnrollment) => {
+    if (!enrollment.notes) return null;
+    
+    const notes = enrollment.notes.toLowerCase();
+    
+    if (notes.includes('[양도]')) {
+      // 양도한 경우
+      const match = enrollment.notes.match(/\[양도\].*?(\d{4}\.\s*\d{1,2}\.\s*\d{1,2}).*?(.+?)님에게 양도/);
+      if (match) {
+        return {
+          type: 'transferred' as const,
+          date: match[1],
+          memberName: match[2]
+        };
+      }
+    }
+    
+    if (notes.includes('[양도받음]')) {
+      // 양도받은 경우
+      const match = enrollment.notes.match(/\[양도받음\].*?(\d{4}\.\s*\d{1,2}\.\s*\d{1,2}).*?(.+?)님으로부터 양도받음/);
+      if (match) {
+        return {
+          type: 'received' as const,
+          date: match[1],
+          memberName: match[2]
+        };
+      }
+    }
+    
+    return null;
+  };
+
   const getProgressInfo = (enrollment: CourseEnrollment) => {
     if (enrollment.programType === '횟수제' && enrollment.sessionCount) {
       const remaining = enrollment.sessionCount - (enrollment.completedSessions || 0);
@@ -491,7 +572,23 @@ const CourseHistory: React.FC = () => {
     {
       key: 'memberName',
       title: '회원명',
-      width: '120px'
+      width: '120px',
+      render: (value, record) => {
+        const transferInfo = getTransferInfo(record);
+        return (
+          <MemberNameContainer>
+            <div>{record.memberName}</div>
+            {transferInfo && (
+              <TransferBadge $type={transferInfo.type}>
+                {transferInfo.type === 'transferred' ? 
+                  `↗ ${transferInfo.memberName}님께 양도` : 
+                  `↘ ${transferInfo.memberName}님께서 양도받음`
+                }
+              </TransferBadge>
+            )}
+          </MemberNameContainer>
+        );
+      }
     },
     {
       key: 'productName',
@@ -539,11 +636,30 @@ const CourseHistory: React.FC = () => {
       key: 'progress',
       title: '진행상황',
       width: '120px',
-      render: (value, record) => (
-        <ProgressInfo>
-          {getProgressInfo(record)}
-        </ProgressInfo>
-      )
+      render: (value, record) => {
+        // 취소된 수강권은 진행상황을 표시하지 않음
+        if (record.enrollmentStatus === 'cancelled') {
+          const transferInfo = getTransferInfo(record);
+          if (transferInfo?.type === 'transferred') {
+            return (
+              <ProgressInfo style={{ color: '#ef6c00' }}>
+                양도 완료
+              </ProgressInfo>
+            );
+          }
+          return (
+            <ProgressInfo style={{ color: '#666' }}>
+              취소됨
+            </ProgressInfo>
+          );
+        }
+        
+        return (
+          <ProgressInfo>
+            {getProgressInfo(record)}
+          </ProgressInfo>
+        );
+      }
     },
     {
       key: 'branchName',
@@ -637,6 +753,7 @@ const CourseHistory: React.FC = () => {
               case 'suspended': return '중단';
               case 'cancelled': return '취소';
               case 'unpaid': return '미수';
+              case 'hold': return '홀드';
               default: return record.enrollmentStatus;
             }
           })()}
@@ -675,7 +792,7 @@ const CourseHistory: React.FC = () => {
     <PageContainer>
       {/* 새로운 SearchArea 컴포넌트 사용 */}
       <SearchArea
-        metaContent={
+        leftContent={
           <div style={{ display: 'flex', gap: '12px', alignItems: 'center', flexWrap: 'wrap' }}>
             <Button onClick={handleOpenRegistrationModal}>
               + 새 수강 등록
@@ -710,6 +827,12 @@ const CourseHistory: React.FC = () => {
         emptyText="수강 이력이 없습니다"
         emptyDescription="검색 조건을 변경하거나 새로운 수강생을 등록해보세요."
         resultCount={resultCountInfo}
+        onRowClick={(record) => {
+          // 관리 가능한 수강권만 클릭 가능 (active, unpaid, hold 상태)
+          if (record.enrollmentStatus === 'active' || record.enrollmentStatus === 'unpaid' || record.enrollmentStatus === 'hold') {
+            handleOpenTransferModal(record);
+          }
+        }}
         pagination={{
           enabled: true,
           pageSize: 15,
@@ -807,10 +930,11 @@ const CourseHistory: React.FC = () => {
       )}
 
       {/* 새 수강 등록 모달 */}
-      <CourseRegistrationModal
-        isOpen={showRegistrationModal}
-        onClose={handleCloseRegistrationModal}
-        onSuccess={handleRegistrationSuccess}
+      <CourseManagementModal
+        isOpen={showTransferModal}
+        onClose={handleCloseTransferModal}
+        onSuccess={handleTransferSuccess}
+        courseEnrollment={selectedForTransfer}
       />
     </PageContainer>
   );
