@@ -22,7 +22,7 @@ const DateInputContainer = styled.div`
 
 const DateInputWrapper = styled.div<{ $error?: boolean; $hasValue: boolean; $disabled?: boolean }>`
   height: 48px;
-  padding: 0 16px;
+  padding: 0 12px;
   border: 1px solid ${props => props.$error ? AppColors.error : AppColors.borderLight};
   border-radius: 12px;
   background: ${props => props.$disabled ? AppColors.background : AppColors.surface};

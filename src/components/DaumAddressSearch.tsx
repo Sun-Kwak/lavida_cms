@@ -22,7 +22,7 @@ const SearchInputContainer = styled.div`
 const SearchInput = styled.input`
   width: 100%;
   height: 100%;
-  padding: 0 100px 0 16px;
+  padding: 0 100px 0 12px;
   border: 1px solid #ddd;
   border-radius: 12px;
   font-size: 14px;

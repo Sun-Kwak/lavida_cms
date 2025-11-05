@@ -31,7 +31,7 @@ const DropdownContainer = styled.div`
 const DropdownButton = styled.button<{ $isOpen: boolean; $hasValue: boolean; $error?: boolean }>`
   width: 100%;
   min-height: 48px;
-  padding: 14px 16px 14px 16px;
+  padding: 12px 16px;
   border: 1px solid ${props => props.$error ? AppColors.error : AppColors.borderLight};
   border-radius: 12px;
   background: ${AppColors.surface};
@@ -73,7 +73,14 @@ const DropdownArrow = styled.div<{ $isOpen: boolean }>`
   transform: ${props => props.$isOpen ? 'rotate(180deg)' : 'rotate(0deg)'};
 `;
 
-const DropdownList = styled.div<{ $isOpen: boolean; $inModal?: boolean; $top?: number; $left?: number; $width?: number }>`
+const DropdownList = styled.div<{ 
+  $isOpen: boolean; 
+  $inModal?: boolean; 
+  $top?: number; 
+  $left?: number; 
+  $width?: number;
+  $openUpward?: boolean;
+}>`
   position: fixed; /* Portal을 사용하므로 항상 fixed */
   top: ${props => `${props.$top || 0}px`};
   left: ${props => `${props.$left || 0}px`};
@@ -87,7 +94,15 @@ const DropdownList = styled.div<{ $isOpen: boolean; $inModal?: boolean; $top?: n
   z-index: 10001; /* 모달보다 높은 z-index */
   opacity: ${props => props.$isOpen ? 1 : 0};
   visibility: ${props => props.$isOpen ? 'visible' : 'hidden'};
-  transform: ${props => props.$isOpen ? 'translateY(0)' : 'translateY(-8px)'};
+  transform: ${props => {
+    if (!props.$isOpen) {
+      return props.$openUpward ? 'translateY(8px)' : 'translateY(-8px)';
+    }
+    return 'translateY(0)';
+  }};
+  ${props => props.$openUpward && `
+    transform-origin: bottom;
+  `}
   transition: opacity 0.2s ease, visibility 0.2s ease, transform 0.2s ease;
   
   /* 스크롤바 숨기기 */
@@ -150,7 +165,7 @@ const CustomDropdown: React.FC<CustomDropdownProps> = ({
   inModal = false
 }) => {
   const [isOpen, setIsOpen] = useState(false);
-  const [dropdownPosition, setDropdownPosition] = useState({ top: 0, left: 0, width: 0 });
+  const [dropdownPosition, setDropdownPosition] = useState({ top: 0, left: 0, width: 0, openUpward: false });
   const [hasPosition, setHasPosition] = useState(false);
   const dropdownRef = useRef<HTMLDivElement>(null);
   const buttonRef = useRef<HTMLButtonElement>(null);
@@ -158,14 +173,42 @@ const CustomDropdown: React.FC<CustomDropdownProps> = ({
   const updateDropdownPosition = useCallback(() => {
     if (buttonRef.current) {
       const rect = buttonRef.current.getBoundingClientRect();
+      const viewportHeight = window.innerHeight;
+      const gap = 4;
+      
+      // 실제 드롭다운 높이 계산 (각 아이템은 약 52px 높이 + 여백)
+      const itemHeight = 52; // padding(14px * 2) + font-size + 여백
+      const actualDropdownHeight = Math.min(options.length * itemHeight, 240);
+      
+      // 화면 공간 계산
+      const spaceBelow = viewportHeight - rect.bottom;
+      const spaceAbove = rect.top;
+      
+      // 공간이 충분한지 확인
+      const canOpenBelow = spaceBelow >= (actualDropdownHeight + gap);
+      const canOpenAbove = spaceAbove >= (actualDropdownHeight + gap);
+      
+      // 아래쪽 우선, 공간이 부족하면 위쪽 확인
+      const shouldOpenUp = !canOpenBelow && canOpenAbove;
+      
+      let topPosition;
+      if (shouldOpenUp) {
+        // 위로 열 때: 버튼 바로 위에서 시작해서 위로 확장
+        topPosition = rect.top - actualDropdownHeight - gap;
+      } else {
+        // 아래로 열 때: 버튼 바로 아래에서 시작
+        topPosition = rect.bottom + gap;
+      }
+      
       setDropdownPosition({
-        top: rect.bottom + 4, // 4px gap
+        top: topPosition,
         left: rect.left,
-        width: rect.width
+        width: rect.width,
+        openUpward: shouldOpenUp
       });
       setHasPosition(true);
     }
-  }, []);
+  }, [options.length]);
 
   useEffect(() => {
     const handleClickOutside = (event: MouseEvent) => {
@@ -233,6 +276,7 @@ const CustomDropdown: React.FC<CustomDropdownProps> = ({
         $top={dropdownPosition.top}
         $left={dropdownPosition.left}
         $width={dropdownPosition.width}
+        $openUpward={dropdownPosition.openUpward}
         role="listbox"
       >
         {options.map((option) => (

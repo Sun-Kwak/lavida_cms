@@ -148,6 +148,23 @@ export default function Modal({
     };
   }, [isOpen]);
 
+  // ESC 키 처리
+  useEffect(() => {
+    const handleEscapeKey = (event: KeyboardEvent) => {
+      if (event.key === 'Escape' && isOpen && onClose) {
+        onClose();
+      }
+    };
+
+    if (isOpen) {
+      document.addEventListener('keydown', handleEscapeKey);
+    }
+
+    return () => {
+      document.removeEventListener('keydown', handleEscapeKey);
+    };
+  }, [isOpen, onClose]);
+
   const modal = (
     <Overlay onClick={disableOutsideClick ? undefined : onClose} $zIndex={zIndex}>
       <ModalWrapper

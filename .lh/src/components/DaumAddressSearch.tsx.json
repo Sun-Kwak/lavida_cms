@@ -3,7 +3,7 @@
     "activeCommit": 0,
     "commits": [
         {
-            "activePatchIndex": 3,
+            "activePatchIndex": 6,
             "patches": [
                 {
                     "date": 1760248357527,
@@ -20,6 +20,18 @@
                 {
                     "date": 1761913936841,
                     "content": "Index: \n===================================================================\n--- \n+++ \n@@ -9,15 +9,20 @@\n   value?: string;\n }\n \n const SearchContainer = styled.div`\n+  width: 100%;\n+`;\n+\n+const SearchInputContainer = styled.div`\n   position: relative;\n   width: 100%;\n+  height: 48px;\n `;\n \n const SearchInput = styled.input`\n   width: 100%;\n-  height: 48px;\n+  height: 100%;\n   padding: 0 100px 0 16px;\n   border: 1px solid #ddd;\n   border-radius: 12px;\n   font-size: 14px;\n@@ -172,23 +177,25 @@\n   };\n \n   return (\n     <SearchContainer>\n-      <SearchInput\n-        type=\"text\"\n-        value={address}\n-        onClick={handleSearch}\n-        placeholder={placeholder}\n-        disabled={disabled}\n-        readOnly\n-      />\n-      <SearchButton\n-        type=\"button\"\n-        onClick={handleSearch}\n-        disabled={disabled || !isScriptLoaded}\n-      >\n-        {!isScriptLoaded ? '로딩중...' : '주소검색'}\n-      </SearchButton>\n+      <SearchInputContainer>\n+        <SearchInput\n+          type=\"text\"\n+          value={address}\n+          onClick={handleSearch}\n+          placeholder={placeholder}\n+          disabled={disabled}\n+          readOnly\n+        />\n+        <SearchButton\n+          type=\"button\"\n+          onClick={handleSearch}\n+          disabled={disabled || !isScriptLoaded}\n+        >\n+          {!isScriptLoaded ? '로딩중...' : '주소검색'}\n+        </SearchButton>\n+      </SearchInputContainer>\n       \n       {addressDetails && (\n         <AddressDetails>\n           <div><strong>도로명:</strong> {addressDetails.roadAddress}</div>\n"
+                },
+                {
+                    "date": 1762341867820,
+                    "content": "Index: \n===================================================================\n--- \n+++ \n@@ -23,9 +23,9 @@\n   width: 100%;\n   height: 100%;\n   padding: 0 100px 0 16px;\n   border: 1px solid #ddd;\n-  border-radius: 12px;\n+  border-radius: 6px;\n   font-size: 14px;\n   box-sizing: border-box;\n   cursor: pointer;\n   background-color: white;\n@@ -57,9 +57,9 @@\n   padding: 8px 16px;\n   background-color: #007bff;\n   color: white;\n   border: none;\n-  border-radius: 8px;\n+  border-radius: 6px;\n   cursor: pointer;\n   font-size: 12px;\n   \n   &:hover {\n"
+                },
+                {
+                    "date": 1762341964353,
+                    "content": "Index: \n===================================================================\n--- \n+++ \n@@ -23,9 +23,9 @@\n   width: 100%;\n   height: 100%;\n   padding: 0 100px 0 16px;\n   border: 1px solid #ddd;\n-  border-radius: 6px;\n+  border-radius: 12px;\n   font-size: 14px;\n   box-sizing: border-box;\n   cursor: pointer;\n   background-color: white;\n@@ -57,9 +57,9 @@\n   padding: 8px 16px;\n   background-color: #007bff;\n   color: white;\n   border: none;\n-  border-radius: 6px;\n+  border-radius: 8px;\n   cursor: pointer;\n   font-size: 12px;\n   \n   &:hover {\n"
+                },
+                {
+                    "date": 1762342025682,
+                    "content": "Index: \n===================================================================\n--- \n+++ \n@@ -21,9 +21,9 @@\n \n const SearchInput = styled.input`\n   width: 100%;\n   height: 100%;\n-  padding: 0 100px 0 16px;\n+  padding: 0 100px 0 12px;\n   border: 1px solid #ddd;\n   border-radius: 12px;\n   font-size: 14px;\n   box-sizing: border-box;\n"
                 }
             ],
             "date": 1760248357527,

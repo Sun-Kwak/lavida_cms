@@ -4,6 +4,8 @@ import { dbManager, type Member, type Product as DBProduct } from '../../../util
 import { AppColors } from '../../../styles/colors';
 import { AppTextStyles } from '../../../styles/textStyles';
 import CustomDropdown from '../../../components/CustomDropdown';
+import CustomDateInput from '../../../components/CustomDateInput';
+import NumberTextField from '../../../components/NumberTextField';
 
 const Container = styled.div`
   height: 100%;
@@ -70,49 +72,6 @@ const RemoveButton = styled.button`
   
   &:hover {
     background: #cc3333;
-  }
-`;
-
-const Input = styled.input`
-  width: 100%;
-  max-width: 100%;
-  padding: 8px 12px;
-  border: 1px solid ${AppColors.borderLight};
-  border-radius: 4px;
-  font-size: ${AppTextStyles.body2.fontSize};
-  box-sizing: border-box;
-  
-  &:focus {
-    outline: none;
-    border-color: ${AppColors.primary};
-    box-shadow: 0 0 0 2px ${AppColors.primary}20;
-  }
-  
-  &:disabled {
-    background: ${AppColors.disabled};
-    cursor: not-allowed;
-  }
-`;
-
-const PaymentSummary = styled.div`
-  background: ${AppColors.surface};
-  border: 1px solid ${AppColors.borderLight};
-  border-radius: 8px;
-  padding: 16px;
-  margin-top: 16px;
-`;
-
-const SummaryRow = styled.div`
-  display: flex;
-  justify-content: space-between;
-  align-items: center;
-  margin-bottom: 8px;
-  
-  &:last-child {
-    margin-bottom: 0;
-    padding-top: 8px;
-    border-top: 1px solid ${AppColors.borderLight};
-    font-weight: 700;
   }
 `;
 
@@ -453,8 +412,6 @@ const CoursePaymentPanel: React.FC<CoursePaymentPanelProps> = ({
   }, 0);
   const pointPayment = paymentInfo.pointPayment || 0;
   const cashPayment = paymentInfo.receivedAmount || 0; // 현금/카드 결제 금액
-  const totalReceived = pointPayment + cashPayment; // 총 받은 금액 (포인트 + 현금/카드)
-  const unpaidAmount = Math.max(0, totalAmount - totalReceived);
 
   // 결제 방법 옵션
   const paymentMethodOptions = [
@@ -514,24 +471,15 @@ const CoursePaymentPanel: React.FC<CoursePaymentPanelProps> = ({
                           fontSize: '12px', 
                           color: '#666', 
                           display: 'block', 
-                          marginBottom: '6px',
-                          fontWeight: '500'
+                          marginBottom: '8px',
+                          fontWeight: '600'
                         }}>
                           시작일
                         </label>
-                        <input
-                          type="date"
+                        <CustomDateInput
                           value={product.startDate ? product.startDate.toISOString().split('T')[0] : ''}
-                          onChange={(e) => handleProductEdit(index, 'startDate', new Date(e.target.value))}
-                          style={{
-                            width: '100%',
-                            padding: '8px 10px',
-                            border: '1px solid #ddd',
-                            borderRadius: '4px',
-                            fontSize: '13px',
-                            boxSizing: 'border-box',
-                            height: '36px'
-                          }}
+                          onChange={(value) => handleProductEdit(index, 'startDate', new Date(value))}
+                          placeholder="시작일을 선택하세요"
                         />
                       </div>
                       <div>
@@ -539,24 +487,16 @@ const CoursePaymentPanel: React.FC<CoursePaymentPanelProps> = ({
                           fontSize: '12px', 
                           color: '#666', 
                           display: 'block', 
-                          marginBottom: '6px',
-                          fontWeight: '500'
+                          marginBottom: '8px',
+                          fontWeight: '600'
                         }}>
                           종료일
                         </label>
-                        <input
-                          type="date"
+                        <CustomDateInput
                           value={product.endDate ? product.endDate.toISOString().split('T')[0] : ''}
-                          onChange={(e) => handleProductEdit(index, 'endDate', new Date(e.target.value))}
-                          style={{
-                            width: '100%',
-                            padding: '8px 10px',
-                            border: '1px solid #ddd',
-                            borderRadius: '4px',
-                            fontSize: '13px',
-                            boxSizing: 'border-box',
-                            height: '36px'
-                          }}
+                          onChange={(value) => handleProductEdit(index, 'endDate', new Date(value))}
+                          placeholder="종료일을 선택하세요"
+                          min={product.startDate ? product.startDate.toISOString().split('T')[0] : undefined}
                         />
                       </div>
                     </div>
@@ -593,27 +533,17 @@ const CoursePaymentPanel: React.FC<CoursePaymentPanelProps> = ({
                         fontSize: '12px', 
                         color: '#666', 
                         display: 'block', 
-                        marginBottom: '6px',
-                        fontWeight: '500'
+                        marginBottom: '8px',
+                        fontWeight: '600'
                       }}>
                         수업 횟수
                       </label>
                       <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
-                        <input
-                          type="number"
-                          min="1"
-                          max="100"
+                        <NumberTextField
                           value={product.sessions || (product.baseSessions || 10)}
-                          onChange={(e) => handleProductEdit(index, 'sessions', parseInt(e.target.value) || 1)}
-                          style={{
-                            width: '100px',
-                            padding: '8px 10px',
-                            border: '1px solid #ddd',
-                            borderRadius: '4px',
-                            fontSize: '13px',
-                            boxSizing: 'border-box',
-                            height: '36px'
-                          }}
+                          onChange={(value) => handleProductEdit(index, 'sessions', value || 1)}
+                          width="100px"
+                          placeholder="횟수"
                         />
                         <span style={{ fontSize: '13px', color: '#666', fontWeight: '500' }}>회</span>
                       </div>
@@ -651,26 +581,19 @@ const CoursePaymentPanel: React.FC<CoursePaymentPanelProps> = ({
                       fontSize: '12px', 
                       color: '#666', 
                       minWidth: '60px',
-                      fontWeight: '500'
+                      fontWeight: '600'
                     }}>
                       적용금액:
                     </label>
-                    <input
-                      type="number"
-                      min="0"
-                      step="1000"
+                    <NumberTextField
                       value={product.appliedPrice || product.price}
-                      onChange={(e) => handleProductEdit(index, 'appliedPrice', parseInt(e.target.value) || 0)}
+                      onChange={(value) => handleProductEdit(index, 'appliedPrice', value || 0)}
+                      step={1000}
+                      width="120px"
+                      placeholder="금액"
                       style={{
-                        width: '120px',
-                        padding: '8px 10px',
-                        border: '1px solid #ddd',
-                        borderRadius: '4px',
-                        fontSize: '14px',
                         fontWeight: 'bold',
-                        color: '#0066cc',
-                        boxSizing: 'border-box',
-                        height: '36px'
+                        color: '#0066cc'
                       }}
                     />
                     <span style={{ fontSize: '14px', fontWeight: 'bold', color: '#0066cc' }}>원</span>
@@ -703,22 +626,33 @@ const CoursePaymentPanel: React.FC<CoursePaymentPanelProps> = ({
       )}
 
       {totalAmount > 0 && (
-        <>
+        <div style={{ 
+          marginTop: '16px', 
+          padding: '16px', 
+          backgroundColor: '#f8f9fa', 
+          borderRadius: '8px'
+        }}>
+          <div style={{
+            textAlign: 'right',
+            fontWeight: 'bold',
+            fontSize: '18px',
+            marginBottom: '12px'
+          }}>
+            총 결제금액: {totalAmount.toLocaleString()}원
+          </div>
+          
           <PointPaymentSection>
             <Label>포인트 결제</Label>
             <InfoText>
               사용 가능한 포인트: {memberPointBalance.toLocaleString()}원
             </InfoText>
             <PointInputRow>
-              <Input
-                type="number"
-                value={pointPayment || ''}
-                onChange={(e) => {
-                  const value = e.target.value ? parseFloat(e.target.value) : 0;
-                  handlePointPaymentChange(value);
-                }}
+              <NumberTextField
+                value={pointPayment || 0}
+                onChange={(value) => handlePointPaymentChange(value || 0)}
                 placeholder="포인트 사용 금액"
-                max={Math.min(memberPointBalance, totalAmount)}
+                width="100%"
+                allowEmpty={true}
               />
               <PointUseButton onClick={handleUseAllPoints}>
                 전액 사용
@@ -733,15 +667,43 @@ const CoursePaymentPanel: React.FC<CoursePaymentPanelProps> = ({
 
           <FormField>
             <Label>받은금액 (현금/카드)</Label>
-            <Input
-              type="number"
-              value={paymentInfo.receivedAmount !== undefined ? paymentInfo.receivedAmount : Math.max(0, totalAmount - pointPayment)}
-              onChange={(e) => {
-                const value = e.target.value ? parseFloat(e.target.value) : 0;
-                handleReceivedAmountChange(value);
-              }}
-              placeholder="받은 금액을 입력하세요"
-            />
+            <div style={{ display: 'flex', gap: '8px', alignItems: 'center' }}>
+              <NumberTextField
+                value={paymentInfo.receivedAmount !== undefined ? paymentInfo.receivedAmount : Math.max(0, totalAmount - pointPayment)}
+                onChange={(value) => handleReceivedAmountChange(value || 0)}
+                placeholder="받은 금액을 입력하세요"
+                width="100%"
+                allowEmpty={true}
+              />
+              <button
+                type="button"
+                onClick={() => {
+                  const cashAmount = Math.max(0, totalAmount - pointPayment);
+                  handleReceivedAmountChange(cashAmount);
+                }}
+                style={{
+                  minHeight: '48px',
+                  padding: '14px 16px',
+                  border: '1px solid #ddd',
+                  borderRadius: '12px',
+                  backgroundColor: '#fff',
+                  cursor: 'pointer',
+                  fontSize: '12px',
+                  whiteSpace: 'nowrap',
+                  transition: 'all 0.2s ease'
+                }}
+                onMouseEnter={(e) => {
+                  e.currentTarget.style.borderColor = '#37bbd6';
+                  e.currentTarget.style.boxShadow = '0 2px 8px rgba(55, 187, 214, 0.1)';
+                }}
+                onMouseLeave={(e) => {
+                  e.currentTarget.style.borderColor = '#ddd';
+                  e.currentTarget.style.boxShadow = 'none';
+                }}
+              >
+                필요 금액으로 설정
+              </button>
+            </div>
             {cashPayment !== totalAmount - pointPayment && (
               <InfoText>
                 {cashPayment > totalAmount - pointPayment
@@ -762,38 +724,7 @@ const CoursePaymentPanel: React.FC<CoursePaymentPanelProps> = ({
               </InfoText>
             )}
           </FormField>
-
-          <PaymentSummary>
-            <SummaryRow>
-              <span>총 결제금액:</span>
-              <span>{totalAmount.toLocaleString()}원</span>
-            </SummaryRow>
-            <SummaryRow>
-              <span>포인트 결제:</span>
-              <span>{pointPayment.toLocaleString()}원</span>
-            </SummaryRow>
-            <SummaryRow>
-              <span>현금/카드 결제:</span>
-              <span>{cashPayment.toLocaleString()}원</span>
-            </SummaryRow>
-            <SummaryRow>
-              <span>총 받은금액:</span>
-              <span>{totalReceived.toLocaleString()}원</span>
-            </SummaryRow>
-            {unpaidAmount > 0 && (
-              <SummaryRow style={{ color: '#d32f2f' }}>
-                <span>미수금:</span>
-                <span>{unpaidAmount.toLocaleString()}원</span>
-              </SummaryRow>
-            )}
-            {cashPayment > totalAmount - pointPayment && (
-              <SummaryRow style={{ color: '#2e7d32' }}>
-                <span>포인트 적립 예정:</span>
-                <span>{(cashPayment - (totalAmount - pointPayment)).toLocaleString()}원</span>
-              </SummaryRow>
-            )}
-          </PaymentSummary>
-        </>
+        </div>
       )}
 
       {paymentInfo.selectedProducts.length === 0 && (

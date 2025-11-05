@@ -10,7 +10,7 @@ import CoursePaymentPanel from './CoursePaymentPanel';
 
 const ModalContainer = styled.div`
   display: flex;
-  gap: 24px;
+  /* gap: 24px; */
   height: 600px;
   min-width: 900px;
   width: 100%;
@@ -280,6 +280,7 @@ const CourseRegistrationModal: React.FC<CourseRegistrationModalProps> = ({
       onClose={handleClose}
       width="min(95vw, 1000px)"
       header="새 수강 등록"
+      disableOutsideClick={true}
       body={
         <ModalContainer>
           <LeftPanel>

@@ -10,7 +10,7 @@ import MemberSearchPanel from './MemberSearchPanel';
 
 const ModalContainer = styled.div`
   display: flex;
-  gap: 24px;
+  /* gap: 24px; */
   height: auto;
   min-height: 500px;
   min-width: 900px;
@@ -73,10 +73,12 @@ const RequiredMark = styled.span`
 const AmountInput = styled.input`
   padding: 12px 16px;
   border: 1px solid ${AppColors.borderLight};
-  border-radius: 8px;
+  border-radius: 12px;
   font-size: 16px;
   font-weight: 600;
   text-align: right;
+  height: 48px;
+  box-sizing: border-box;
   
   &:focus {
     outline: none;
@@ -92,8 +94,10 @@ const AmountInput = styled.input`
 const TextInput = styled.input`
   padding: 12px 16px;
   border: 1px solid ${AppColors.borderLight};
-  border-radius: 8px;
+  border-radius: 12px;
   font-size: 14px;
+  height: 48px;
+  box-sizing: border-box;
   
   &:focus {
     outline: none;
@@ -108,10 +112,12 @@ const TextInput = styled.input`
 const TextArea = styled.textarea`
   padding: 12px 16px;
   border: 1px solid ${AppColors.borderLight};
-  border-radius: 8px;
+  border-radius: 12px;
   font-size: 14px;
   min-height: 80px;
   resize: vertical;
+  box-sizing: border-box;
+  font-family: inherit;
   
   &:focus {
     outline: none;
@@ -359,6 +365,7 @@ const PointAddModal: React.FC<PointAddModalProps> = ({
       onClose={handleClose}
       width="min(95vw, 1000px)"
       header="포인트 추가/조정"
+      disableOutsideClick={true}
       body={
         <ModalContainer>
           <LeftPanel>

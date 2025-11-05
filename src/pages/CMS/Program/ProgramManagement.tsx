@@ -239,17 +239,27 @@ const Label = styled.label<{ $required?: boolean }>`
 const Input = styled.input<{ $error?: boolean }>`
   width: 100%;
   min-width: 0;
-  padding: 12px;
+  height: 48px;
+  padding: 14px 16px 14px 16px;
   border: 1px solid ${({ $error }) => $error ? AppColors.error : AppColors.borderLight};
-  border-radius: 8px;
+  border-radius: 12px;
   font-size: ${AppTextStyles.body1.fontSize};
   color: ${AppColors.onSurface};
-  background-color: ${AppColors.input};
+  background: ${AppColors.surface};
   box-sizing: border-box;
+  transition: all 0.2s ease;
+  display: flex;
+  align-items: center;
+  
+  &:hover {
+    border-color: ${({ $error }) => $error ? AppColors.error : AppColors.primary};
+    box-shadow: 0 2px 8px rgba(55, 187, 214, 0.1);
+  }
   
   &:focus {
     outline: none;
-    border-color: ${AppColors.primary};
+    border-color: ${({ $error }) => $error ? AppColors.error : AppColors.primary};
+    box-shadow: 0 0 0 3px rgba(55, 187, 214, 0.1);
   }
   
   &::placeholder {
@@ -258,7 +268,10 @@ const Input = styled.input<{ $error?: boolean }>`
 
   &:disabled {
     background-color: ${AppColors.background};
-    opacity: 0.5;
+    color: ${AppColors.disabled};
+    cursor: not-allowed;
+    border-color: ${AppColors.borderLight};
+    opacity: 1;
   }
 `;
 

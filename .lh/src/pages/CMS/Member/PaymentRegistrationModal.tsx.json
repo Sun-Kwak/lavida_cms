@@ -3,7 +3,7 @@
     "activeCommit": 0,
     "commits": [
         {
-            "activePatchIndex": 4,
+            "activePatchIndex": 7,
             "patches": [
                 {
                     "date": 1761374852720,
@@ -24,6 +24,18 @@
                 {
                     "date": 1762070340233,
                     "content": "Index: \n===================================================================\n--- \n+++ \n@@ -299,11 +299,8 @@\n         memo: memo || `현장 결제 등록 - ${paymentMethod} ${baseAmount.toLocaleString()}원`\n       });\n \n       // 2. 기본 포인트 적립\n-      const expiryDate = new Date();\n-      expiryDate.setFullYear(expiryDate.getFullYear() + 1);\n-\n       await dbManager.point.addPointTransaction({\n         memberId: selectedMember.id,\n         memberName: selectedMember.name,\n         amount: baseAmount,\n@@ -315,9 +312,8 @@\n         branchName: selectedMember.branchName,\n         staffId: selectedMember.coach,\n         staffName: selectedMember.coachName,\n         earnedDate: new Date(),\n-        expiryDate,\n         isExpired: false,\n         source: '현장결제',\n         description: `현장 결제 등록 - ${paymentMethod} ${baseAmount.toLocaleString()}원${memo ? ` (${memo})` : ''}`\n       });\n@@ -336,9 +332,8 @@\n           branchName: selectedMember.branchName,\n           staffId: selectedMember.coach,\n           staffName: selectedMember.coachName,\n           earnedDate: new Date(),\n-          expiryDate,\n           isExpired: false,\n           source: '보너스포인트',\n           description: `현장 결제 등록 보너스 포인트 (${baseAmount.toLocaleString()}원 → ${Math.floor(baseAmount / 1000000)}개 100만원 단위)`\n         });\n"
+                },
+                {
+                    "date": 1762341535506,
+                    "content": "Index: \n===================================================================\n--- \n+++ \n@@ -9,9 +9,9 @@\n import MemberSearchPanel from './MemberSearchPanel';\n \n const ModalContainer = styled.div`\n   display: flex;\n-  gap: 24px;\n+  /* gap: 24px; */\n   height: 600px;\n   min-width: 900px;\n   width: 100%;\n   overflow: hidden;\n"
+                },
+                {
+                    "date": 1762342161838,
+                    "content": "Index: \n===================================================================\n--- \n+++ \n@@ -72,12 +72,14 @@\n \n const AmountInput = styled.input`\n   padding: 12px 16px;\n   border: 1px solid ${AppColors.borderLight};\n-  border-radius: 8px;\n+  border-radius: 12px;\n   font-size: 16px;\n   font-weight: 600;\n   text-align: right;\n+  height: 48px;\n+  box-sizing: border-box;\n   \n   &:focus {\n     outline: none;\n     border-color: ${AppColors.primary};\n@@ -91,10 +93,12 @@\n \n const TextInput = styled.input`\n   padding: 12px 16px;\n   border: 1px solid ${AppColors.borderLight};\n-  border-radius: 8px;\n+  border-radius: 12px;\n   font-size: 14px;\n+  height: 48px;\n+  box-sizing: border-box;\n   \n   &:focus {\n     outline: none;\n     border-color: ${AppColors.primary};\n"
+                },
+                {
+                    "date": 1762342594889,
+                    "content": "Index: \n===================================================================\n--- \n+++ \n@@ -380,8 +380,9 @@\n       isOpen={isOpen}\n       onClose={handleClose}\n       width=\"min(95vw, 1000px)\"\n       header=\"현장 결제 등록\"\n+      disableOutsideClick={true}\n       body={\n         <ModalContainer>\n           <LeftPanel>\n             <PanelTitle>회원 검색 및 선택</PanelTitle>\n"
                 }
             ],
             "date": 1761374852720,

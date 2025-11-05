@@ -12,6 +12,8 @@ import {
 } from './StyledComponents';
 import { Product, StepProps } from './types';
 import CustomDropdown from '../../../components/CustomDropdown';
+import CustomDateInput from '../../../components/CustomDateInput';
+import NumberTextField from '../../../components/NumberTextField';
 import { dbManager, type Product as DBProduct } from '../../../utils/indexedDB';
 
 const PaymentInfoStep: React.FC<StepProps> = ({ formData, onUpdate }) => {
@@ -238,6 +240,7 @@ const PaymentInfoStep: React.FC<StepProps> = ({ formData, onUpdate }) => {
           value={formData.paymentInfo.paymentMethod || 'card'}
           onChange={handlePaymentMethodChange}
           options={paymentMethodOptions}
+          inModal={false}
         />
       </FormField>
       
@@ -269,24 +272,15 @@ const PaymentInfoStep: React.FC<StepProps> = ({ formData, onUpdate }) => {
                           fontSize: '12px', 
                           color: '#666', 
                           display: 'block', 
-                          marginBottom: '6px',
-                          fontWeight: '500'
+                          marginBottom: '8px',
+                          fontWeight: '600'
                         }}>
                           시작일
                         </label>
-                        <input
-                          type="date"
+                        <CustomDateInput
                           value={product.startDate ? product.startDate.toISOString().split('T')[0] : ''}
-                          onChange={(e) => handleProductEdit(index, 'startDate', new Date(e.target.value))}
-                          style={{
-                            width: '100%',
-                            padding: '8px 10px',
-                            border: '1px solid #ddd',
-                            borderRadius: '4px',
-                            fontSize: '13px',
-                            boxSizing: 'border-box',
-                            height: '36px'
-                          }}
+                          onChange={(value) => handleProductEdit(index, 'startDate', new Date(value))}
+                          placeholder="시작일을 선택하세요"
                         />
                       </div>
                       <div>
@@ -294,24 +288,16 @@ const PaymentInfoStep: React.FC<StepProps> = ({ formData, onUpdate }) => {
                           fontSize: '12px', 
                           color: '#666', 
                           display: 'block', 
-                          marginBottom: '6px',
-                          fontWeight: '500'
+                          marginBottom: '8px',
+                          fontWeight: '600'
                         }}>
                           종료일
                         </label>
-                        <input
-                          type="date"
+                        <CustomDateInput
                           value={product.endDate ? product.endDate.toISOString().split('T')[0] : ''}
-                          onChange={(e) => handleProductEdit(index, 'endDate', new Date(e.target.value))}
-                          style={{
-                            width: '100%',
-                            padding: '8px 10px',
-                            border: '1px solid #ddd',
-                            borderRadius: '4px',
-                            fontSize: '13px',
-                            boxSizing: 'border-box',
-                            height: '36px'
-                          }}
+                          onChange={(value) => handleProductEdit(index, 'endDate', new Date(value))}
+                          placeholder="종료일을 선택하세요"
+                          min={product.startDate ? product.startDate.toISOString().split('T')[0] : undefined}
                         />
                       </div>
                     </div>
@@ -348,27 +334,17 @@ const PaymentInfoStep: React.FC<StepProps> = ({ formData, onUpdate }) => {
                         fontSize: '12px', 
                         color: '#666', 
                         display: 'block', 
-                        marginBottom: '6px',
-                        fontWeight: '500'
+                        marginBottom: '8px',
+                        fontWeight: '600'
                       }}>
                         수업 횟수
                       </label>
                       <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
-                        <input
-                          type="number"
-                          min="1"
-                          max="100"
+                        <NumberTextField
                           value={product.sessions || (product.baseSessions || 10)}
-                          onChange={(e) => handleProductEdit(index, 'sessions', parseInt(e.target.value) || 1)}
-                          style={{
-                            width: '100px',
-                            padding: '8px 10px',
-                            border: '1px solid #ddd',
-                            borderRadius: '4px',
-                            fontSize: '13px',
-                            boxSizing: 'border-box',
-                            height: '36px'
-                          }}
+                          onChange={(value) => handleProductEdit(index, 'sessions', value || 1)}
+                          width="100px"
+                          placeholder="횟수"
                         />
                         <span style={{ fontSize: '13px', color: '#666', fontWeight: '500' }}>회</span>
                       </div>
@@ -406,26 +382,19 @@ const PaymentInfoStep: React.FC<StepProps> = ({ formData, onUpdate }) => {
                       fontSize: '12px', 
                       color: '#666', 
                       minWidth: '60px',
-                      fontWeight: '500'
+                      fontWeight: '600'
                     }}>
                       적용금액:
                     </label>
-                    <input
-                      type="number"
-                      min="0"
-                      step="1000"
+                    <NumberTextField
                       value={product.appliedPrice || product.price}
-                      onChange={(e) => handleProductEdit(index, 'appliedPrice', parseInt(e.target.value) || 0)}
+                      onChange={(value) => handleProductEdit(index, 'appliedPrice', value || 0)}
+                      step={1000}
+                      width="120px"
+                      placeholder="금액"
                       style={{
-                        width: '120px',
-                        padding: '8px 10px',
-                        border: '1px solid #ddd',
-                        borderRadius: '4px',
-                        fontSize: '14px',
                         fontWeight: 'bold',
-                        color: '#0066cc',
-                        boxSizing: 'border-box',
-                        height: '36px'
+                        color: '#0066cc'
                       }}
                     />
                     <span style={{ fontSize: '14px', fontWeight: 'bold', color: '#0066cc' }}>원</span>
@@ -475,11 +444,9 @@ const PaymentInfoStep: React.FC<StepProps> = ({ formData, onUpdate }) => {
             <FormField>
               <Label>받은금액</Label>
               <div style={{ display: 'flex', gap: '8px', alignItems: 'center' }}>
-                <input
-                  type="number"
-                  value={formData.paymentInfo.receivedAmount || totalAmount}
-                  onChange={(e) => {
-                    const value = e.target.value ? parseFloat(e.target.value) : 0;
+                <NumberTextField
+                  value={formData.paymentInfo.receivedAmount !== undefined ? formData.paymentInfo.receivedAmount : totalAmount}
+                  onChange={(value) => {
                     onUpdate({
                       paymentInfo: {
                         ...formData.paymentInfo,
@@ -488,15 +455,8 @@ const PaymentInfoStep: React.FC<StepProps> = ({ formData, onUpdate }) => {
                     });
                   }}
                   placeholder="받은 금액을 입력하세요"
-                  style={{
-                    flex: 1,
-                    padding: '8px 12px',
-                    border: '1px solid #ddd',
-                    borderRadius: '4px',
-                    fontSize: '14px',
-                    boxSizing: 'border-box',
-                    height: '36px'
-                  }}
+                  width="100%"
+                  allowEmpty={true}
                 />
                 <button
                   type="button"
@@ -509,14 +469,23 @@ const PaymentInfoStep: React.FC<StepProps> = ({ formData, onUpdate }) => {
                     });
                   }}
                   style={{
-                    padding: '8px 12px',
+                    minHeight: '48px',
+                    padding: '14px 16px',
                     border: '1px solid #ddd',
-                    borderRadius: '4px',
+                    borderRadius: '12px',
                     backgroundColor: '#fff',
                     cursor: 'pointer',
                     fontSize: '12px',
-                    height: '36px',
-                    whiteSpace: 'nowrap'
+                    whiteSpace: 'nowrap',
+                    transition: 'all 0.2s ease'
+                  }}
+                  onMouseEnter={(e) => {
+                    e.currentTarget.style.borderColor = '#37bbd6';
+                    e.currentTarget.style.boxShadow = '0 2px 8px rgba(55, 187, 214, 0.1)';
+                  }}
+                  onMouseLeave={(e) => {
+                    e.currentTarget.style.borderColor = '#ddd';
+                    e.currentTarget.style.boxShadow = 'none';
                   }}
                 >
                   적용금액 합계로 설정
@@ -569,6 +538,7 @@ const PaymentInfoStep: React.FC<StepProps> = ({ formData, onUpdate }) => {
             onChange={handleProductSelect}
             options={getProductOptions()}
             disabled={loading || availableProducts.length === 0}
+            inModal={false}
           />
         )}
         {formData.joinInfo.branchId && availableProducts.length === 0 && !loading && (

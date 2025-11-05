@@ -3,7 +3,7 @@
     "activeCommit": 0,
     "commits": [
         {
-            "activePatchIndex": 4,
+            "activePatchIndex": 7,
             "patches": [
                 {
                     "date": 1759902049199,
@@ -24,6 +24,18 @@
                 {
                     "date": 1761450440002,
                     "content": "Index: \n===================================================================\n--- \n+++ \n@@ -84,9 +84,9 @@\n   error = false,\n   required = false,\n   min,\n   max,\n-  defaultViewDate = '1970-01-01'\n+  defaultViewDate\n }) => {\n   const hiddenInputRef = useRef<HTMLInputElement>(null);\n \n   const formatDateForDisplay = (dateValue: string): string => {\n@@ -107,9 +107,10 @@\n   const handleWrapperClick = () => {\n     if (!disabled && hiddenInputRef.current) {\n       // 값이 없을 때만 임시로 defaultViewDate 설정\n       if (!value) {\n-        hiddenInputRef.current.value = defaultViewDate;\n+        const viewDate = defaultViewDate || new Date().toISOString().split('T')[0];\n+        hiddenInputRef.current.value = viewDate;\n         \n         if (hiddenInputRef.current.showPicker) {\n           hiddenInputRef.current.showPicker();\n         } else {\n@@ -117,9 +118,9 @@\n         }\n         \n         // 사용자가 날짜를 선택하지 않으면 원래 값으로 복원\n         setTimeout(() => {\n-          if (hiddenInputRef.current && hiddenInputRef.current.value === defaultViewDate && !value) {\n+          if (hiddenInputRef.current && hiddenInputRef.current.value === viewDate && !value) {\n             hiddenInputRef.current.value = '';\n           }\n         }, 100);\n       } else {\n"
+                },
+                {
+                    "date": 1762341867802,
+                    "content": "Index: \n===================================================================\n--- \n+++ \n@@ -23,9 +23,9 @@\n const DateInputWrapper = styled.div<{ $error?: boolean; $hasValue: boolean; $disabled?: boolean }>`\n   height: 48px;\n   padding: 0 16px;\n   border: 1px solid ${props => props.$error ? AppColors.error : AppColors.borderLight};\n-  border-radius: 12px;\n+  border-radius: 6px;\n   background: ${props => props.$disabled ? AppColors.background : AppColors.surface};\n   color: ${props => props.$disabled ? AppColors.disabled : AppColors.onSurface};\n   transition: all 0.2s ease;\n   box-sizing: border-box;\n"
+                },
+                {
+                    "date": 1762341964333,
+                    "content": "Index: \n===================================================================\n--- \n+++ \n@@ -23,9 +23,9 @@\n const DateInputWrapper = styled.div<{ $error?: boolean; $hasValue: boolean; $disabled?: boolean }>`\n   height: 48px;\n   padding: 0 16px;\n   border: 1px solid ${props => props.$error ? AppColors.error : AppColors.borderLight};\n-  border-radius: 6px;\n+  border-radius: 12px;\n   background: ${props => props.$disabled ? AppColors.background : AppColors.surface};\n   color: ${props => props.$disabled ? AppColors.disabled : AppColors.onSurface};\n   transition: all 0.2s ease;\n   box-sizing: border-box;\n"
+                },
+                {
+                    "date": 1762342025664,
+                    "content": "Index: \n===================================================================\n--- \n+++ \n@@ -21,9 +21,9 @@\n `;\n \n const DateInputWrapper = styled.div<{ $error?: boolean; $hasValue: boolean; $disabled?: boolean }>`\n   height: 48px;\n-  padding: 0 16px;\n+  padding: 0 12px;\n   border: 1px solid ${props => props.$error ? AppColors.error : AppColors.borderLight};\n   border-radius: 12px;\n   background: ${props => props.$disabled ? AppColors.background : AppColors.surface};\n   color: ${props => props.$disabled ? AppColors.disabled : AppColors.onSurface};\n"
                 }
             ],
             "date": 1759902049199,

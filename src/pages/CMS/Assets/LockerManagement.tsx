@@ -6,6 +6,7 @@ import { AppTextStyles } from '../../../styles/textStyles';
 import { dbManager, type Branch, type Member, type Locker } from '../../../utils/indexedDB';
 import CustomDropdown from '../../../components/CustomDropdown';
 import CustomDateInput from '../../../components/CustomDateInput';
+import NumberTextField from '../../../components/NumberTextField';
 import { SYSTEM_ADMIN_CONFIG } from '../../../constants/staffConstants';
 import Modal from '../../../components/Modal';
 
@@ -81,7 +82,6 @@ const ModalOverlay = styled.div<{ $isOpen: boolean }>`
 
 const ModalContent = styled.div`
   background-color: ${AppColors.background};
-  padding: 24px;
   border-radius: 12px;
   border: 1px solid ${AppColors.borderLight};
   min-width: 300px;
@@ -250,20 +250,6 @@ const PriceInputGroup = styled.div`
   margin: 16px 0;
 `;
 
-const PriceInput = styled.input`
-  padding: 8px 12px;
-  border: 1px solid ${AppColors.borderLight};
-  border-radius: 6px;
-  background-color: ${AppColors.surface};
-  color: ${AppColors.onSurface};
-  font-size: ${AppTextStyles.body2.fontSize};
-
-  &:focus {
-    outline: none;
-    border-color: ${AppColors.primary};
-  }
-`;
-
 const StatNumber = styled.span`
   color: ${AppColors.primary};
   font-weight: 600;
@@ -290,7 +276,6 @@ const StatItem = styled.div`
 // 라커 배정 모달 스타일
 const AssignmentModalContainer = styled.div`
   display: flex;
-  gap: 24px;
   height: 600px;
   min-width: 900px;
   width: 100%;
@@ -498,9 +483,10 @@ const LockerManagement: React.FC = () => {
   const [lockers, setLockers] = useState<Locker[]>([]);
   const [branches, setBranches] = useState<Branch[]>([]);
   const [isAddModalOpen, setIsAddModalOpen] = useState(false);
-  const [addCount, setAddCount] = useState<number>(1);
+  const [addCount, setAddCount] = useState<number | undefined>(1);
   const [selectedLocker, setSelectedLocker] = useState<Locker | null>(null);
   const [isPriceSettingModalOpen, setIsPriceSettingModalOpen] = useState(false);
+  const [tempPrice, setTempPrice] = useState<number | undefined>(0); // 임시 가격 상태 - undefined 허용
   const [currentUserInfo, setCurrentUserInfo] = useState<UserInfo | null>(null);
   const [hasPermission, setHasPermission] = useState(false);
 
@@ -620,6 +606,24 @@ const LockerManagement: React.FC = () => {
     }
   };
 
+  // ESC 키 처리
+  React.useEffect(() => {
+    const handleEscapeKey = (event: KeyboardEvent) => {
+      if (event.key === 'Escape') {
+        if (isPriceSettingModalOpen) {
+          setIsPriceSettingModalOpen(false);
+        } else if (isAddModalOpen) {
+          setIsAddModalOpen(false);
+        }
+      }
+    };
+
+    document.addEventListener('keydown', handleEscapeKey);
+    return () => {
+      document.removeEventListener('keydown', handleEscapeKey);
+    };
+  }, [isPriceSettingModalOpen, isAddModalOpen]);
+
   // 컴포넌트 마운트 시 데이터 로드
   React.useEffect(() => {
     const initData = async () => {
@@ -681,6 +685,12 @@ const LockerManagement: React.FC = () => {
     // 권한 확인
     if (!canEditBranch(selectedBranch)) {
       toast.error('라커 추가 권한이 없습니다.');
+      return;
+    }
+
+    // Validation 체크
+    if (!addCount || addCount < 1 || addCount > 50) {
+      toast.error('라커 개수를 올바르게 입력해주세요. (1개 ~ 50개)');
       return;
     }
 
@@ -1106,6 +1116,7 @@ const LockerManagement: React.FC = () => {
       toast.error('라커 가격 설정 권한이 없습니다.');
       return;
     }
+    setTempPrice(getCurrentBranchLockerPrice()); // 현재 가격으로 초기화
     setIsPriceSettingModalOpen(true);
   };
 
@@ -1119,7 +1130,13 @@ const LockerManagement: React.FC = () => {
     setIsAddModalOpen(true);
   };
 
-  const handlePriceSettingUpdate = async (newPrice: number) => {
+  const handlePriceSettingUpdate = async (newPrice: number | undefined) => {
+    // Validation 체크
+    if (!newPrice || newPrice <= 0) {
+      toast.error('가격을 올바르게 입력해주세요. (1원 이상)');
+      return;
+    }
+
     try {
       const success = await dbManager.updateLockerPrice(selectedBranch, newPrice);
       if (success) {
@@ -1248,19 +1265,19 @@ const LockerManagement: React.FC = () => {
 
         {/* 지점별 라커 가격 설정 모달 */}
         <ModalOverlay $isOpen={isPriceSettingModalOpen}>
-          <ModalContent>
+          <ModalContent onClick={(e) => e.stopPropagation()}>
             <ModalTitle>
               {branches.find(b => b.id === selectedBranch)?.name} 라커 가격 설정
             </ModalTitle>
             <PriceInputGroup>
               <label>라커 가격:</label>
-              <PriceInput
-                type="number"
-                min="0"
-                step="1000"
-                defaultValue={getCurrentBranchLockerPrice()}
+              <NumberTextField
+                value={tempPrice ?? ''}
+                onChange={(value) => setTempPrice(value)}
+                step={1000}
                 placeholder="가격을 입력하세요"
-                id="branchPriceInput"
+                width="100%"
+                allowEmpty={true}
               />
               <span style={{ fontSize: AppTextStyles.label2.fontSize, color: AppColors.onInput1 }}>
                 현재 가격: {formatPrice(getCurrentBranchLockerPrice())}
@@ -1272,9 +1289,7 @@ const LockerManagement: React.FC = () => {
               </SecondaryButton>
               <ActionButton 
                 onClick={() => {
-                  const input = document.getElementById('branchPriceInput') as HTMLInputElement;
-                  const newPrice = parseInt(input.value) || 0;
-                  handlePriceSettingUpdate(newPrice);
+                  handlePriceSettingUpdate(tempPrice);
                 }}
               >
                 설정
@@ -1285,20 +1300,19 @@ const LockerManagement: React.FC = () => {
 
         {/* 라커 추가 모달 */}
         <ModalOverlay $isOpen={isAddModalOpen}>
-          <ModalContent>
+          <ModalContent onClick={(e) => e.stopPropagation()}>
             <ModalTitle>라커 추가</ModalTitle>
             <PriceInputGroup>
               <label>추가할 라커 개수:</label>
-              <PriceInput
-                type="number"
-                min="1"
-                max="50"
-                value={addCount}
-                onChange={(e) => setAddCount(parseInt(e.target.value) || 1)}
+              <NumberTextField
+                value={addCount ?? ''}
+                onChange={(value) => setAddCount(value)}
                 placeholder="추가할 개수를 입력하세요"
+                width="100%"
+                allowEmpty={true}
               />
             </PriceInputGroup>
-            <p>번호: {Math.max(...currentBranchLockers.map(l => parseInt(l.number)), 0) + 1}번부터 {Math.max(...currentBranchLockers.map(l => parseInt(l.number)), 0) + addCount}번까지</p>
+            <p>번호: {Math.max(...currentBranchLockers.map(l => parseInt(l.number)), 0) + 1}번부터 {Math.max(...currentBranchLockers.map(l => parseInt(l.number)), 0) + (addCount || 1)}번까지</p>
             <p>라커 가격: {formatPrice(getCurrentBranchLockerPrice())}</p>
             <ModalButtons>
               <SecondaryButton onClick={() => {
@@ -1308,7 +1322,7 @@ const LockerManagement: React.FC = () => {
                 취소
               </SecondaryButton>
               <ActionButton onClick={handleAddLockers}>
-                {addCount}개 추가
+                {addCount || 1}개 추가
               </ActionButton>
             </ModalButtons>
           </ModalContent>
@@ -1326,6 +1340,7 @@ const LockerManagement: React.FC = () => {
           }}
           width="min(95vw, 1000px)"
           header={`라커 ${selectedLockerForAssignment?.number}번 배정`}
+          disableOutsideClick={true}
           body={
             <AssignmentModalContainer>
               <LeftPanel>
@@ -1516,6 +1531,7 @@ const LockerManagement: React.FC = () => {
           }}
           width="min(95vw, 600px)"
           header={`라커 ${selectedLocker?.number}번 ${isEditMode ? '수정' : '정보'}`}
+          disableOutsideClick={true}
           body={
             selectedLocker && (
               <div style={{ padding: '8px 0' }}>

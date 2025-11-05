@@ -3,7 +3,7 @@
     "activeCommit": 0,
     "commits": [
         {
-            "activePatchIndex": 3,
+            "activePatchIndex": 4,
             "patches": [
                 {
                     "date": 1762070993750,
@@ -20,6 +20,10 @@
                 {
                     "date": 1762168729073,
                     "content": "Index: \n===================================================================\n--- \n+++ \n@@ -371,9 +371,9 @@\n         `수강권 양도 수수료 포인트 결제`\n       );\n     }\n \n-    // 2. 현금/카드/계좌이체 결제 기록 생성 (있는 경우)\n+    // 2. 현금/카드/계좌이체 결제 기록 생성 (실제 현금 흐름이 있는 경우만)\n     if (cashPayment > 0) {\n       await dbManager.payment.addPayment({\n         memberId: selectedMember.id,\n         memberName: selectedMember.name,\n@@ -383,21 +383,21 @@\n         coachName: selectedMember.coachName,\n         products: [{\n           id: 'transfer_fee',\n           name: '수강권 양도 수수료',\n-          price: transferFee,\n+          price: cashPayment, // 실제 현금성 결제 금액만\n           quantity: 1,\n           description: `${courseEnrollment?.productName} 양도 수수료`\n         }],\n-        totalAmount: transferFee,\n-        paidAmount: transferFee,\n+        totalAmount: cashPayment, // 실제 현금성 결제 금액\n+        paidAmount: cashPayment,\n         unpaidAmount: 0,\n         paymentStatus: 'completed',\n         paymentMethod: transferPaymentMethod,\n         paymentDate: new Date(),\n         paymentType: 'other',\n         amount: cashPayment,\n-        memo: `수강권 양도 수수료 - ${courseEnrollment?.productName}${pointPayment > 0 ? ` (포인트 ${pointPayment.toLocaleString()}원 + ${transferPaymentMethod} ${cashPayment.toLocaleString()}원)` : ''}`\n+        memo: `수강권 양도 수수료 - ${courseEnrollment?.productName} (총 수수료: ${transferFee.toLocaleString()}원${pointPayment > 0 ? `, 포인트 사용: ${pointPayment.toLocaleString()}원` : ''})`\n       });\n     }\n   };\n \n"
+                },
+                {
+                    "date": 1762342594970,
+                    "content": "Index: \n===================================================================\n--- \n+++ \n@@ -967,8 +967,9 @@\n       isOpen={isOpen}\n       onClose={handleClose}\n       width=\"min(95vw, 800px)\"\n       header=\"수강권 관리\"\n+      disableOutsideClick={true}\n       body={\n         <ModalContent>\n           {/* 기본 정보 (항상 표시) */}\n           {renderBasicInfo()}\n"
                 }
             ],
             "date": 1762070993750,

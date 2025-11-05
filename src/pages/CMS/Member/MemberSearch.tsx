@@ -10,8 +10,6 @@ import Modal from '../../../components/Modal';
 import CustomDateInput from '../../../components/CustomDateInput';
 import CustomDropdown from '../../../components/CustomDropdown';
 import DaumAddressSearch from '../../../components/DaumAddressSearch';
-import { AppPhoneTextField } from '../../../customComponents/AppPhoneTextField';
-import { AppEmailTextField } from '../../../customComponents/AppEmailTextField';
 import { AppIdTextField } from '../../../customComponents/AppIdTextField';
 import { AppPwdTextField, PwdFieldType } from '../../../customComponents/AppPwdTextField';
 import { SearchArea, type PeriodOption } from '../../../components/SearchArea';
@@ -180,10 +178,34 @@ const FormInput = styled.input`
   max-width: 100%;
   padding: 12px;
   border: 1px solid ${AppColors.borderLight};
-  border-radius: 8px;
+  border-radius: 12px;
   font-size: ${AppTextStyles.body2.fontSize};
+  height: 48px;
   outline: none;
   box-sizing: border-box;
+  
+  &:focus {
+    border-color: ${AppColors.primary};
+  }
+  
+  &:disabled {
+    background: #f5f5f5;
+    cursor: not-allowed;
+  }
+`;
+
+const FormTextarea = styled.textarea`
+  width: 100%;
+  max-width: 100%;
+  padding: 12px;
+  border: 1px solid ${AppColors.borderLight};
+  border-radius: 12px;
+  font-size: ${AppTextStyles.body2.fontSize};
+  min-height: 80px;
+  outline: none;
+  box-sizing: border-box;
+  resize: vertical;
+  font-family: inherit;
   
   &:focus {
     border-color: ${AppColors.primary};
@@ -618,7 +640,7 @@ const MemberSearch: React.FC = () => {
     },
     {
       key: 'coachName',
-      title: '담당코치',
+      title: '담당직원',
       width: '100px',
       render: (value, record) => record.coachName || '-'
     },
@@ -1069,6 +1091,7 @@ const MemberSearch: React.FC = () => {
           onClose={handleCloseModal}
           width="min(95vw, 1000px)"
           header="회원 정보 수정"
+          disableOutsideClick={true}
           body={
             <div style={{ textAlign: 'left' }}>
               <FormSection>
@@ -1099,10 +1122,24 @@ const MemberSearch: React.FC = () => {
                 <FormRow>
                   <FormGroup>
                     <FormLabel>연락처 *</FormLabel>
-                    <AppPhoneTextField
+                    <FormInput
                       value={editFormData.phone || ''}
-                      onChange={(value, isValid) => setEditFormData(prev => ({ ...prev, phone: value }))}
+                      onChange={(e) => {
+                        // 숫자만 추출
+                        const value = e.target.value.replace(/[^0-9]/g, '');
+                        // 휴대폰 번호 형식으로 자동 포맷팅
+                        let formatted = value;
+                        if (value.length >= 3) {
+                          if (value.length >= 7) {
+                            formatted = `${value.slice(0, 3)}-${value.slice(3, 7)}-${value.slice(7, 11)}`;
+                          } else {
+                            formatted = `${value.slice(0, 3)}-${value.slice(3)}`;
+                          }
+                        }
+                        setEditFormData(prev => ({ ...prev, phone: formatted }));
+                      }}
                       placeholder="연락처를 입력하세요"
+                      maxLength={13}
                     />
                   </FormGroup>
                   <FormGroup>
@@ -1118,7 +1155,8 @@ const MemberSearch: React.FC = () => {
                 <FormRowVertical>
                   <FormGroup>
                     <FormLabel>이메일</FormLabel>
-                    <AppEmailTextField
+                    <FormInput
+                      type="email"
                       value={editFormData.email || ''}
                       onChange={(e) => setEditFormData(prev => ({ ...prev, email: e.target.value }))}
                       placeholder="이메일을 입력하세요"
@@ -1155,7 +1193,7 @@ const MemberSearch: React.FC = () => {
                     />
                   </FormGroup>
                   <FormGroup>
-                    <FormLabel>담당 코치</FormLabel>
+                    <FormLabel>담당 직원</FormLabel>
                     <CustomDropdown
                       value={editFormData.coach || ''}
                       onChange={(value) => setEditFormData(prev => ({ ...prev, coach: value }))}
@@ -1277,7 +1315,7 @@ const MemberSearch: React.FC = () => {
                 <FormRowVertical>
                   <FormGroup>
                     <FormLabel>비고</FormLabel>
-                    <FormInput
+                    <FormTextarea
                       value={editFormData.remarks || ''}
                       onChange={(e) => setEditFormData(prev => ({ ...prev, remarks: e.target.value }))}
                       placeholder="기타 메모사항을 입력하세요"

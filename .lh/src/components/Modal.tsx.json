@@ -3,7 +3,7 @@
     "activeCommit": 0,
     "commits": [
         {
-            "activePatchIndex": 3,
+            "activePatchIndex": 4,
             "patches": [
                 {
                     "date": 1759906185677,
@@ -20,6 +20,10 @@
                 {
                     "date": 1759909776217,
                     "content": "Index: \n===================================================================\n--- \n+++ \n@@ -84,8 +84,19 @@\n   flex-grow: 1; // Allow body to take available space\n   white-space: pre-line; // Respect newlines in body content\n   overflow-y: auto; // 스크롤 처리\n   min-height: 0; // flexbox에서 스크롤이 동작하도록\n+  \n+  /* 스크롤바 숨김 - Webkit 브라우저 (Chrome, Safari, Edge) */\n+  &::-webkit-scrollbar {\n+    display: none;\n+  }\n+  \n+  /* 스크롤바 숨김 - Firefox */\n+  scrollbar-width: none;\n+  \n+  /* 스크롤바 숨김 - IE/Edge Legacy */\n+  -ms-overflow-style: none;\n `;\n \n const ModalFooter = styled.div`\n   padding: 16px 24px 24px 24px;\n"
+                },
+                {
+                    "date": 1762342628614,
+                    "content": "Index: \n===================================================================\n--- \n+++ \n@@ -147,8 +147,25 @@\n       document.body.style.overflow = \"\";\n     };\n   }, [isOpen]);\n \n+  // ESC 키 처리\n+  useEffect(() => {\n+    const handleEscapeKey = (event: KeyboardEvent) => {\n+      if (event.key === 'Escape' && isOpen && onClose) {\n+        onClose();\n+      }\n+    };\n+\n+    if (isOpen) {\n+      document.addEventListener('keydown', handleEscapeKey);\n+    }\n+\n+    return () => {\n+      document.removeEventListener('keydown', handleEscapeKey);\n+    };\n+  }, [isOpen, onClose]);\n+\n   const modal = (\n     <Overlay onClick={disableOutsideClick ? undefined : onClose} $zIndex={zIndex}>\n       <ModalWrapper\n         $bgColor={bgColor}\n"
                 }
             ],
             "date": 1759906185677,

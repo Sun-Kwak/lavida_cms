@@ -968,6 +968,7 @@ const CourseManagementModal: React.FC<CourseManagementModalProps> = ({
       onClose={handleClose}
       width="min(95vw, 800px)"
       header="수강권 관리"
+      disableOutsideClick={true}
       body={
         <ModalContent>
           {/* 기본 정보 (항상 표시) */}

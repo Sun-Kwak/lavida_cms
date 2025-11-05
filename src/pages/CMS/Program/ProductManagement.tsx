@@ -4,6 +4,8 @@ import { AppColors } from '../../../styles/colors';
 import { AppTextStyles } from '../../../styles/textStyles';
 import { dbManager, Product, Branch, Program } from '../../../utils/indexedDB';
 import CustomDropdown from '../../../components/CustomDropdown';
+import NumberTextField from '../../../components/NumberTextField';
+import { AppTextField } from '../../../customComponents/AppTextField';
 import { SYSTEM_ADMIN_CONFIG } from '../../../constants/staffConstants';
 
 const Container = styled.div`
@@ -235,48 +237,29 @@ const Label = styled.label<{ $required?: boolean }>`
   `}
 `;
 
-const Input = styled.input<{ $error?: boolean }>`
-  width: 100%;
-  min-width: 0;
-  padding: 12px;
-  border: 1px solid ${({ $error }) => $error ? AppColors.error : AppColors.borderLight};
-  border-radius: 8px;
-  font-size: ${AppTextStyles.body1.fontSize};
-  color: ${AppColors.onSurface};
-  background-color: ${AppColors.input};
-  box-sizing: border-box;
-  
-  &:focus {
-    outline: none;
-    border-color: ${AppColors.primary};
-  }
-  
-  &::placeholder {
-    color: ${AppColors.onInput1};
-  }
-
-  &:disabled {
-    background-color: ${AppColors.background};
-    opacity: 0.5;
-  }
-`;
-
 const TextArea = styled.textarea<{ $error?: boolean }>`
   width: 100%;
   min-width: 0;
-  padding: 12px;
+  padding: 14px 16px;
   border: 1px solid ${({ $error }) => $error ? AppColors.error : AppColors.borderLight};
-  border-radius: 8px;
+  border-radius: 12px;
   font-size: ${AppTextStyles.body1.fontSize};
   color: ${AppColors.onSurface};
-  background-color: ${AppColors.input};
+  background: ${AppColors.surface};
   box-sizing: border-box;
   resize: vertical;
   min-height: 80px;
+  transition: all 0.2s ease;
+  
+  &:hover {
+    border-color: ${({ $error }) => $error ? AppColors.error : AppColors.primary};
+    box-shadow: 0 2px 8px rgba(55, 187, 214, 0.1);
+  }
   
   &:focus {
     outline: none;
-    border-color: ${AppColors.primary};
+    border-color: ${({ $error }) => $error ? AppColors.error : AppColors.primary};
+    box-shadow: 0 0 0 3px rgba(55, 187, 214, 0.1);
   }
   
   &::placeholder {
@@ -285,7 +268,10 @@ const TextArea = styled.textarea<{ $error?: boolean }>`
 
   &:disabled {
     background-color: ${AppColors.background};
-    opacity: 0.5;
+    color: ${AppColors.disabled};
+    cursor: not-allowed;
+    border-color: ${AppColors.borderLight};
+    opacity: 1;
   }
 `;
 
@@ -747,18 +733,6 @@ const ProductManagement: React.FC = () => {
     setErrors({});
   };
 
-  const handleKeyPress = (e: React.KeyboardEvent) => {
-    if (e.key === 'Enter' && !saving) {
-      handleAddProduct();
-    }
-  };
-
-  const handleEditKeyPress = (e: React.KeyboardEvent) => {
-    if (e.key === 'Enter' && !saving) {
-      handleUpdateProduct();
-    }
-  };
-
   // 지점명과 프로그램명 가져오는 헬퍼 함수
   const getBranchName = (branchId: string) => {
     const branch = branches.find(b => b.id === branchId);
@@ -821,29 +795,25 @@ const ProductManagement: React.FC = () => {
             <FormRow>
               <FieldColumn>
                 <Label $required={selectedProgram?.type === '횟수제'}>횟수</Label>
-                <Input
-                  type="number"
-                  placeholder={selectedProgram?.type === '횟수제' ? "횟수를 입력하세요" : "기간제는 횟수 불필요"}
+                <NumberTextField
                   value={newSessions}
-                  onChange={(e) => setNewSessions(e.target.value ? Number(e.target.value) : '')}
-                  onKeyPress={handleKeyPress}
+                  onChange={(value) => setNewSessions(value || '')}
+                  placeholder={selectedProgram?.type === '횟수제' ? "횟수를 입력하세요" : "기간제는 횟수 불필요"}
                   disabled={saving || !selectedProgram || selectedProgram.type === '기간제'}
-                  $error={!!errors.sessions}
-                  min={1}
+                  error={!!errors.sessions}
+                  allowEmpty
                 />
                 {errors.sessions && <ErrorText>{errors.sessions}</ErrorText>}
               </FieldColumn>
               <FieldColumn>
                 <Label $required={selectedProgram?.type === '기간제'}>개월수</Label>
-                <Input
-                  type="number"
-                  placeholder={selectedProgram?.type === '기간제' ? "개월수를 입력하세요" : "횟수제는 개월수 불필요"}
+                <NumberTextField
                   value={newMonths}
-                  onChange={(e) => setNewMonths(e.target.value ? Number(e.target.value) : '')}
-                  onKeyPress={handleKeyPress}
+                  onChange={(value) => setNewMonths(value || '')}
+                  placeholder={selectedProgram?.type === '기간제' ? "개월수를 입력하세요" : "횟수제는 개월수 불필요"}
                   disabled={saving || !selectedProgram || selectedProgram.type === '횟수제'}
-                  $error={!!errors.months}
-                  min={1}
+                  error={!!errors.months}
+                  allowEmpty
                 />
                 {errors.months && <ErrorText>{errors.months}</ErrorText>}
               </FieldColumn>
@@ -866,14 +836,12 @@ const ProductManagement: React.FC = () => {
             <FormRow>
               <FieldColumn>
                 <Label>가격</Label>
-                <Input
-                  type="number"
-                  placeholder="가격을 입력하세요 (원)"
+                <NumberTextField
                   value={newPrice}
-                  onChange={(e) => setNewPrice(e.target.value ? Number(e.target.value) : '')}
-                  onKeyPress={handleKeyPress}
+                  onChange={(value) => setNewPrice(value || '')}
+                  placeholder="가격을 입력하세요 (원)"
                   disabled={saving}
-                  min={0}
+                  allowEmpty
                 />
               </FieldColumn>
             </FormRow>
@@ -881,16 +849,13 @@ const ProductManagement: React.FC = () => {
             <FormRow>
               <FieldColumn>
                 <Label $required>상품명</Label>
-                <Input
-                  type="text"
+                <AppTextField
                   placeholder="상품명을 입력하세요"
                   value={newProductName}
                   onChange={(e) => setNewProductName(e.target.value)}
-                  onKeyPress={handleKeyPress}
-                  disabled={saving}
-                  $error={!!errors.name}
+                  readOnly={saving}
+                  errorMessage={errors.name}
                 />
-                {errors.name && <ErrorText>{errors.name}</ErrorText>}
               </FieldColumn>
             </FormRow>
             
@@ -1006,29 +971,25 @@ const ProductManagement: React.FC = () => {
                     <div style={{ display: 'flex', gap: '12px' }}>
                       <FieldColumn>
                         <Label $required={editSelectedProgram?.type === '횟수제'}>횟수</Label>
-                        <Input
-                          type="number"
-                          placeholder={editSelectedProgram?.type === '횟수제' ? "횟수를 입력하세요" : "기간제는 횟수 불필요"}
+                        <NumberTextField
                           value={editSessions}
-                          onChange={(e) => setEditSessions(e.target.value ? Number(e.target.value) : '')}
-                          onKeyPress={handleEditKeyPress}
+                          onChange={(value) => setEditSessions(value || '')}
+                          placeholder={editSelectedProgram?.type === '횟수제' ? "횟수를 입력하세요" : "기간제는 횟수 불필요"}
                           disabled={saving || !editSelectedProgram || editSelectedProgram.type === '기간제'}
-                          $error={!!errors.sessions}
-                          min={1}
+                          error={!!errors.sessions}
+                          allowEmpty
                         />
                         {errors.sessions && <ErrorText>{errors.sessions}</ErrorText>}
                       </FieldColumn>
                       <FieldColumn>
                         <Label $required={editSelectedProgram?.type === '기간제'}>개월수</Label>
-                        <Input
-                          type="number"
-                          placeholder={editSelectedProgram?.type === '기간제' ? "개월수를 입력하세요" : "횟수제는 개월수 불필요"}
+                        <NumberTextField
                           value={editMonths}
-                          onChange={(e) => setEditMonths(e.target.value ? Number(e.target.value) : '')}
-                          onKeyPress={handleEditKeyPress}
+                          onChange={(value) => setEditMonths(value || '')}
+                          placeholder={editSelectedProgram?.type === '기간제' ? "개월수를 입력하세요" : "횟수제는 개월수 불필요"}
                           disabled={saving || !editSelectedProgram || editSelectedProgram.type === '횟수제'}
-                          $error={!!errors.months}
-                          min={1}
+                          error={!!errors.months}
+                          allowEmpty
                         />
                         {errors.months && <ErrorText>{errors.months}</ErrorText>}
                       </FieldColumn>
@@ -1051,14 +1012,12 @@ const ProductManagement: React.FC = () => {
                     <div style={{ display: 'flex', gap: '12px' }}>
                       <FieldColumn>
                         <Label>가격</Label>
-                        <Input
-                          type="number"
-                          placeholder="가격을 입력하세요 (원)"
+                        <NumberTextField
                           value={editPrice}
-                          onChange={(e) => setEditPrice(e.target.value ? Number(e.target.value) : '')}
-                          onKeyPress={handleEditKeyPress}
+                          onChange={(value) => setEditPrice(value || '')}
+                          placeholder="가격을 입력하세요 (원)"
                           disabled={saving}
-                          min={0}
+                          allowEmpty
                         />
                       </FieldColumn>
                     </div>
@@ -1066,16 +1025,13 @@ const ProductManagement: React.FC = () => {
                     <div style={{ display: 'flex', gap: '12px' }}>
                       <FieldColumn>
                         <Label $required>상품명</Label>
-                        <Input
-                          type="text"
+                        <AppTextField
                           placeholder="상품명을 입력하세요"
                           value={editProductName}
                           onChange={(e) => setEditProductName(e.target.value)}
-                          onKeyPress={handleEditKeyPress}
-                          disabled={saving}
-                          $error={!!errors.name}
+                          readOnly={saving}
+                          errorMessage={errors.name}
                         />
-                        {errors.name && <ErrorText>{errors.name}</ErrorText>}
                       </FieldColumn>
                     </div>
                     

@@ -11,7 +11,7 @@ import CustomDropdown from './CustomDropdown';
 // 스타일 컴포넌트들
 const ModalContainer = styled.div`
   display: flex;
-  gap: 24px;
+  /* gap: 24px; */
   height: 600px;
   min-width: 900px;
   width: 100%;
@@ -585,6 +585,7 @@ const ReservationModal: React.FC<ReservationModalProps> = ({
       <Modal 
         isOpen={isOpen} 
         onClose={handleClose}
+        disableOutsideClick={true}
         body={
           <div>
             <div style={{ textAlign: 'center', padding: '48px' }}>
@@ -613,6 +614,7 @@ const ReservationModal: React.FC<ReservationModalProps> = ({
       onClose={handleClose}
       width="min(95vw, 1000px)"
       header="회원 예약 등록"
+      disableOutsideClick={true}
       body={
         <ModalContainer>
           <LeftPanel>

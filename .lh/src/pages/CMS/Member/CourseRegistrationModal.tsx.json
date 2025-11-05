@@ -3,7 +3,7 @@
     "activeCommit": 0,
     "commits": [
         {
-            "activePatchIndex": 8,
+            "activePatchIndex": 10,
             "patches": [
                 {
                     "date": 1761132526034,
@@ -40,6 +40,14 @@
                 {
                     "date": 1761910063251,
                     "content": "Index: \n===================================================================\n--- \n+++ \n@@ -94,8 +94,10 @@\n   programType?: string; // '기간제' | '횟수제'\n   // 기간제 관련\n   duration?: number; // 기간(일)\n   baseDuration?: number; // 기준 기간\n+  months?: number; // 개월수\n+  baseMonths?: number; // 기준 개월수\n   startDate?: Date;\n   endDate?: Date;\n   // 횟수제 관련\n   sessions?: number; // 수업 횟수\n"
+                },
+                {
+                    "date": 1762341371597,
+                    "content": "Index: \n===================================================================\n--- \n+++ \n@@ -9,9 +9,9 @@\n import CoursePaymentPanel from './CoursePaymentPanel';\n \n const ModalContainer = styled.div`\n   display: flex;\n-  gap: 24px;\n+  /* gap: 16px; */\n   height: 600px;\n   min-width: 900px;\n   width: 100%;\n   overflow: hidden;\n@@ -19,28 +19,28 @@\n \n const LeftPanel = styled.div`\n   flex: 1;\n   border-right: 1px solid ${AppColors.borderLight};\n-  padding-right: 24px;\n+  padding-right: 16px;\n   min-width: 0; /* 플렉스 아이템이 축소될 수 있도록 */\n   display: flex;\n   flex-direction: column;\n `;\n \n const RightPanel = styled.div`\n   flex: 1;\n-  padding-left: 24px;\n+  padding-left: 16px;\n   min-width: 0; /* 플렉스 아이템이 축소될 수 있도록 */\n   display: flex;\n   flex-direction: column;\n `;\n \n const PanelTitle = styled.h3`\n   ${AppTextStyles.title3}\n-  margin-bottom: 16px;\n+  margin-bottom: 12px;\n   color: ${AppColors.onBackground};\n   border-bottom: 2px solid ${AppColors.primary};\n-  padding-bottom: 8px;\n+  padding-bottom: 6px;\n `;\n \n const Button = styled.button<{ variant?: 'primary' | 'secondary' }>`\n   padding: 12px 24px;\n"
+                },
+                {
+                    "date": 1762341483719,
+                    "content": "Index: \n===================================================================\n--- \n+++ \n@@ -9,9 +9,9 @@\n import CoursePaymentPanel from './CoursePaymentPanel';\n \n const ModalContainer = styled.div`\n   display: flex;\n-  /* gap: 16px; */\n+  /* gap: 24px; */\n   height: 600px;\n   min-width: 900px;\n   width: 100%;\n   overflow: hidden;\n@@ -19,28 +19,28 @@\n \n const LeftPanel = styled.div`\n   flex: 1;\n   border-right: 1px solid ${AppColors.borderLight};\n-  padding-right: 16px;\n+  padding-right: 24px;\n   min-width: 0; /* 플렉스 아이템이 축소될 수 있도록 */\n   display: flex;\n   flex-direction: column;\n `;\n \n const RightPanel = styled.div`\n   flex: 1;\n-  padding-left: 16px;\n+  padding-left: 24px;\n   min-width: 0; /* 플렉스 아이템이 축소될 수 있도록 */\n   display: flex;\n   flex-direction: column;\n `;\n \n const PanelTitle = styled.h3`\n   ${AppTextStyles.title3}\n-  margin-bottom: 12px;\n+  margin-bottom: 16px;\n   color: ${AppColors.onBackground};\n   border-bottom: 2px solid ${AppColors.primary};\n-  padding-bottom: 6px;\n+  padding-bottom: 8px;\n `;\n \n const Button = styled.button<{ variant?: 'primary' | 'secondary' }>`\n   padding: 12px 24px;\n@@ -68,17 +68,17 @@\n const ButtonGroup = styled.div`\n   display: flex;\n   justify-content: flex-end;\n   gap: 12px;\n-  margin-top: 16px;\n+  margin-top: 24px;\n `;\n \n const WarningText = styled.div`\n   background: #fff3cd;\n   border: 1px solid #ffeaa7;\n   border-radius: 8px;\n   padding: 12px;\n-  margin: 8px 0;\n+  margin: 16px 0;\n   color: #856404;\n   font-size: 14px;\n   text-align: center;\n `;\n"
                 }
             ],
             "date": 1761132526034,
