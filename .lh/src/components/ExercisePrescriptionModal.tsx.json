@@ -1,0 +1,18 @@
+{
+    "sourceFile": "src/components/ExercisePrescriptionModal.tsx",
+    "activeCommit": 0,
+    "commits": [
+        {
+            "activePatchIndex": 0,
+            "patches": [
+                {
+                    "date": 1762429155166,
+                    "content": "Index: \n===================================================================\n--- \n+++ \n"
+                }
+            ],
+            "date": 1762429155166,
+            "name": "Commit-0",
+            "content": "import React from 'react';\nimport styled from 'styled-components';\nimport { AppColors } from '../styles/colors';\n\nconst ModalOverlay = styled.div`\n  position: fixed;\n  top: 0;\n  left: 0;\n  right: 0;\n  bottom: 0;\n  background: rgba(0, 0, 0, 0.5);\n  display: flex;\n  align-items: center;\n  justify-content: center;\n  z-index: 1000;\n  padding: 20px;\n`;\n\nconst ModalContent = styled.div`\n  background: white;\n  border-radius: 8px;\n  max-width: 90vw;\n  max-height: 90vh;\n  width: 1000px;\n  overflow: hidden;\n  box-shadow: 0 10px 25px rgba(0, 0, 0, 0.15);\n`;\n\nconst ModalHeader = styled.div`\n  display: flex;\n  justify-content: space-between;\n  align-items: center;\n  padding: 20px 24px;\n  border-bottom: 1px solid ${AppColors.borderLight};\n  background: ${AppColors.background};\n`;\n\nconst ModalTitle = styled.h2`\n  margin: 0;\n  font-size: 18px;\n  font-weight: 600;\n  color: ${AppColors.onSurface};\n  display: flex;\n  align-items: center;\n  gap: 8px;\n`;\n\nconst VersionBadge = styled.span`\n  background: ${AppColors.primary};\n  color: white;\n  padding: 4px 8px;\n  border-radius: 12px;\n  font-size: 12px;\n  font-weight: 500;\n`;\n\nconst CloseButton = styled.button`\n  background: none;\n  border: none;\n  font-size: 24px;\n  color: ${AppColors.onInput1};\n  cursor: pointer;\n  padding: 4px;\n  display: flex;\n  align-items: center;\n  justify-content: center;\n  border-radius: 4px;\n  \n  &:hover {\n    background: ${AppColors.borderLight};\n    color: ${AppColors.onSurface};\n  }\n`;\n\nconst ModalBody = styled.div`\n  padding: 0;\n  max-height: calc(90vh - 80px);\n  overflow-y: auto;\n`;\n\ninterface ExercisePrescriptionModalProps {\n  isOpen: boolean;\n  onClose: () => void;\n  children: React.ReactNode;\n  version?: number;\n}\n\nconst ExercisePrescriptionModal: React.FC<ExercisePrescriptionModalProps> = ({\n  isOpen,\n  onClose,\n  children,\n  version\n}) => {\n  if (!isOpen) return null;\n\n  const handleOverlayClick = (e: React.MouseEvent) => {\n    if (e.target === e.currentTarget) {\n      onClose();\n    }\n  };\n\n  return (\n    <ModalOverlay onClick={handleOverlayClick}>\n      <ModalContent>\n        <ModalHeader>\n          <ModalTitle>\n            운동처방 상세보기\n            {version && <VersionBadge>v{version}</VersionBadge>}\n          </ModalTitle>\n          <CloseButton onClick={onClose}>\n            ×\n          </CloseButton>\n        </ModalHeader>\n        <ModalBody>\n          {children}\n        </ModalBody>\n      </ModalContent>\n    </ModalOverlay>\n  );\n};\n\nexport default ExercisePrescriptionModal;"
+        }
+    ]
+}

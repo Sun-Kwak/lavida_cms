@@ -5,19 +5,15 @@ import { AppColors } from '../../../styles/colors';
 import { AppTextStyles } from '../../../styles/textStyles';
 import CustomDropdown from '../../../components/CustomDropdown';
 import ReservationModal from '../../../components/ReservationModal';
-import HolidayManagement from '../../../components/HolidayManagement';
 import { dbManager, type Branch, type Program } from '../../../utils/indexedDB';
 import { getCurrentUser } from '../../../utils/authUtils';
-import { migrateHolidaySettingsToWeekly, checkMigrationStatus } from '../../../utils/holidayMigration';
 import { useStaffHolidays } from '../../../hooks/useStaffHolidays';
 import { 
   ScheduleCalendar, 
-  HolidayModal,
   WeeklyHolidayModal,
   type CalendarView, 
   type ScheduleEvent, 
   type StaffInfo,
-  type HolidaySettings,
   type WeeklyHolidaySettings,
   assignStaffColor 
 } from '../../../components/Calendar';
@@ -95,17 +91,15 @@ const ReservationPage: React.FC = () => {
   const [selectedStaffIds, setSelectedStaffIds] = useState<string[]>([]);
   const [events, setEvents] = useState<ScheduleEvent[]>([]);
 
-  // 휴일설정 모달 상태
-  const [isHolidayModalOpen, setIsHolidayModalOpen] = useState(false);
+  // 휴일설정 모달 상태 (HolidayModal 제거, WeeklyHolidayModal만 유지)
   const [isWeeklyHolidayModalOpen, setIsWeeklyHolidayModalOpen] = useState(false);
-  const [holidayModalStaffId, setHolidayModalStaffId] = useState<string | undefined>();
   const [weeklyHolidayModalStaffId, setWeeklyHolidayModalStaffId] = useState<string | undefined>();
   const [currentUser, setCurrentUser] = useState<{ id: string; role: 'master' | 'coach' | 'admin'; name?: string } | undefined>();
-  const holidaySettings: HolidaySettings[] = []; // 빈 배열로 고정
+  // 휴일 설정은 Staff.holidays 배열로 통일 (HolidaySettings 테이블 사용 안함)
   const [weeklyHolidaySettings, setWeeklyHolidaySettings] = useState<WeeklyHolidaySettings[]>([]);
 
   // 휴일 관리 훅
-  const { staffHolidays, refreshHolidays } = useStaffHolidays(selectedStaffIds);
+  const { staffHolidays } = useStaffHolidays(selectedStaffIds);
 
   // 예약 모달 상태
   const [isReservationModalOpen, setIsReservationModalOpen] = useState(false);
@@ -541,12 +535,7 @@ const ReservationPage: React.FC = () => {
     setIsWeeklyHolidayModalOpen(true);
   };
 
-  // 주별 휴일설정 모달 관련 함수들 (새로운)
-  const handleHolidayModalClose = () => {
-    setIsHolidayModalOpen(false);
-    setHolidayModalStaffId(undefined);
-  };
-
+  // 주별 근무 스케줄 모달 관련 함수들
   const handleWeeklyHolidayModalClose = async () => {
     setIsWeeklyHolidayModalOpen(false);
     setWeeklyHolidayModalStaffId(undefined);
@@ -560,31 +549,7 @@ const ReservationPage: React.FC = () => {
     }
   };
 
-  const handleHolidaySettingsSave = async (settings: Omit<HolidaySettings, 'id' | 'createdAt' | 'updatedAt'>[]) => {
-    try {
-      // 권한 재검증
-      if (!currentUser) {
-        throw new Error('사용자 정보를 확인할 수 없습니다.');
-      }
-
-      // 저장하려는 설정에 포함된 모든 직원에 대한 권한 체크
-      const uniqueStaffIds = Array.from(new Set(settings.map(s => s.staffId)));
-      
-      for (const staffId of uniqueStaffIds) {
-        if (currentUser.role !== 'master' && currentUser.id !== staffId) {
-          throw new Error('권한이 없습니다. 본인의 휴일설정만 수정할 수 있습니다.');
-        }
-      }
-
-      await dbManager.saveHolidaySettings(settings);
-      console.log('휴일설정 저장 성공:', settings);
-      // 휴일설정 새로고침 (제거됨 - 스케줄 이벤트 사용)
-      // await loadHolidaySettings();
-    } catch (error) {
-      console.error('휴일설정 저장 실패:', error);
-      throw error; // 에러를 다시 throw하여 HolidayModal에서 처리하도록 함
-    }
-  };
+  // HolidaySettings 제거: 휴일 관리는 Staff.holidays 배열로 통일
 
   const handleWeeklyHolidaySettingsSave = async (settings: Omit<WeeklyHolidaySettings, 'id' | 'createdAt' | 'updatedAt'>[]) => {
     try {
@@ -749,17 +714,7 @@ const ReservationPage: React.FC = () => {
   // 지점 데이터 로드
   useEffect(() => {
     const initializeData = async () => {
-      // 마이그레이션 상태 확인 및 실행
-      try {
-        const migrationStatus = await checkMigrationStatus();
-        if (migrationStatus.hasOldSettings && !migrationStatus.hasNewSettings) {
-          console.log('휴일 설정 마이그레이션을 시작합니다...');
-          await migrateHolidaySettingsToWeekly();
-          console.log('휴일 설정 마이그레이션이 완료되었습니다.');
-        }
-      } catch (error) {
-        console.error('휴일 설정 마이그레이션 실패:', error);
-      }
+      // HolidaySettings 마이그레이션 제거: Staff.holidays로 통일
       
       // 기본 데이터 로드
       await loadBranchData();
@@ -1113,19 +1068,9 @@ const ReservationPage: React.FC = () => {
         </ContentContainer>
       </Container>
 
-      {/* 기존 휴일설정 모달 (호환성 유지) */}
-      <HolidayModal
-        isOpen={isHolidayModalOpen}
-        onClose={handleHolidayModalClose}
-        staffId={holidayModalStaffId}
-        staffList={staffList}
-        currentUser={currentUser}
-        onSave={handleHolidaySettingsSave}
-        existingHolidays={holidaySettings}
-        existingEvents={events} // 예약 제한을 위한 기존 이벤트 전달
-      />
+      {/* 휴일 관리는 HolidayManagement 컴포넌트와 Staff.holidays로 통일 */}
 
-      {/* 새로운 주별 휴일설정 모달 */}
+      {/* 주별 근무 스케줄 모달 (WeeklyWorkSchedule로 변경 예정) */}
       <WeeklyHolidayModal
         isOpen={isWeeklyHolidayModalOpen}
         onClose={handleWeeklyHolidayModalClose}

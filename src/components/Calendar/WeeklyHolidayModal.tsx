@@ -6,6 +6,15 @@ import { dbManager } from '../../utils/indexedDB';
 import type { WeeklyHolidaySettings } from '../../utils/db/types';
 import { getUnifiedShiftSettings } from '../../utils/shiftUtils';
 
+/**
+ * 주별 근무 스케줄 모달
+ * 
+ * 변경 사항:
+ * - 휴일 관리는 Staff.holidays 배열로 통일 (이 모달에서는 휴일 체크박스 기능 비활성화 예정)
+ * - 근무시간과 휴게시간 설정만 담당
+ * - 향후 WeeklyWorkScheduleModal로 이름 변경 예정
+ */
+
 interface WeeklyHolidayModalProps {
   isOpen: boolean;
   onClose: () => void;

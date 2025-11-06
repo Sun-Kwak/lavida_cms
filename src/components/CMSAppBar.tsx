@@ -39,6 +39,7 @@ const staticMenuCategories: MenuCategoryType[] = [
       { id: 'member-course-history', title: '수강 이력', path: '/cms/member/course-history' },
       { id: 'member-payment-history', title: '결제 이력', path: '/cms/member/payment-history' },
       { id: 'member-point-history', title: '포인트 이력', path: '/cms/member/point-history' },
+      { id: 'member-exercise-prescription-history', title: '운동처방', path: '/cms/member/exercise-prescription-history' },
     ],
   },
   {
@@ -213,14 +214,27 @@ const RightSection = styled.div`
 
 const UserInfo = styled.div`
   display: flex;
-  align-items: center;
-  gap: 8px;
+  flex-direction: column;
+  align-items: flex-end;
+  gap: 2px;
   font-size: ${AppTextStyles.body2.fontSize};
   color: ${AppColors.onSurface};
 `;
 
+const UserNameSection = styled.div`
+  display: flex;
+  align-items: center;
+  gap: 8px;
+`;
+
 const UserName = styled.span`
   font-weight: 500;
+`;
+
+const AppVersion = styled.span`
+  font-size: 11px;
+  color: ${AppColors.onSurface}80;
+  font-weight: 400;
 `;
 
 const LogoutButton = styled.button`
@@ -576,8 +590,11 @@ const CMSAppBar: React.FC<CMSAppBarProps> = React.memo(({ currentPath, onMenuCli
 
         <RightSection>
           <UserInfo>
-            <UserName>{adminName}</UserName>
-            <span>님</span>
+            <UserNameSection>
+              <UserName>{adminName}</UserName>
+              <span>님</span>
+            </UserNameSection>
+            <AppVersion>v1.0.1</AppVersion>
           </UserInfo>
           
           <LogoutButton onClick={handleLogout}>

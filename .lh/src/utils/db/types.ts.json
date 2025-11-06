@@ -3,7 +3,7 @@
     "activeCommit": 0,
     "commits": [
         {
-            "activePatchIndex": 19,
+            "activePatchIndex": 21,
             "patches": [
                 {
                     "date": 1761368450126,
@@ -84,6 +84,14 @@
                 {
                     "date": 1762256980694,
                     "content": "Index: \n===================================================================\n--- \n+++ \n@@ -36,8 +36,9 @@\n   role: string; // 직책\n   employmentType: string; // 고용형태\n   permission: string; // 권한\n   program?: string; // 담당프로그램 (코치일 경우만)\n+  workShift?: string; // 근무 시간대 (횟수제 프로그램 코치일 경우만)\n   contractStartDate: Date;\n   contractEndDate?: Date | null; // 계약종료일 (정규직은 없을 수 있음)\n   contractFile?: File | null; // 계약서 파일\n   contractFileName?: string; // 계약서 파일명 저장용\n"
+                },
+                {
+                    "date": 1762427386626,
+                    "content": "Index: \n===================================================================\n--- \n+++ \n@@ -88,17 +88,91 @@\n   description?: string; // 상품소개\n   isActive: boolean;\n }\n \n-// 기존 휴일 설정 인터페이스 (호환성 유지)\n-export interface HolidaySettings extends DBRecord {\n+// 주별 근무 스케줄 인터페이스 (휴일은 Staff.holidays 사용, 근무시간/휴게시간만 관리)\n+export interface WeeklyWorkSchedule extends DBRecord {\n   staffId: string;\n-  date: string; // YYYY-MM-DD 형식\n-  isHoliday: boolean; // true: 휴일, false: 근무일\n-  workingHours?: {\n-    start: number;\n-    end: number;\n-  }; // 해당 날짜의 근무시간 (휴일이 아닌 경우)\n+  weekStartDate: string; // 해당 주의 월요일 날짜 (YYYY-MM-DD 형식)\n+  weekDays: {\n+    monday: {\n+      workingHours: {\n+        start: number;\n+        end: number;\n+      };\n+      breakTimes: Array<{\n+        start: number;  // 시간 (예: 12시 = 12)\n+        end: number;    // 시간 (예: 13시 = 13)\n+        name?: string;  // 휴게시간 이름 (예: \"점심시간\")\n+      }>;\n+    };\n+    tuesday: {\n+      workingHours: {\n+        start: number;\n+        end: number;\n+      };\n+      breakTimes: Array<{\n+        start: number;\n+        end: number;\n+        name?: string;\n+      }>;\n+    };\n+    wednesday: {\n+      workingHours: {\n+        start: number;\n+        end: number;\n+      };\n+      breakTimes: Array<{\n+        start: number;\n+        end: number;\n+        name?: string;\n+      }>;\n+    };\n+    thursday: {\n+      workingHours: {\n+        start: number;\n+        end: number;\n+      };\n+      breakTimes: Array<{\n+        start: number;\n+        end: number;\n+        name?: string;\n+      }>;\n+    };\n+    friday: {\n+      workingHours: {\n+        start: number;\n+        end: number;\n+      };\n+      breakTimes: Array<{\n+        start: number;\n+        end: number;\n+        name?: string;\n+      }>;\n+    };\n+    saturday: {\n+      workingHours: {\n+        start: number;\n+        end: number;\n+      };\n+      breakTimes: Array<{\n+        start: number;\n+        end: number;\n+        name?: string;\n+      }>;\n+    };\n+    sunday: {\n+      workingHours: {\n+        start: number;\n+        end: number;\n+      };\n+      breakTimes: Array<{\n+        start: number;\n+        end: number;\n+        name?: string;\n+      }>;\n+    };\n+  };\n }\n \n // 새로운 주별 휴일 설정 인터페이스\n export interface WeeklyHolidaySettings extends DBRecord {\n"
+                },
+                {
+                    "date": 1762427972832,
+                    "content": "Index: \n===================================================================\n--- \n+++ \n@@ -635,5 +635,7 @@\n   \n   // 메타 정보\n   isActive: boolean;\n   prescriptionDate: Date; // 처방서 작성일\n+  version: number; // 버전 번호 (히스토리 관리용)\n+  isLatest: boolean; // 최신 버전 여부\n }\n\\ No newline at end of file\n"
                 }
             ],
             "date": 1761368450126,

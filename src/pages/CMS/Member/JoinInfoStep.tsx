@@ -89,14 +89,30 @@ const JoinInfoStep: React.FC<StepProps> = ({ formData, onUpdate }) => {
       return;
     }
 
+    // 지점이 선택되지 않은 경우 검색 불가
+    if (!formData.joinInfo.branchId) {
+      setStaffSearchResults([]);
+      return;
+    }
+
     console.log('직원 검색 실행:', searchTerm);
+    console.log('선택된 지점 ID:', formData.joinInfo.branchId);
     console.log('검색 대상 직원 수:', staff.length);
 
-    const filteredStaff = staff.filter(employee => 
+    // 선택된 지점에 속한 직원만 먼저 필터링
+    const branchStaff = staff.filter(employee => 
+      employee.branchId === formData.joinInfo.branchId
+    );
+
+    console.log('선택된 지점의 직원 수:', branchStaff.length);
+
+    // 그 다음 검색어로 필터링
+    const filteredStaff = branchStaff.filter(employee => 
       employee.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
       employee.role.toLowerCase().includes(searchTerm.toLowerCase()) ||
       employee.position.toLowerCase().includes(searchTerm.toLowerCase()) ||
-      employee.loginId.toLowerCase().includes(searchTerm.toLowerCase())
+      employee.loginId.toLowerCase().includes(searchTerm.toLowerCase()) ||
+      employee.phone.toLowerCase().includes(searchTerm.toLowerCase())
     );
 
     console.log('검색 결과:', filteredStaff);
@@ -238,7 +254,22 @@ const JoinInfoStep: React.FC<StepProps> = ({ formData, onUpdate }) => {
           <Label>지점 *</Label>
           <CustomDropdown
             value={formData.joinInfo.branchId}
-            onChange={(value: string) => handleInputChange('branchId', value)}
+            onChange={(value: string) => {
+              // 지점이 변경되면 선택된 직원 정보 초기화
+              const updatedJoinInfo = {
+                ...formData.joinInfo,
+                branchId: value,
+                coach: '' // 직원 선택 초기화
+              };
+              
+              // 검색 상태도 초기화
+              setStaffSearchTerm('');
+              setStaffSearchResults([]);
+              
+              onUpdate({
+                joinInfo: updatedJoinInfo
+              });
+            }}
             options={getBranchOptions()}
             placeholder="지점을 선택하세요"
             required
@@ -255,8 +286,13 @@ const JoinInfoStep: React.FC<StepProps> = ({ formData, onUpdate }) => {
             onSelectItem={handleStaffSelect}
             onClear={handleStaffClear}
             results={staffSearchResults}
-            placeholder="직원 이름, 로그인ID, 직급, 직책으로 검색하세요"
+            placeholder={
+              formData.joinInfo.branchId 
+                ? "직원 이름, 전화번호, 로그인ID, 직급, 직책으로 검색하세요" 
+                : "먼저 지점을 선택해주세요"
+            }
             header="직원 검색"
+            disabled={!formData.joinInfo.branchId} // 지점이 선택되지 않으면 비활성화
           />
         </FormField>
 

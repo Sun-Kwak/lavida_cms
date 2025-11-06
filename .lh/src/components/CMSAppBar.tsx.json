@@ -3,7 +3,7 @@
     "activeCommit": 0,
     "commits": [
         {
-            "activePatchIndex": 37,
+            "activePatchIndex": 39,
             "patches": [
                 {
                     "date": 1757828417755,
@@ -156,6 +156,14 @@
                 {
                     "date": 1760758580330,
                     "content": "Index: \n===================================================================\n--- \n+++ \n@@ -35,8 +35,9 @@\n     title: '회원관리',\n     subMenus: [\n       { id: 'member-register', title: '신규 등록', path: '/cms/member/register' },\n       { id: 'member-search', title: '빠른 검색', path: '/cms/member/search' },\n+      { id: 'member-course-history', title: '수강 이력', path: '/cms/member/course-history' },\n       { id: 'member-payment-history', title: '결제 이력', path: '/cms/member/payment-history' },\n       { id: 'member-point-history', title: '포인트 이력', path: '/cms/member/point-history' },\n     ],\n   },\n"
+                },
+                {
+                    "date": 1762427973000,
+                    "content": "Index: \n===================================================================\n--- \n+++ \n@@ -38,8 +38,9 @@\n       { id: 'member-search', title: '빠른 검색', path: '/cms/member/search' },\n       { id: 'member-course-history', title: '수강 이력', path: '/cms/member/course-history' },\n       { id: 'member-payment-history', title: '결제 이력', path: '/cms/member/payment-history' },\n       { id: 'member-point-history', title: '포인트 이력', path: '/cms/member/point-history' },\n+      { id: 'member-exercise-prescription-history', title: '운동처방', path: '/cms/member/exercise-prescription-history' },\n     ],\n   },\n   {\n     id: 'program',\n"
+                },
+                {
+                    "date": 1762429498897,
+                    "content": "Index: \n===================================================================\n--- \n+++ \n@@ -213,18 +213,31 @@\n `;\n \n const UserInfo = styled.div`\n   display: flex;\n-  align-items: center;\n-  gap: 8px;\n+  flex-direction: column;\n+  align-items: flex-end;\n+  gap: 2px;\n   font-size: ${AppTextStyles.body2.fontSize};\n   color: ${AppColors.onSurface};\n `;\n \n+const UserNameSection = styled.div`\n+  display: flex;\n+  align-items: center;\n+  gap: 8px;\n+`;\n+\n const UserName = styled.span`\n   font-weight: 500;\n `;\n \n+const AppVersion = styled.span`\n+  font-size: 11px;\n+  color: ${AppColors.onSurface}80;\n+  font-weight: 400;\n+`;\n+\n const LogoutButton = styled.button`\n   padding: 6px 12px;\n   border: 1px solid ${AppColors.borderLight};\n   border-radius: 6px;\n@@ -576,10 +589,13 @@\n         </LeftSection>\n \n         <RightSection>\n           <UserInfo>\n-            <UserName>{adminName}</UserName>\n-            <span>님</span>\n+            <UserNameSection>\n+              <UserName>{adminName}</UserName>\n+              <span>님</span>\n+            </UserNameSection>\n+            <AppVersion>v1.0.1</AppVersion>\n           </UserInfo>\n           \n           <LogoutButton onClick={handleLogout}>\n             로그아웃\n"
                 }
             ],
             "date": 1757828417755,

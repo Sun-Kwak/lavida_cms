@@ -15,6 +15,7 @@ import MemberSearch from './Member/MemberSearch';
 import MemberCourseHistory from './Member/CourseHistory';
 import MemberPaymentHistory from './Member/MemberPaymentHistory';
 import MemberPointHistory from './Member/MemberPointHistory';
+import MemberExercisePrescriptionHistory from './Member/MemberExercisePrescriptionHistory';
 
 // 프로그램 페이지들
 import ProgramManagement from './Program/ProgramManagement';
@@ -88,6 +89,7 @@ const CMSRoutes: React.FC = () => {
         <Route path="/member/course-history" element={<MemberCourseHistory />} />
         <Route path="/member/payment-history" element={<MemberPaymentHistory />} />
         <Route path="/member/point-history" element={<MemberPointHistory />} />
+        <Route path="/member/exercise-prescription-history" element={<MemberExercisePrescriptionHistory />} />
         
         {/* 프로그램 */}
         <Route path="/program/management" element={<ProgramManagement />} />

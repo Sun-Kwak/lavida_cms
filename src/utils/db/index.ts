@@ -6,7 +6,7 @@
 // 필요한 imports를 먼저 선언
 import { BranchService } from './BranchService';
 import { StaffService } from './StaffService';
-import { ProgramService, ProductService, HolidayService, WeeklyHolidayService, ScheduleEventService } from './ProgramService';
+import { ProgramService, ProductService, WeeklyWorkScheduleService, WeeklyHolidayService, ScheduleEventService } from './ProgramService';
 import { MemberService } from './MemberService';
 import { PaymentService, OrderService } from './PaymentService';
 import { PointService } from './PointService';
@@ -25,7 +25,7 @@ export { BaseDBManager } from './BaseDBManager';
 // 개별 서비스 클래스들 export
 export { BranchService } from './BranchService';
 export { StaffService } from './StaffService';
-export { ProgramService, ProductService, HolidayService, ScheduleEventService } from './ProgramService';
+export { ProgramService, ProductService, WeeklyWorkScheduleService, WeeklyHolidayService, ScheduleEventService } from './ProgramService';
 export { MemberService } from './MemberService';
 export { PaymentService, OrderService } from './PaymentService';
 export { PointService } from './PointService';
@@ -43,7 +43,7 @@ export class IndexedDBManager extends BaseDBManager {
   public staff: StaffService;
   public program: ProgramService;
   public product: ProductService;
-  public holiday: HolidayService;
+  public weeklyWorkSchedule: WeeklyWorkScheduleService;
   public weeklyHoliday: WeeklyHolidayService;
   public scheduleEvent: ScheduleEventService;
   public member: MemberService;
@@ -63,7 +63,7 @@ export class IndexedDBManager extends BaseDBManager {
     this.staff = new StaffService();
     this.program = new ProgramService();
     this.product = new ProductService();
-    this.holiday = new HolidayService();
+    this.weeklyWorkSchedule = new WeeklyWorkScheduleService();
     this.weeklyHoliday = new WeeklyHolidayService();
     this.scheduleEvent = new ScheduleEventService();
     this.member = new MemberService();
@@ -553,59 +553,47 @@ export class IndexedDBManager extends BaseDBManager {
     return await this.terms.getActiveTermsDocument(validType);
   }
 
-  // Holiday 관련 호환성 메서드 (HolidaySettings로 대체)
-  async getAllHolidays() {
-    // HolidayService에는 전체 조회가 없으므로 최근 1년 범위로 조회
-    const now = new Date();
-    const startDate = new Date(now.getFullYear() - 1, 0, 1).toISOString().split('T')[0];
-    const endDate = new Date(now.getFullYear() + 1, 11, 31).toISOString().split('T')[0];
-    return await this.holiday.getHolidaySettingsByDateRange(startDate, endDate);
-  }
-
-  async addHoliday(holidayData: import('./types').HolidaySettings) {
-    return await this.holiday.saveHolidaySettings([holidayData]);
-  }
-
-  async updateHoliday(id: string, updates: Partial<import('./types').HolidaySettings>) {
-    // HolidayService는 개별 업데이트가 없으므로 조회 후 전체 저장
-    const allHolidays = await this.getAllHolidays();
-    const target = allHolidays.find(h => h.id === id);
-    if (!target) {
-      throw new Error('휴일 설정을 찾을 수 없습니다.');
-    }
-    const updated = { ...target, ...updates, updatedAt: new Date() };
-    return await this.holiday.saveHolidaySettings([updated]);
-  }
-
-  async deleteHoliday(id: string) {
-    // HolidayService에는 삭제 메서드가 없음
-    console.warn('Holiday 삭제는 직접 지원되지 않습니다.');
-    return false;
-  }
+  // 휴일 관리는 Staff.holidays 배열을 사용 (HolidaySettings 제거됨)
 
   async getHolidayById(id: string) {
-    const allHolidays = await this.getAllHolidays();
-    return allHolidays.find(h => h.id === id) || null;
+    console.warn('HolidaySettings 테이블이 제거되었습니다. Staff.holidays 배열을 사용하세요.');
+    return null;
   }
 
   async getHolidaysByYear(year: number) {
-    const startDate = new Date(year, 0, 1).toISOString().split('T')[0];
-    const endDate = new Date(year, 11, 31).toISOString().split('T')[0];
-    return await this.holiday.getHolidaySettingsByDateRange(startDate, endDate);
+    console.warn('HolidaySettings 테이블이 제거되었습니다. Staff.holidays 배열을 사용하세요.');
+    return [];
   }
 
   async isHoliday(date: Date) {
-    const dateString = date.toISOString().split('T')[0];
-    const holidays = await this.holiday.getHolidaySettingsByDate(dateString);
-    return holidays.length > 0;
+    console.warn('HolidaySettings 테이블이 제거되었습니다. Staff.holidays 배열을 사용하세요.');
+    return false;
   }
 
   async getHolidaySettingsByDateRange(startDate: string, endDate: string) {
-    return await this.holiday.getHolidaySettingsByDateRange(startDate, endDate);
+    console.warn('HolidaySettings 테이블이 제거되었습니다. Staff.holidays 배열을 사용하세요.');
+    return [];
   }
 
-  async saveHolidaySettings(settings: Omit<import('./types').HolidaySettings, 'id' | 'createdAt' | 'updatedAt'>[]) {
-    return await this.holiday.saveHolidaySettings(settings);
+  // WeeklyWorkSchedule 관련 메서드
+  async saveWeeklyWorkSchedule(settings: Omit<import('./types').WeeklyWorkSchedule, 'id' | 'createdAt' | 'updatedAt'>[]) {
+    return await this.weeklyWorkSchedule.saveWeeklyWorkSchedule(settings);
+  }
+
+  async getWeeklyWorkScheduleByStaff(staffId: string) {
+    return await this.weeklyWorkSchedule.getWeeklyWorkScheduleByStaff(staffId);
+  }
+
+  async getWeeklyWorkScheduleByStaffAndWeek(staffId: string, weekStartDate: string) {
+    return await this.weeklyWorkSchedule.getWeeklyWorkScheduleByStaffAndWeek(staffId, weekStartDate);
+  }
+
+  async deleteWeeklyWorkSchedule(id: string) {
+    return await this.weeklyWorkSchedule.deleteWeeklyWorkSchedule(id);
+  }
+
+  async deleteWeeklyWorkScheduleByStaff(staffId: string) {
+    return await this.weeklyWorkSchedule.deleteWeeklyWorkScheduleByStaff(staffId);
   }
 
   // 주별 휴일설정 관련 메서드

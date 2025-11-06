@@ -10,7 +10,7 @@ export class ExercisePrescriptionService extends BaseDBManager {
   private readonly STORE_NAME = 'exercisePrescriptions';
 
   /**
-   * 운동처방서 저장
+   * 운동처방서 저장 (히스토리 관리)
    */
   async saveExercisePrescription(
     prescriptionData: Omit<ExercisePrescription, 'id' | 'createdAt' | 'updatedAt'>
@@ -23,6 +23,24 @@ export class ExercisePrescriptionService extends BaseDBManager {
         throw new Error('서명이 필요합니다. 서명을 완료해주세요.');
       }
       
+      // 해당 회원의 기존 처방서들 조회
+      const existingPrescriptions = await this.getExercisePrescriptionHistory(prescriptionData.memberId);
+      
+      // 기존 처방서들의 isLatest를 false로 변경
+      for (const existing of existingPrescriptions) {
+        if (existing.isLatest) {
+          await this.executeTransaction(this.STORE_NAME, 'readwrite', (store) => {
+            const updated = { ...existing, isLatest: false, updatedAt: new Date() };
+            return store.put(updated);
+          });
+        }
+      }
+      
+      // 새 버전 번호 계산
+      const newVersion = existingPrescriptions.length > 0 
+        ? Math.max(...existingPrescriptions.map(p => p.version || 1)) + 1 
+        : 1;
+      
       const prescription: ExercisePrescription = {
         ...prescriptionData,
         id: this.generateUUID(),
@@ -30,13 +48,15 @@ export class ExercisePrescriptionService extends BaseDBManager {
         updatedAt: new Date(),
         // 최초 저장 시에만 서명 날짜 설정
         signedAt: prescriptionData.signedAt || new Date(),
+        version: newVersion,
+        isLatest: true,
       };
 
       await this.executeTransaction(this.STORE_NAME, 'readwrite', (store) => {
         return store.put(prescription);
       });
       
-      console.log(`운동처방서 저장 완료: ${prescription.id}`);
+      console.log(`운동처방서 저장 완료: ${prescription.id}, 버전: ${newVersion}`);
       return prescription.id;
     } catch (error) {
       console.error('운동처방서 저장 실패:', error);
@@ -45,7 +65,7 @@ export class ExercisePrescriptionService extends BaseDBManager {
   }
 
   /**
-   * 운동처방서 업데이트
+   * 운동처방서 업데이트 (새 버전으로 저장)
    */
   async updateExercisePrescription(
     id: string, 
@@ -59,19 +79,36 @@ export class ExercisePrescriptionService extends BaseDBManager {
         throw new Error('운동처방서를 찾을 수 없습니다.');
       }
 
-      const updated: ExercisePrescription = {
+      // 기존 버전들의 isLatest를 false로 변경
+      const allVersions = await this.getExercisePrescriptionHistory(existing.memberId);
+      for (const version of allVersions) {
+        if (version.isLatest) {
+          await this.executeTransaction(this.STORE_NAME, 'readwrite', (store) => {
+            const updated = { ...version, isLatest: false, updatedAt: new Date() };
+            return store.put(updated);
+          });
+        }
+      }
+
+      // 새 버전으로 저장
+      const newVersion = Math.max(...allVersions.map(p => p.version || 1)) + 1;
+      const newPrescription: ExercisePrescription = {
         ...existing,
         ...updates,
+        id: this.generateUUID(), // 새 ID 생성
+        createdAt: new Date(), // 새 생성일
         updatedAt: new Date(),
+        version: newVersion,
+        isLatest: true,
         // 서명 날짜는 최초 서명 시에만 설정되고 이후 업데이트에서는 변경하지 않음
         signedAt: existing.signedAt,
       };
 
       await this.executeTransaction(this.STORE_NAME, 'readwrite', (store) => {
-        return store.put(updated);
+        return store.put(newPrescription);
       });
       
-      console.log(`운동처방서 업데이트 완료: ${id}`);
+      console.log(`운동처방서 새 버전 생성 완료: ${newPrescription.id}, 버전: ${newVersion}`);
       return true;
     } catch (error) {
       console.error('운동처방서 업데이트 실패:', error);
@@ -80,7 +117,7 @@ export class ExercisePrescriptionService extends BaseDBManager {
   }
 
   /**
-   * 회원별 운동처방서 조회
+   * 회원별 운동처방서 조회 (최신만)
    */
   async getExercisePrescriptionByMember(memberId: string): Promise<ExercisePrescription | null> {
     try {
@@ -91,14 +128,11 @@ export class ExercisePrescriptionService extends BaseDBManager {
         return index.getAll(memberId);
       }) as ExercisePrescription[];
       
-      // 가장 최근 운동처방서 반환
-      if (allPrescriptions.length > 0) {
-        return allPrescriptions.sort((a: ExercisePrescription, b: ExercisePrescription) => 
-          new Date(b.updatedAt).getTime() - new Date(a.updatedAt).getTime()
-        )[0];
-      }
+      // isLatest가 true인 것 우선, 없으면 가장 최근 것
+      const latestPrescription = allPrescriptions.find(p => p.isLatest) 
+        || allPrescriptions.sort((a, b) => new Date(b.updatedAt).getTime() - new Date(a.updatedAt).getTime())[0];
       
-      return null;
+      return latestPrescription || null;
     } catch (error) {
       console.error('운동처방서 조회 실패:', error);
       return null;
@@ -318,6 +352,8 @@ export class ExercisePrescriptionService extends BaseDBManager {
       signedAt: null, // 서명 날짜 초기값
       isActive: true,
       prescriptionDate: new Date(),
+      version: 1,
+      isLatest: true,
     };
   }
 

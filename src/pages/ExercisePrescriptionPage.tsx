@@ -1,4 +1,4 @@
-import React, { useEffect, useState } from 'react';
+import React, { useEffect, useState, useCallback } from 'react';
 import { useSearchParams } from 'react-router-dom';
 import styled from 'styled-components';
 import { AppColors } from '../styles/colors';
@@ -19,24 +19,25 @@ const PageContainer = styled.div`
   }
 `;
 
-const SearchPanel = styled.div`
+const SearchPanel = styled.div<{ $hidden?: boolean }>`
   width: 300px;
   background: ${AppColors.surface};
   border-right: 1px solid ${AppColors.borderLight};
   padding: 20px;
   overflow-y: auto;
+  display: ${props => props.$hidden ? 'none' : 'block'};
   
   @media print {
     display: none;
   }
 `;
 
-const ButtonPanel = styled.div`
+const ButtonPanel = styled.div<{ $hidden?: boolean }>`
   width: 80px;
   background: ${AppColors.surface};
   border-right: 1px solid ${AppColors.borderLight};
   padding: 20px 10px;
-  display: flex;
+  display: ${props => props.$hidden ? 'none' : 'flex'};
   flex-direction: column;
   gap: 15px;
   align-items: center;
@@ -298,6 +299,7 @@ const ExercisePrescriptionPage: React.FC = () => {
   const [selectedMember, setSelectedMember] = useState<Member | null>(null);
   const [members, setMembers] = useState<Member[]>([]);
   const [currentPrescription, setCurrentPrescription] = useState<ExercisePrescription | null>(null);
+  const [isReadOnly, setIsReadOnly] = useState(false); // 읽기 전용 모드 상태
   const [formData, setFormData] = useState({
     height: '',
     weight: '',
@@ -369,11 +371,11 @@ const ExercisePrescriptionPage: React.FC = () => {
       }
 
       try {
-        // 해당 회원의 운동처방서 조회
+        // 해당 회원의 최신 운동처방서 조회
         const prescription = await dbManager.exercisePrescription.getExercisePrescriptionByMember(selectedMember.id);
         
         if (prescription) {
-          // 기존 운동처방서가 있으면 로드
+          // 최신 운동처방서가 있으면 로드
           setCurrentPrescription(prescription);
           setFormData({
             height: prescription.height,
@@ -385,7 +387,7 @@ const ExercisePrescriptionPage: React.FC = () => {
             bodyImages: prescription.bodyImages,
             signatureData: prescription.signatureData || '',
           });
-          console.log('기존 운동처방서 로드:', prescription);
+          console.log('최신 운동처방서 로드:', prescription);
         } else {
           // 기존 운동처방서가 없으면 빈 템플릿 사용
           setCurrentPrescription(null);
@@ -426,16 +428,52 @@ const ExercisePrescriptionPage: React.FC = () => {
     member.name.includes(searchTerm) || member.phone.includes(searchTerm)
   );
 
+  // 특정 처방서 ID로 직접 로드하는 함수 (히스토리 상세보기용)
+  const loadSpecificPrescription = useCallback(async (prescriptionId: string) => {
+    try {
+      const prescription = await dbManager.exercisePrescription.getExercisePrescriptionById(prescriptionId);
+      if (prescription) {
+        // 처방서에 해당하는 회원 정보도 찾기
+        const member = members.find(m => m.id === prescription.memberId);
+        if (member) {
+          setSelectedMember(member);
+        }
+        
+        setCurrentPrescription(prescription);
+        setIsReadOnly(true); // 히스토리 보기는 읽기 전용
+        setFormData({
+          height: prescription.height,
+          weight: prescription.weight,
+          footSize: prescription.footSize,
+          medications: prescription.medications,
+          medicalHistory: prescription.medicalHistory,
+          painHistory: prescription.painHistory,
+          bodyImages: prescription.bodyImages,
+          signatureData: prescription.signatureData || '',
+        });
+        console.log('특정 운동처방서 로드 (읽기 전용):', prescription);
+      }
+    } catch (error) {
+      console.error('특정 운동처방서 로드 실패:', error);
+    }
+  }, [members]);
+
   useEffect(() => {
-    // URL 파라미터에서 userid 또는 memberId 확인
+    // URL 파라미터에서 userid, memberId, prescriptionId 확인
     const userIdParam = searchParams.get('userid') || searchParams.get('memberId');
-    if (userIdParam && members.length > 0) {
+    const prescriptionIdParam = searchParams.get('prescriptionId');
+    
+    if (prescriptionIdParam) {
+      // prescriptionId가 있으면 해당 처방서를 직접 로드 (히스토리 상세보기용)
+      loadSpecificPrescription(prescriptionIdParam);
+    } else if (userIdParam && members.length > 0) {
+      // memberId만 있으면 해당 회원의 최신 처방서 로드
       const member = members.find(m => m.id === userIdParam);
       if (member) {
         setSelectedMember(member);
       }
     }
-  }, [searchParams, members]);
+  }, [searchParams, members, loadSpecificPrescription]);
 
   const handleMemberSelect = (member: Member) => {
     setSelectedMember(member);
@@ -551,30 +589,18 @@ const ExercisePrescriptionPage: React.FC = () => {
         signedAt: currentPrescription?.signedAt || new Date(), // 기존에 서명 날짜가 있으면 유지, 없으면 현재 시각
         isActive: true,
         prescriptionDate: new Date(),
+        version: 1, // 기본값 (서비스에서 자동 계산됨)
+        isLatest: true, // 기본값 (서비스에서 자동 설정됨)
       };
 
       if (currentPrescription) {
-        // 기존 운동처방서 업데이트
-        await dbManager.exercisePrescription.updateExercisePrescription(
-          currentPrescription.id,
-          {
-            height: formData.height,
-            weight: formData.weight,
-            footSize: formData.footSize,
-            medications: formData.medications,
-            medicalHistory: formData.medicalHistory,
-            painHistory: formData.painHistory,
-            bodyImages: formData.bodyImages,
-            signatureData: finalSignatureData, // 최종 서명 데이터 사용
-            isActive: true,
-            prescriptionDate: new Date(),
-          }
-        );
-        console.log('운동처방서 업데이트 완료:', currentPrescription.id);
+        // 기존 운동처방서가 있으면 새 버전으로 저장 (업데이트가 아닌 신규 버전 생성)
+        const prescriptionId = await dbManager.exercisePrescription.saveExercisePrescription(prescriptionData);
+        console.log('새 버전 운동처방서 생성 완료:', prescriptionId);
         
-        // 업데이트된 처방서 정보 다시 로드
-        const updatedPrescription = await dbManager.exercisePrescription.getExercisePrescriptionById(currentPrescription.id);
-        setCurrentPrescription(updatedPrescription);
+        // 생성된 최신 처방서 정보 로드
+        const savedPrescription = await dbManager.exercisePrescription.getExercisePrescriptionById(prescriptionId);
+        setCurrentPrescription(savedPrescription);
       } else {
         // 새 운동처방서 생성
         const prescriptionId = await dbManager.exercisePrescription.saveExercisePrescription(prescriptionData);
@@ -918,7 +944,7 @@ const ExercisePrescriptionPage: React.FC = () => {
         <ActionButton 
           onClick={handleSave} 
           title="저장"
-          disabled={!hasSignature() && !hasExistingSignature()} // 현재 서명이 있거나 기존 서명이 있어야 저장 가능
+          disabled={isReadOnly || (!hasSignature() && !hasExistingSignature())} // 읽기 전용이거나 서명이 없으면 비활성화
         >
           <ButtonIcon>💾</ButtonIcon>
           <ButtonText>저장</ButtonText>
@@ -966,6 +992,8 @@ const ExercisePrescriptionPage: React.FC = () => {
                 placeholder="키(cm)"
                 value={formData.height}
                 onChange={(e) => handleInputChange('height', e.target.value)}
+                readOnly={isReadOnly}
+                style={{ background: isReadOnly ? '#f5f5f5' : 'white' }}
               />
             </FormGroup>
             <FormGroup>
@@ -975,6 +1003,8 @@ const ExercisePrescriptionPage: React.FC = () => {
                 placeholder="체중(kg)"
                 value={formData.weight}
                 onChange={(e) => handleInputChange('weight', e.target.value)}
+                readOnly={isReadOnly}
+                style={{ background: isReadOnly ? '#f5f5f5' : 'white' }}
               />
             </FormGroup>
             <FormGroup>
@@ -984,6 +1014,8 @@ const ExercisePrescriptionPage: React.FC = () => {
                 placeholder="발사이즈"
                 value={formData.footSize}
                 onChange={(e) => handleInputChange('footSize', e.target.value)}
+                readOnly={isReadOnly}
+                style={{ background: isReadOnly ? '#f5f5f5' : 'white' }}
               />
             </FormGroup>
           </FormRow>
@@ -997,7 +1029,8 @@ const ExercisePrescriptionPage: React.FC = () => {
                 placeholder="복용중인 약물을 입력하세요"
                 value={formData.medications}
                 onChange={(e) => handleInputChange('medications', e.target.value)}
-                style={{ flex: 1 }}
+                style={{ flex: 1, background: isReadOnly ? '#f5f5f5' : 'white' }}
+                readOnly={isReadOnly}
               />
             </FormGroup>
           </FormRow>
@@ -1012,6 +1045,7 @@ const ExercisePrescriptionPage: React.FC = () => {
                     type="checkbox"
                     checked={formData.medicalHistory.musculoskeletal}
                     onChange={(e) => handleCheckboxChange('musculoskeletal', e.target.checked)}
+                    disabled={isReadOnly}
                   />
                   근골격계질환
                 </CheckboxItem>
@@ -1020,6 +1054,7 @@ const ExercisePrescriptionPage: React.FC = () => {
                     type="checkbox"
                     checked={formData.medicalHistory.cardiovascular}
                     onChange={(e) => handleCheckboxChange('cardiovascular', e.target.checked)}
+                    disabled={isReadOnly}
                   />
                   심혈관계질환
                 </CheckboxItem>
@@ -1028,6 +1063,7 @@ const ExercisePrescriptionPage: React.FC = () => {
                     type="checkbox"
                     checked={formData.medicalHistory.diabetes}
                     onChange={(e) => handleCheckboxChange('diabetes', e.target.checked)}
+                    disabled={isReadOnly}
                   />
                   당뇨
                 </CheckboxItem>
@@ -1036,6 +1072,7 @@ const ExercisePrescriptionPage: React.FC = () => {
                     type="checkbox"
                     checked={formData.medicalHistory.osteoporosis}
                     onChange={(e) => handleCheckboxChange('osteoporosis', e.target.checked)}
+                    disabled={isReadOnly}
                   />
                   골다공증
                 </CheckboxItem>
@@ -1044,6 +1081,7 @@ const ExercisePrescriptionPage: React.FC = () => {
                     type="checkbox"
                     checked={formData.medicalHistory.thyroid}
                     onChange={(e) => handleCheckboxChange('thyroid', e.target.checked)}
+                    disabled={isReadOnly}
                   />
                   갑상선
                 </CheckboxItem>
@@ -1052,6 +1090,7 @@ const ExercisePrescriptionPage: React.FC = () => {
                     type="checkbox"
                     checked={formData.medicalHistory.varicose}
                     onChange={(e) => handleCheckboxChange('varicose', e.target.checked)}
+                    disabled={isReadOnly}
                   />
                   정맥류
                 </CheckboxItem>
@@ -1060,6 +1099,7 @@ const ExercisePrescriptionPage: React.FC = () => {
                     type="checkbox"
                     checked={formData.medicalHistory.arthritis}
                     onChange={(e) => handleCheckboxChange('arthritis', e.target.checked)}
+                    disabled={isReadOnly}
                   />
                   관절염
                 </CheckboxItem>
@@ -1110,6 +1150,8 @@ const ExercisePrescriptionPage: React.FC = () => {
                 placeholder="통증 히스토리, 수술 이력, 운동 목적 등을 상세히 기입해주세요"
                 value={formData.painHistory}
                 onChange={(e) => handleInputChange('painHistory', e.target.value)}
+                readOnly={isReadOnly}
+                style={{ background: isReadOnly ? '#f5f5f5' : 'white' }}
               />
             </FormGroup>
           </FormRow>

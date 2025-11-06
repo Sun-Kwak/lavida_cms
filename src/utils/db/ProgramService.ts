@@ -366,21 +366,21 @@ export class ProductService extends BaseDBManager {
   }
 }
 
-// 휴일설정 서비스 클래스
-export class HolidayService extends BaseDBManager {
+// WeeklyWorkSchedule 서비스 클래스 (근무시간/휴게시간만 관리, 휴일은 Staff.holidays 사용)
+export class WeeklyWorkScheduleService extends BaseDBManager {
 
   /**
-   * 휴일설정 추가/업데이트
+   * 주별 근무 스케줄 추가/업데이트
    */
-  async saveHolidaySettings(settingsArray: Omit<import('./types').HolidaySettings, 'id' | 'createdAt' | 'updatedAt'>[]): Promise<import('./types').HolidaySettings[]> {
+  async saveWeeklyWorkSchedule(settingsArray: Omit<import('./types').WeeklyWorkSchedule, 'id' | 'createdAt' | 'updatedAt'>[]): Promise<import('./types').WeeklyWorkSchedule[]> {
     try {
-      const savedSettings: import('./types').HolidaySettings[] = [];
+      const savedSettings: import('./types').WeeklyWorkSchedule[] = [];
       
       for (const setting of settingsArray) {
         // 기존 설정이 있는지 확인
-        const existingSettings = await this.getHolidaySettingsByStaffAndDate(setting.staffId, setting.date);
+        const existingSettings = await this.getWeeklyWorkScheduleByStaffAndWeek(setting.staffId, setting.weekStartDate);
         
-        let savedSetting: import('./types').HolidaySettings;
+        let savedSetting: import('./types').WeeklyWorkSchedule;
         
         if (existingSettings.length > 0) {
           // 업데이트
@@ -391,7 +391,7 @@ export class HolidayService extends BaseDBManager {
             updatedAt: new Date()
           };
           
-          await this.executeTransaction('holidaySettings', 'readwrite', (store) => 
+          await this.executeTransaction('weeklyWorkSchedule', 'readwrite', (store) => 
             store.put(savedSetting)
           );
         } else {
@@ -403,7 +403,7 @@ export class HolidayService extends BaseDBManager {
             updatedAt: new Date()
           };
           
-          await this.executeTransaction('holidaySettings', 'readwrite', (store) => 
+          await this.executeTransaction('weeklyWorkSchedule', 'readwrite', (store) => 
             store.add(savedSetting)
           );
         }
@@ -411,20 +411,20 @@ export class HolidayService extends BaseDBManager {
         savedSettings.push(savedSetting);
       }
 
-      console.log('휴일설정 저장 성공:', savedSettings.length);
+      console.log('주별 근무 스케줄 저장 성공:', savedSettings.length);
       return savedSettings;
     } catch (error) {
-      console.error('휴일설정 저장 실패:', error);
+      console.error('주별 근무 스케줄 저장 실패:', error);
       throw error;
     }
   }
 
   /**
-   * 특정 직원의 모든 휴일설정 조회
+   * 특정 직원의 모든 주별 근무 스케줄 조회
    */
-  async getHolidaySettingsByStaff(staffId: string): Promise<import('./types').HolidaySettings[]> {
+  async getWeeklyWorkScheduleByStaff(staffId: string): Promise<import('./types').WeeklyWorkSchedule[]> {
     try {
-      const settings = await this.executeTransaction('holidaySettings', 'readonly', (store) => {
+      const settings = await this.executeTransaction('weeklyWorkSchedule', 'readonly', (store) => {
         const index = store.index('staffId');
         return index.getAll(IDBKeyRange.only(staffId));
       });
@@ -435,19 +435,19 @@ export class HolidayService extends BaseDBManager {
         updatedAt: new Date(setting.updatedAt)
       }));
     } catch (error) {
-      console.error('직원별 휴일설정 조회 실패:', error);
+      console.error('직원별 주별 근무 스케줄 조회 실패:', error);
       return [];
     }
   }
 
   /**
-   * 특정 직원의 특정 날짜 휴일설정 조회
+   * 특정 직원의 특정 주 근무 스케줄 조회
    */
-  async getHolidaySettingsByStaffAndDate(staffId: string, date: string): Promise<import('./types').HolidaySettings[]> {
+  async getWeeklyWorkScheduleByStaffAndWeek(staffId: string, weekStartDate: string): Promise<import('./types').WeeklyWorkSchedule[]> {
     try {
-      const settings = await this.executeTransaction('holidaySettings', 'readonly', (store) => {
-        const index = store.index('staffDate');
-        return index.getAll(IDBKeyRange.only([staffId, date]));
+      const settings = await this.executeTransaction('weeklyWorkSchedule', 'readonly', (store) => {
+        const index = store.index('staffWeek');
+        return index.getAll(IDBKeyRange.only([staffId, weekStartDate]));
       });
       
       return settings.map(setting => ({
@@ -456,85 +456,42 @@ export class HolidayService extends BaseDBManager {
         updatedAt: new Date(setting.updatedAt)
       }));
     } catch (error) {
-      console.error('직원별 날짜별 휴일설정 조회 실패:', error);
+      console.error('직원별 주별 근무 스케줄 조회 실패:', error);
       return [];
     }
   }
 
   /**
-   * 특정 날짜의 모든 휴일설정 조회
+   * 주별 근무 스케줄 삭제
    */
-  async getHolidaySettingsByDate(date: string): Promise<import('./types').HolidaySettings[]> {
+  async deleteWeeklyWorkSchedule(id: string): Promise<boolean> {
     try {
-      const settings = await this.executeTransaction('holidaySettings', 'readonly', (store) => {
-        const index = store.index('date');
-        return index.getAll(IDBKeyRange.only(date));
-      });
-      
-      return settings.map(setting => ({
-        ...setting,
-        createdAt: new Date(setting.createdAt),
-        updatedAt: new Date(setting.updatedAt)
-      }));
-    } catch (error) {
-      console.error('날짜별 휴일설정 조회 실패:', error);
-      return [];
-    }
-  }
-
-  /**
-   * 날짜 범위의 휴일설정 조회
-   */
-  async getHolidaySettingsByDateRange(startDate: string, endDate: string): Promise<import('./types').HolidaySettings[]> {
-    try {
-      const settings = await this.executeTransaction('holidaySettings', 'readonly', (store) => {
-        const index = store.index('date');
-        return index.getAll(IDBKeyRange.bound(startDate, endDate));
-      });
-      
-      return settings.map(setting => ({
-        ...setting,
-        createdAt: new Date(setting.createdAt),
-        updatedAt: new Date(setting.updatedAt)
-      }));
-    } catch (error) {
-      console.error('날짜 범위별 휴일설정 조회 실패:', error);
-      return [];
-    }
-  }
-
-  /**
-   * 휴일설정 삭제
-   */
-  async deleteHolidaySettings(id: string): Promise<boolean> {
-    try {
-      await this.executeTransaction('holidaySettings', 'readwrite', (store) => 
+      await this.executeTransaction('weeklyWorkSchedule', 'readwrite', (store) => 
         store.delete(id)
       );
-
-      console.log('휴일설정 삭제 성공:', id);
+      console.log('주별 근무 스케줄 삭제 성공:', id);
       return true;
     } catch (error) {
-      console.error('휴일설정 삭제 실패:', error);
+      console.error('주별 근무 스케줄 삭제 실패:', error);
       throw error;
     }
   }
 
   /**
-   * 특정 직원의 모든 휴일설정 삭제
+   * 특정 직원의 모든 주별 근무 스케줄 삭제
    */
-  async deleteHolidaySettingsByStaff(staffId: string): Promise<boolean> {
+  async deleteWeeklyWorkScheduleByStaff(staffId: string): Promise<boolean> {
     try {
-      const settings = await this.getHolidaySettingsByStaff(staffId);
+      const settings = await this.getWeeklyWorkScheduleByStaff(staffId);
       
       for (const setting of settings) {
-        await this.deleteHolidaySettings(setting.id);
+        await this.deleteWeeklyWorkSchedule(setting.id);
       }
-
-      console.log('직원 휴일설정 전체 삭제 성공:', staffId);
+      
+      console.log('직원 주별 근무 스케줄 전체 삭제 성공:', staffId);
       return true;
     } catch (error) {
-      console.error('직원 휴일설정 전체 삭제 실패:', error);
+      console.error('직원 주별 근무 스케줄 전체 삭제 실패:', error);
       throw error;
     }
   }

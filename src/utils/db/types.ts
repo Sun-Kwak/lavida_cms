@@ -89,15 +89,89 @@ export interface Product extends DBRecord {
   isActive: boolean;
 }
 
-// 기존 휴일 설정 인터페이스 (호환성 유지)
-export interface HolidaySettings extends DBRecord {
+// 주별 근무 스케줄 인터페이스 (휴일은 Staff.holidays 사용, 근무시간/휴게시간만 관리)
+export interface WeeklyWorkSchedule extends DBRecord {
   staffId: string;
-  date: string; // YYYY-MM-DD 형식
-  isHoliday: boolean; // true: 휴일, false: 근무일
-  workingHours?: {
-    start: number;
-    end: number;
-  }; // 해당 날짜의 근무시간 (휴일이 아닌 경우)
+  weekStartDate: string; // 해당 주의 월요일 날짜 (YYYY-MM-DD 형식)
+  weekDays: {
+    monday: {
+      workingHours: {
+        start: number;
+        end: number;
+      };
+      breakTimes: Array<{
+        start: number;  // 시간 (예: 12시 = 12)
+        end: number;    // 시간 (예: 13시 = 13)
+        name?: string;  // 휴게시간 이름 (예: "점심시간")
+      }>;
+    };
+    tuesday: {
+      workingHours: {
+        start: number;
+        end: number;
+      };
+      breakTimes: Array<{
+        start: number;
+        end: number;
+        name?: string;
+      }>;
+    };
+    wednesday: {
+      workingHours: {
+        start: number;
+        end: number;
+      };
+      breakTimes: Array<{
+        start: number;
+        end: number;
+        name?: string;
+      }>;
+    };
+    thursday: {
+      workingHours: {
+        start: number;
+        end: number;
+      };
+      breakTimes: Array<{
+        start: number;
+        end: number;
+        name?: string;
+      }>;
+    };
+    friday: {
+      workingHours: {
+        start: number;
+        end: number;
+      };
+      breakTimes: Array<{
+        start: number;
+        end: number;
+        name?: string;
+      }>;
+    };
+    saturday: {
+      workingHours: {
+        start: number;
+        end: number;
+      };
+      breakTimes: Array<{
+        start: number;
+        end: number;
+        name?: string;
+      }>;
+    };
+    sunday: {
+      workingHours: {
+        start: number;
+        end: number;
+      };
+      breakTimes: Array<{
+        start: number;
+        end: number;
+        name?: string;
+      }>;
+    };
+  };
 }
 
 // 새로운 주별 휴일 설정 인터페이스
@@ -562,4 +636,6 @@ export interface ExercisePrescription extends DBRecord {
   // 메타 정보
   isActive: boolean;
   prescriptionDate: Date; // 처방서 작성일
+  version: number; // 버전 번호 (히스토리 관리용)
+  isLatest: boolean; // 최신 버전 여부
 }
