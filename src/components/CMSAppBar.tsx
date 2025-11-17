@@ -594,7 +594,7 @@ const CMSAppBar: React.FC<CMSAppBarProps> = React.memo(({ currentPath, onMenuCli
               <UserName>{adminName}</UserName>
               <span>님</span>
             </UserNameSection>
-            <AppVersion>v1.0.1</AppVersion>
+            <AppVersion>v1.0.2</AppVersion>
           </UserInfo>
           
           <LogoutButton onClick={handleLogout}>
