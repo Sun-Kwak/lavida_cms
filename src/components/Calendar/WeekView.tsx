@@ -428,14 +428,30 @@ const WeekView: React.FC<WeekViewProps> = ({
   };
 
   const handleSlotClick = (dayDate: Date, slot: { hour: number; minute: number }) => {
-    // WeekView에서는 선택된 코치가 하나일 때만 예약 생성
-    if (filteredStaff.length !== 1) {
-      alert('예약을 생성하려면 코치를 하나만 선택해주세요.');
+    // Master인 경우 여러 코치가 선택되어도 팝업을 띄움 (팝업에서 코치 선택)
+    // Coach인 경우 본인만 선택되어야 함
+    let staffId: string | undefined;
+    
+    if (currentUser?.role === 'master') {
+      // Master: 코치가 하나만 선택된 경우 해당 코치 사용, 아니면 팝업에서 선택
+      if (filteredStaff.length === 1) {
+        staffId = filteredStaff[0].id;
+      }
+      // 여러 코치 선택 또는 미선택 시에도 팝업을 띄움 (staffId는 undefined)
+    } else if (currentUser?.role === 'coach') {
+      // Coach: 본인만 선택되어야 함
+      if (filteredStaff.length !== 1 || filteredStaff[0].id !== currentUser.id) {
+        alert('본인의 일정만 관리할 수 있습니다.');
+        return;
+      }
+      staffId = filteredStaff[0].id;
+    } else {
+      // 권한 없음
+      alert('예약 생성 권한이 없습니다.');
       return;
     }
 
-    const staffId = filteredStaff[0].id;
-    const staff = staffList.find(s => s.id === staffId);
+    const staff = staffId ? staffList.find(s => s.id === staffId) : undefined;
 
     // 계약 기간 체크
     if (staff?.contractStartDate && staff?.contractEndDate) {
@@ -464,55 +480,60 @@ const WeekView: React.FC<WeekViewProps> = ({
       }
     }
 
-    // 해당 날짜가 휴일인지 확인 (날짜 레벨에서)
-    const holidayStaffNames = getHolidayStaffNames(dayDate, weeklyHolidaySettings || [], staffList);
-    const isStaffOnHoliday = holidayStaffNames.includes(filteredStaff[0].name);
-    
-    if (isStaffOnHoliday) {
-      // 휴일에 포함된 경우, 코치 권한이 있는지 확인
-      if (currentUser && (currentUser.role === 'master' || currentUser.id === staffId)) {
-        // 마스터이거나 본인 코치인 경우 허용
-        if (window.confirm(`이 날짜는 휴일입니다. 예약을 생성하시겠습니까?`)) {
-          // 예약 생성 진행
-          if (onEventCreate) {
-            const startTime = new Date(dayDate);
-            startTime.setHours(slot.hour, slot.minute, 0, 0);
-            
-            const endTime = new Date(startTime);
-            const duration = programDuration || 30;
-            const actualDuration = duration > 30 ? 60 : duration;
-            endTime.setMinutes(endTime.getMinutes() + actualDuration);
-            
-            onEventCreate(startTime, endTime, staffId);
+    // staffId가 있는 경우에만 휴일/휴게시간/근무시간 체크 수행
+    // (Master가 여러 코치 선택 시 staffId가 undefined이므로 체크 건너뜀)
+    if (staffId) {
+      // 해당 날짜가 휴일인지 확인 (날짜 레벨에서)
+      const staffName = staff?.name || '';
+      const holidayStaffNames = getHolidayStaffNames(dayDate, weeklyHolidaySettings || [], staffList);
+      const isStaffOnHoliday = holidayStaffNames.includes(staffName);
+      
+      if (isStaffOnHoliday) {
+        // 휴일에 포함된 경우, 코치 권한이 있는지 확인
+        if (currentUser && (currentUser.role === 'master' || currentUser.id === staffId)) {
+          // 마스터이거나 본인 코치인 경우 허용
+          if (window.confirm(`이 날짜는 휴일입니다. 예약을 생성하시겠습니까?`)) {
+            // 예약 생성 진행
+            if (onEventCreate) {
+              const startTime = new Date(dayDate);
+              startTime.setHours(slot.hour, slot.minute, 0, 0);
+              
+              const endTime = new Date(startTime);
+              const duration = programDuration || 30;
+              const actualDuration = duration > 30 ? 60 : duration;
+              endTime.setMinutes(endTime.getMinutes() + actualDuration);
+              
+              onEventCreate(startTime, endTime, staffId);
+            }
           }
+        } else {
+          // 일반 사용자는 휴일에 예약 불가
+          alert('휴일에는 예약을 생성할 수 없습니다. 관리자 또는 해당 코치에게 문의하세요.');
         }
-      } else {
-        // 일반 사용자는 휴일에 예약 불가
-        alert('휴일에는 예약을 생성할 수 없습니다. 관리자 또는 해당 코치에게 문의하세요.');
-      }
-      return;
-    }
-
-    // 휴게시간 체크 (마스터나 본인 코치는 예외)
-    const isInBreak = isTimeInBreak(staffId, dayDate, slot.hour, slot.minute);
-    if (isInBreak) {
-      if (currentUser && (currentUser.role === 'master' || currentUser.id === staffId)) {
-        // 마스터이거나 본인 코치인 경우 허용 (확인 없이 바로 진행)
-      } else {
-        alert('휴게시간에는 예약을 생성할 수 없습니다.');
         return;
       }
-    }
 
-    // 근무시간 체크 (마스터나 본인 코치는 예외)
-    const isAvailable = isTimeSlotAvailable(staffId, slot.hour, slot.minute, dayDate);
-    if (!isAvailable) {
-      if (currentUser && (currentUser.role === 'master' || currentUser.id === staffId)) {
-        // 마스터이거나 본인 코치인 경우 허용 (확인 없이 바로 진행)
-      } else {
-        // 일반 사용자는 근무시간 외/휴일/휴게시간에 예약 불가
-        alert('이 시간대는 예약할 수 없습니다.');
-        return;
+      // 휴게시간 체크 (마스터나 본인 코치는 예외)
+      const isInBreak = isTimeInBreak(staffId, dayDate, slot.hour, slot.minute);
+      if (isInBreak) {
+        if (currentUser && (currentUser.role === 'master' || currentUser.id === staffId)) {
+          // 마스터이거나 본인 코치인 경우 허용 (확인 없이 바로 진행)
+        } else {
+          alert('휴게시간에는 예약을 생성할 수 없습니다.');
+          return;
+        }
+      }
+
+      // 근무시간 체크 (마스터나 본인 코치는 예외)
+      const isAvailable = isTimeSlotAvailable(staffId, slot.hour, slot.minute, dayDate);
+      if (!isAvailable) {
+        if (currentUser && (currentUser.role === 'master' || currentUser.id === staffId)) {
+          // 마스터이거나 본인 코치인 경우 허용 (확인 없이 바로 진행)
+        } else {
+          // 일반 사용자는 근무시간 외/휴일/휴게시간에 예약 불가
+          alert('이 시간대는 예약할 수 없습니다.');
+          return;
+        }
       }
     }
 

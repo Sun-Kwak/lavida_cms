@@ -342,6 +342,7 @@ const ProductManagement: React.FC = () => {
   const [newSessions, setNewSessions] = useState<number | ''>('');
   const [newMonths, setNewMonths] = useState<number | ''>(''); // 기간제용 개월수
   const [newDuration, setNewDuration] = useState<number>(30); // 기본 30분
+  const [newValidityMonths, setNewValidityMonths] = useState<number | ''>(''); // 횟수제용 유효기간
   const [newPrice, setNewPrice] = useState<number | ''>('');
   const [newDescription, setNewDescription] = useState('');
   
@@ -352,6 +353,7 @@ const ProductManagement: React.FC = () => {
   const [editSessions, setEditSessions] = useState<number | ''>('');
   const [editMonths, setEditMonths] = useState<number | ''>(''); // 기간제용 개월수
   const [editDuration, setEditDuration] = useState<number>(30); // 기본 30분
+  const [editValidityMonths, setEditValidityMonths] = useState<number | ''>(''); // 횟수제용 유효기간
   const [editPrice, setEditPrice] = useState<number | ''>('');
   const [editDescription, setEditDescription] = useState('');
   
@@ -564,6 +566,7 @@ const ProductManagement: React.FC = () => {
         sessions: selectedProgram.type === '횟수제' ? Number(newSessions) : undefined,
         months: selectedProgram.type === '기간제' ? Number(newMonths) : undefined,
         duration: selectedProgram.type === '횟수제' ? newDuration : undefined,
+        validityMonths: selectedProgram.type === '횟수제' && newValidityMonths ? Number(newValidityMonths) : undefined,
         price: newPrice ? Number(newPrice) : undefined,
         description: newDescription.trim() || undefined,
         isActive: true,
@@ -584,6 +587,7 @@ const ProductManagement: React.FC = () => {
       setNewSessions('');
       setNewMonths('');
       setNewDuration(30);
+      setNewValidityMonths('');
       setNewPrice('');
       setNewDescription('');
       setIsAdding(false);
@@ -641,6 +645,7 @@ const ProductManagement: React.FC = () => {
     setEditSessions(product.sessions || '');
     setEditMonths(product.months || '');
     setEditDuration(product.duration || 30);
+    setEditValidityMonths(product.validityMonths || '');
     setEditPrice(product.price || '');
     setEditDescription(product.description || '');
     setIsAdding(false);
@@ -674,6 +679,7 @@ const ProductManagement: React.FC = () => {
         sessions: selectedProgram.type === '횟수제' ? Number(editSessions) : undefined,
         months: selectedProgram.type === '기간제' ? Number(editMonths) : undefined,
         duration: selectedProgram.type === '횟수제' ? editDuration : undefined,
+        validityMonths: selectedProgram.type === '횟수제' && editValidityMonths ? Number(editValidityMonths) : undefined,
         price: editPrice ? Number(editPrice) : undefined,
         description: editDescription.trim() || undefined,
       });
@@ -704,6 +710,7 @@ const ProductManagement: React.FC = () => {
     setEditSessions('');
     setEditMonths('');
     setEditDuration(30);
+    setEditValidityMonths('');
     setEditPrice('');
     setEditDescription('');
     setError(null);
@@ -717,6 +724,7 @@ const ProductManagement: React.FC = () => {
     setNewSessions('');
     setNewMonths('');
     setNewDuration(30);
+    setNewValidityMonths('');
     setNewPrice('');
     setNewDescription('');
     setIsAdding(false);
@@ -727,6 +735,7 @@ const ProductManagement: React.FC = () => {
     setEditSessions('');
     setEditMonths('');
     setEditDuration(30);
+    setEditValidityMonths('');
     setEditPrice('');
     setEditDescription('');
     setError(null);
@@ -831,6 +840,16 @@ const ProductManagement: React.FC = () => {
                   required={selectedProgram?.type === '횟수제'}
                 />
               </FieldColumn>
+              <FieldColumn>
+                <Label>유효기간 (개월)</Label>
+                <NumberTextField
+                  value={newValidityMonths}
+                  onChange={(value) => setNewValidityMonths(value || '')}
+                  placeholder={selectedProgram?.type === '횟수제' ? "유효기간을 입력하세요" : "기간제는 유효기간 불필요"}
+                  disabled={saving || !selectedProgram || selectedProgram.type === '기간제'}
+                  allowEmpty
+                />
+              </FieldColumn>
             </FormRow>
             
             <FormRow>
@@ -892,6 +911,7 @@ const ProductManagement: React.FC = () => {
             setEditSessions('');
             setEditMonths('');
             setEditDuration(30);
+            setEditValidityMonths('');
             setEditPrice('');
             setEditDescription('');
             setErrors({});
@@ -1007,6 +1027,16 @@ const ProductManagement: React.FC = () => {
                           required={editSelectedProgram?.type === '횟수제'}
                         />
                       </FieldColumn>
+                      <FieldColumn>
+                        <Label>유효기간 (개월)</Label>
+                        <NumberTextField
+                          value={editValidityMonths}
+                          onChange={(value) => setEditValidityMonths(value || '')}
+                          placeholder={editSelectedProgram?.type === '횟수제' ? "유효기간을 입력하세요" : "기간제는 유효기간 불필요"}
+                          disabled={saving || !editSelectedProgram || editSelectedProgram.type === '기간제'}
+                          allowEmpty
+                        />
+                      </FieldColumn>
                     </div>
                     
                     <div style={{ display: 'flex', gap: '12px' }}>
@@ -1107,6 +1137,12 @@ const ProductManagement: React.FC = () => {
                           <DetailItem>
                             <DetailLabel>소요시간:</DetailLabel>
                             <DetailValue>{product.duration}분</DetailValue>
+                          </DetailItem>
+                        )}
+                        {product.validityMonths && (
+                          <DetailItem>
+                            <DetailLabel>유효기간:</DetailLabel>
+                            <DetailValue>{product.validityMonths}개월</DetailValue>
                           </DetailItem>
                         )}
                         {product.price && (

@@ -249,6 +249,55 @@ const WarningText = styled.div`
   text-align: left;
 `;
 
+const CoachSection = styled.div`
+  margin-bottom: 16px;
+  padding-bottom: 16px;
+  border-bottom: 1px solid ${AppColors.borderLight};
+`;
+
+const CoachChipContainer = styled.div`
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+`;
+
+const CoachChip = styled.div<{ selected?: boolean; color?: string }>`
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 8px 12px;
+  border-radius: 20px;
+  cursor: pointer;
+  transition: all 0.2s;
+  font-size: ${AppTextStyles.body2.fontSize};
+  font-weight: ${props => props.selected ? '600' : '500'};
+  border: 2px solid ${props => props.selected ? (props.color || AppColors.primary) : AppColors.borderLight};
+  background: ${props => props.selected ? (props.color || AppColors.primary) + '15' : AppColors.surface};
+  color: ${props => props.selected ? (props.color || AppColors.primary) : AppColors.onSurface};
+
+  &:hover {
+    border-color: ${props => props.color || AppColors.primary};
+    background: ${props => props.selected 
+      ? (props.color || AppColors.primary) + '25' 
+      : (props.color || AppColors.primary) + '08'
+    };
+    transform: translateY(-1px);
+    box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+  }
+
+  &:active {
+    transform: translateY(0);
+  }
+`;
+
+const CoachColorDot = styled.div<{ color?: string }>`
+  width: 10px;
+  height: 10px;
+  border-radius: 50%;
+  background-color: ${props => props.color || AppColors.primary};
+  flex-shrink: 0;
+`;
+
 // 인터페이스 정의
 interface ReservationModalProps {
   isOpen: boolean;
@@ -269,6 +318,7 @@ interface ReservationModalProps {
   };
   existingEvents: ScheduleEvent[];
   onReservationCreate: (reservation: ScheduleEvent) => void;
+  staffList?: { id: string; name: string; color?: string }[];
 }
 
 interface MemberWithCourse extends Member {
@@ -295,7 +345,8 @@ const ReservationModal: React.FC<ReservationModalProps> = ({
   branchName,
   currentUser,
   existingEvents,
-  onReservationCreate
+  onReservationCreate,
+  staffList = []
 }) => {
   const [searchQuery, setSearchQuery] = useState('');
   const [availableMembers, setAvailableMembers] = useState<MemberWithCourse[]>([]);
@@ -305,6 +356,10 @@ const ReservationModal: React.FC<ReservationModalProps> = ({
   const [loading, setLoading] = useState(false);
   const [timeConflict, setTimeConflict] = useState<string>('');
   const [savingMemo, setSavingMemo] = useState(false);
+  
+  // Master인 경우 코치 선택을 위한 state
+  const [selectedStaffId, setSelectedStaffId] = useState<string>(staffId);
+  const [selectedStaffName, setSelectedStaffName] = useState<string>(staffName);
 
   // 선택된 상품의 소요시간에 따른 종료시간 계산
   const calculateEndTime = useCallback((enrollment: CourseEnrollmentWithDuration | null): Date => {
@@ -352,9 +407,13 @@ const ReservationModal: React.FC<ReservationModalProps> = ({
     // 상품이 선택되지 않은 경우 충돌 검사 안함
     if (!selectedEnrollment) return '';
     
+    // 현재 사용할 staffId 결정 (master인 경우 선택된 코치, 아니면 기본 staffId)
+    const currentStaffId = currentUser?.role === 'master' ? selectedStaffId : staffId;
+    if (!currentStaffId) return ''; // 코치가 선택되지 않은 경우
+    
     const conflictingEvents = existingEvents.filter(event => {
       // 같은 스태프의 이벤트만 체크
-      if (event.staffId !== staffId) return false;
+      if (event.staffId !== currentStaffId) return false;
       
       // 시간 겹침 체크 - actualEndTime 사용
       const eventStart = new Date(event.startTime);
@@ -375,7 +434,7 @@ const ReservationModal: React.FC<ReservationModalProps> = ({
     }
 
     return '';
-  }, [existingEvents, staffId, startTime, actualEndTime, selectedEnrollment]);
+  }, [existingEvents, staffId, startTime, actualEndTime, selectedEnrollment, currentUser, selectedStaffId]);
 
   // 예약 가능한 회원 로드
   const loadAvailableMembers = useCallback(async () => {
@@ -388,11 +447,16 @@ const ReservationModal: React.FC<ReservationModalProps> = ({
     try {
       // 해당 지점의 활성 회원 조회
       const allMembers = await dbManager.getAllMembers();
-      const branchMembers = allMembers.filter(member => 
+      let branchMembers = allMembers.filter(member => 
         member.branchId === branchId && 
         member.isActive &&
         member.name.toLowerCase().includes(searchQuery.toLowerCase())
       );
+      
+      // Master인 경우 선택된 코치의 회원들만 필터링
+      if (currentUser?.role === 'master' && selectedStaffId) {
+        branchMembers = branchMembers.filter(member => member.coach === selectedStaffId);
+      }
 
       // 활성 횟수제 수강권을 가진 회원들만 필터링
       const allEnrollments = await dbManager.getAllCourseEnrollments();
@@ -437,7 +501,7 @@ const ReservationModal: React.FC<ReservationModalProps> = ({
     } finally {
       setLoading(false);
     }
-  }, [isOpen, branchId, searchQuery]);
+  }, [isOpen, branchId, searchQuery, currentUser, selectedStaffId]);
 
   // 메모만 저장하는 함수
   const handleSaveMemo = async () => {
@@ -469,6 +533,12 @@ const ReservationModal: React.FC<ReservationModalProps> = ({
   const handleCreateReservation = async () => {
     if (!selectedMember || !selectedEnrollment || !hasPermission) return;
 
+    // Master인 경우 코치가 선택되어 있는지 확인
+    if (currentUser?.role === 'master' && !selectedStaffId) {
+      toast.error('코치를 선택해주세요.');
+      return;
+    }
+
     // 시간 겹침 체크
     if (timeConflict) {
       toast.error('시간이 겹치는 다른 일정이 있어 예약할 수 없습니다.');
@@ -482,8 +552,8 @@ const ReservationModal: React.FC<ReservationModalProps> = ({
         title: `${selectedMember.name} (${selectedEnrollment.productName})`,
         startTime,
         endTime: actualEndTime, // 계산된 종료시간 사용
-        staffId,
-        staffName,
+        staffId: selectedStaffId || staffId,
+        staffName: selectedStaffName || staffName,
         programId: selectedEnrollment.programId || programId,
         programName: selectedEnrollment.programName || programName,
         memberId: selectedMember.id,
@@ -618,6 +688,33 @@ const ReservationModal: React.FC<ReservationModalProps> = ({
       body={
         <ModalContainer>
           <LeftPanel>
+            {/* Master인 경우 코치 선택 UI */}
+            {currentUser?.role === 'master' && staffList && staffList.length > 0 && (
+              <CoachSection>
+                <PanelTitle>담당 코치 선택</PanelTitle>
+                <CoachChipContainer>
+                  {staffList.map((coach) => (
+                    <CoachChip
+                      key={coach.id}
+                      selected={selectedStaffId === coach.id}
+                      color={coach.color}
+                      onClick={() => {
+                        setSelectedStaffId(coach.id);
+                        setSelectedStaffName(coach.name);
+                        // 코치 변경 시 선택된 회원 초기화
+                        setSelectedMember(null);
+                        setSelectedEnrollment(null);
+                        setMemo('');
+                      }}
+                    >
+                      <CoachColorDot color={coach.color} />
+                      {coach.name}
+                    </CoachChip>
+                  ))}
+                </CoachChipContainer>
+              </CoachSection>
+            )}
+
             {/* 회원 검색 */}
             <SearchSection>
               <PanelTitle>수업 참여 회원 선택</PanelTitle>
@@ -685,7 +782,7 @@ const ReservationModal: React.FC<ReservationModalProps> = ({
                         value: enrollment.id,
                         label: `${enrollment.productName} (잔여 ${availableSessions}회 • ${durationText})`
                       };
-                    }) || []}
+                    }).sort((a, b) => a.label.localeCompare(b.label, 'ko-KR')) || []}
                     placeholder="상품을 선택하세요"
                     inModal={true}
                   />

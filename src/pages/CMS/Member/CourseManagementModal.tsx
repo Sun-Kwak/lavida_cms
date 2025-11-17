@@ -657,6 +657,24 @@ const CourseManagementModal: React.FC<CourseManagementModalProps> = ({
           <InfoValue>{courseEnrollment.programName} ({courseEnrollment.programType})</InfoValue>
         </InfoItem>
         <InfoItem>
+          <InfoLabel>시작일</InfoLabel>
+          <InfoValue>
+            {courseEnrollment.startDate ? 
+              new Date(courseEnrollment.startDate).toLocaleDateString() : 
+              '미설정'
+            }
+          </InfoValue>
+        </InfoItem>
+        <InfoItem>
+          <InfoLabel>종료일</InfoLabel>
+          <InfoValue>
+            {courseEnrollment.endDate ? 
+              new Date(courseEnrollment.endDate).toLocaleDateString() : 
+              '미설정'
+            }
+          </InfoValue>
+        </InfoItem>
+        <InfoItem>
           <InfoLabel>진행상황</InfoLabel>
           <InfoValue>
             {courseEnrollment.programType === '횟수제' && courseEnrollment.sessionCount ? 

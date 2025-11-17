@@ -85,6 +85,7 @@ const ModalContent = styled.div`
   border-radius: 12px;
   border: 1px solid ${AppColors.borderLight};
   min-width: 300px;
+  padding: 24px;
 `;
 
 const ModalTitle = styled.h3`
@@ -298,6 +299,16 @@ const RightPanel = styled.div`
   display: flex;
   flex-direction: column;
   text-align: left;
+  overflow-y: auto;
+  max-height: 600px;
+  
+  /* 스크롤바 숨기기 */
+  scrollbar-width: none; /* Firefox */
+  -ms-overflow-style: none; /* Internet Explorer 10+ */
+  
+  &::-webkit-scrollbar {
+    display: none; /* Chrome, Safari, Opera */
+  }
 `;
 
 const PanelTitle = styled.h3`
@@ -333,6 +344,14 @@ const SearchResults = styled.div`
   width: 100%;
   box-sizing: border-box;
   min-height: 0;
+  
+  /* 스크롤바 숨기기 */
+  scrollbar-width: none; /* Firefox */
+  -ms-overflow-style: none; /* Internet Explorer 10+ */
+  
+  &::-webkit-scrollbar {
+    display: none; /* Chrome, Safari, Opera */
+  }
 `;
 
 const MemberItem = styled.div<{ $selected: boolean }>`
@@ -469,6 +488,13 @@ const FieldColumn = styled.div`
   overflow: hidden;
 `;
 
+const InfoText = styled.div`
+  font-size: ${AppTextStyles.body3.fontSize};
+  color: ${AppColors.onInput1};
+  margin-top: 8px;
+  line-height: 1.4;
+`;
+
 // 사용자 정보 타입
 interface UserInfo {
   id: string;
@@ -506,8 +532,11 @@ const LockerManagement: React.FC = () => {
   const [searchQuery, setSearchQuery] = useState('');
   const [searchResults, setSearchResults] = useState<Member[]>([]);
   const [selectedMember, setSelectedMember] = useState<Member | null>(null);
+  const [memberPointBalance, setMemberPointBalance] = useState<number>(0);
+  const [pointPayment, setPointPayment] = useState<number>(0);
   const [selectedMonths, setSelectedMonths] = useState(1);
   const [paymentMethod, setPaymentMethod] = useState('card');
+  const [receivedAmount, setReceivedAmount] = useState<number>(0);
   const [startDate, setStartDate] = useState(new Date().toISOString().split('T')[0]);
   const [endDate, setEndDate] = useState(() => {
     const date = new Date();
@@ -821,6 +850,9 @@ const LockerManagement: React.FC = () => {
       setSelectedLockerForAssignment(locker);
       setIsAssignmentModalOpen(true);
       setSelectedMember(null);
+      setMemberPointBalance(0);
+      setPointPayment(0);
+      setReceivedAmount(0);
       setSearchQuery('');
       setSearchResults([]);
       setSelectedMonths(1);
@@ -849,7 +881,9 @@ const LockerManagement: React.FC = () => {
     try {
       const members = await dbManager.getAllMembers();
       const filtered = members.filter(member => 
-        member.isActive && (
+        member.isActive &&
+        member.branchId === selectedBranch && // 선택된 지점의 회원만
+        (
           member.name.toLowerCase().includes(query.toLowerCase()) ||
           member.phone?.includes(query) ||
           member.email?.toLowerCase().includes(query.toLowerCase())
@@ -863,10 +897,25 @@ const LockerManagement: React.FC = () => {
   };
 
   // 회원 선택 함수
-  const handleMemberSelect = (member: Member) => {
+  const handleMemberSelect = async (member: Member) => {
     setSelectedMember(member);
     setSearchQuery(member.name);
     setSearchResults([]);
+    
+    // 포인트 잔액 로드
+    try {
+      const pointBalance = await dbManager.getMemberPointBalance(member.id);
+      setMemberPointBalance(pointBalance);
+    } catch (error) {
+      console.error('포인트 잔액 조회 실패:', error);
+      setMemberPointBalance(0);
+    }
+    
+    // 포인트 및 받은금액 초기화
+    setPointPayment(0);
+    const monthlyPrice = getCurrentBranchLockerPrice();
+    const totalAmount = monthlyPrice * selectedMonths;
+    setReceivedAmount(totalAmount);
   };
 
   // 개월 수 변경 시 종료일 자동 계산
@@ -876,6 +925,11 @@ const LockerManagement: React.FC = () => {
     const end = new Date(start);
     end.setMonth(end.getMonth() + months);
     setEndDate(end.toISOString().split('T')[0]);
+    
+    // 받은 금액 재계산
+    const monthlyPrice = getCurrentBranchLockerPrice();
+    const totalAmount = monthlyPrice * months;
+    setReceivedAmount(Math.max(0, totalAmount - pointPayment));
   };
 
   // 시작일 변경 시 종료일 자동 계산
@@ -887,6 +941,25 @@ const LockerManagement: React.FC = () => {
     setEndDate(end.toISOString().split('T')[0]);
   };
 
+  // 포인트 결제 금액 변경
+  const handlePointPaymentChange = (value: number) => {
+    const totalAmount = getTotalAmount();
+    const maxPoint = Math.min(memberPointBalance, totalAmount);
+    const newPointPayment = Math.max(0, Math.min(value, maxPoint));
+    
+    setPointPayment(newPointPayment);
+    setReceivedAmount(Math.max(0, totalAmount - newPointPayment));
+  };
+
+  // 전체 포인트 사용
+  const handleUseAllPoints = () => {
+    const totalAmount = getTotalAmount();
+    const maxUsablePoint = Math.min(memberPointBalance, totalAmount);
+    
+    setPointPayment(maxUsablePoint);
+    setReceivedAmount(Math.max(0, totalAmount - maxUsablePoint));
+  };
+
   // 라커 배정 처리 함수
   const handleAssignLocker = async () => {
     if (!selectedMember || !selectedLockerForAssignment) {
@@ -894,38 +967,64 @@ const LockerManagement: React.FC = () => {
       return;
     }
 
+    // 포인트 결제가 잔액을 초과하는지 확인
+    if (pointPayment > memberPointBalance) {
+      toast.error(`포인트 잔액이 부족합니다. (잔액: ${memberPointBalance.toLocaleString()}원)`);
+      return;
+    }
+
     try {
       const monthlyPrice = getCurrentBranchLockerPrice();
       const totalAmount = monthlyPrice * selectedMonths;
+      const cashPayment = receivedAmount || 0;
+      const totalReceived = pointPayment + cashPayment;
       
-      // 결제 정보를 결제 이력에 추가
-      const paymentData = {
-        memberId: selectedMember.id,
-        memberName: selectedMember.name,
-        branchId: selectedLockerForAssignment.branchId,
-        branchName: selectedLockerForAssignment.branchName,
-        coach: selectedMember.coach,
-        coachName: selectedMember.coachName,
+      // 초과 금액 확인 및 보너스 포인트 계산
+      if (totalReceived > totalAmount) {
+        const excessAmount = totalReceived - totalAmount;
+        let confirmMessage = `총 받은 금액이 결제 금액보다 ${excessAmount.toLocaleString()}원 많습니다.\n초과 금액은 포인트로 적립됩니다.`;
+        
+        if (excessAmount >= 1000000) {
+          const millionUnits = Math.floor(excessAmount / 1000000);
+          const bonusPoints = millionUnits * 100000;
+          confirmMessage += `\n\n🎁 보너스 혜택: 추가 ${bonusPoints.toLocaleString()}원 더 적립됩니다!`;
+          confirmMessage += `\n(${millionUnits}개 100만원 단위 × 10만원 보너스)`;
+        }
+        
+        confirmMessage += `\n\n계속 진행하시겠습니까?`;
+        
+        const confirmed = window.confirm(confirmMessage);
+        if (!confirmed) return;
+      }
+      
+      // 통합 주문 처리를 통한 라커 배정
+      const orderId = await dbManager.processOrderWithPayments({
+        memberInfo: {
+          id: selectedMember.id,
+          name: selectedMember.name,
+          branchId: selectedLockerForAssignment.branchId,
+          branchName: selectedLockerForAssignment.branchName,
+          coach: selectedMember.coach,
+          coachName: selectedMember.coachName
+        },
         products: [{
           id: `locker_${selectedLockerForAssignment.id}`,
           name: `라커 ${selectedLockerForAssignment.number}번 (${selectedMonths}개월)`,
           price: totalAmount,
-          quantity: 1,
-          description: `라커 ${selectedLockerForAssignment.number}번 ${selectedMonths}개월 이용 (${startDate} ~ ${endDate})`
+          programId: 'locker',
+          programName: '라커',
+          programType: 'locker'
         }],
-        totalAmount: totalAmount,
-        paidAmount: totalAmount,
-        unpaidAmount: 0,
-        paymentStatus: 'completed' as const,
-        paymentMethod: paymentMethod,
-        paymentDate: new Date(),
-        paymentType: 'asset' as const,
-        memo: `라커 ${selectedLockerForAssignment.number}번 배정 (${startDate} ~ ${endDate})`
-      };
+        payments: {
+          cash: paymentMethod === 'cash' ? cashPayment : 0,
+          card: paymentMethod === 'card' ? cashPayment : 0,
+          transfer: paymentMethod === 'transfer' ? cashPayment : 0,
+          points: pointPayment
+        },
+        orderType: 'asset_assignment' // 라커 배정용 타입
+      });
 
-      // 결제 정보 저장
-      const paymentId = await dbManager.addPayment(paymentData);
-      console.log('결제 정보 저장 완료:', paymentId);
+      console.log('라커 배정 주문 처리 완료:', orderId);
 
       // 라커 배정 (사용자 정의 시작일/종료일 사용)
       await dbManager.assignLockerToUserWithDates(
@@ -935,7 +1034,7 @@ const LockerManagement: React.FC = () => {
         selectedMonths,
         startDate,
         endDate,
-        paymentId
+        orderId
       );
 
       // 배정 이력 추가
@@ -959,6 +1058,9 @@ const LockerManagement: React.FC = () => {
       setIsAssignmentModalOpen(false);
       setSelectedLockerForAssignment(null);
       setSelectedMember(null);
+      setMemberPointBalance(0);
+      setPointPayment(0);
+      setReceivedAmount(0);
       
       toast.success(`라커 ${selectedLockerForAssignment.number}번이 ${selectedMember.name}님에게 배정되었습니다.`);
     } catch (error) {
@@ -1001,7 +1103,9 @@ const LockerManagement: React.FC = () => {
     try {
       const members = await dbManager.getAllMembers();
       const filtered = members.filter(member => 
-        member.isActive && (
+        member.isActive &&
+        member.branchId === selectedBranch && // 선택된 지점의 회원만
+        (
           member.name.toLowerCase().includes(query.toLowerCase()) ||
           member.phone?.includes(query) ||
           member.email?.toLowerCase().includes(query.toLowerCase())
@@ -1335,6 +1439,9 @@ const LockerManagement: React.FC = () => {
             setIsAssignmentModalOpen(false);
             setSelectedLockerForAssignment(null);
             setSelectedMember(null);
+            setMemberPointBalance(0);
+            setPointPayment(0);
+            setReceivedAmount(0);
             setSearchQuery('');
             setSearchResults([]);
           }}
@@ -1481,6 +1588,110 @@ const LockerManagement: React.FC = () => {
                       </div>
                     </AmountDisplay>
 
+                    {/* 포인트 결제 섹션 */}
+                    <div style={{
+                      background: `${AppColors.primary}10`,
+                      border: `1px solid ${AppColors.primary}30`,
+                      borderRadius: '8px',
+                      padding: '16px',
+                      margin: '16px 0'
+                    }}>
+                      <FormLabel>포인트 결제</FormLabel>
+                      <InfoText>
+                        사용 가능한 포인트: {memberPointBalance.toLocaleString()}원
+                      </InfoText>
+                      <div style={{ display: 'flex', alignItems: 'center', gap: '12px', marginTop: '8px' }}>
+                        <NumberTextField
+                          value={pointPayment || 0}
+                          onChange={(value) => handlePointPaymentChange(value || 0)}
+                          placeholder="포인트 사용 금액"
+                          width="100%"
+                          allowEmpty={true}
+                        />
+                        <button
+                          onClick={handleUseAllPoints}
+                          style={{
+                            background: AppColors.primary,
+                            color: AppColors.onPrimary,
+                            border: 'none',
+                            borderRadius: '4px',
+                            padding: '6px 12px',
+                            fontSize: AppTextStyles.body3.fontSize,
+                            cursor: 'pointer',
+                            whiteSpace: 'nowrap'
+                          }}
+                        >
+                          전액 사용
+                        </button>
+                      </div>
+                      {pointPayment > memberPointBalance && (
+                        <InfoText style={{ color: '#d32f2f' }}>
+                          포인트 잔액을 초과할 수 없습니다.
+                        </InfoText>
+                      )}
+                    </div>
+
+                    {/* 받은 금액 */}
+                    <FormGroup>
+                      <FormLabel>받은금액 (현금/카드)</FormLabel>
+                      <div style={{ display: 'flex', gap: '8px', alignItems: 'center' }}>
+                        <NumberTextField
+                          value={receivedAmount !== undefined ? receivedAmount : Math.max(0, getTotalAmount() - pointPayment)}
+                          onChange={(value) => setReceivedAmount(value || 0)}
+                          placeholder="받은 금액을 입력하세요"
+                          width="100%"
+                          allowEmpty={true}
+                        />
+                        <button
+                          type="button"
+                          onClick={() => {
+                            const cashAmount = Math.max(0, getTotalAmount() - pointPayment);
+                            setReceivedAmount(cashAmount);
+                          }}
+                          style={{
+                            minHeight: '48px',
+                            padding: '14px 16px',
+                            border: '1px solid #ddd',
+                            borderRadius: '12px',
+                            backgroundColor: '#fff',
+                            cursor: 'pointer',
+                            fontSize: '12px',
+                            whiteSpace: 'nowrap',
+                            transition: 'all 0.2s ease'
+                          }}
+                          onMouseEnter={(e) => {
+                            e.currentTarget.style.borderColor = '#37bbd6';
+                            e.currentTarget.style.boxShadow = '0 2px 8px rgba(55, 187, 214, 0.1)';
+                          }}
+                          onMouseLeave={(e) => {
+                            e.currentTarget.style.borderColor = '#ddd';
+                            e.currentTarget.style.boxShadow = 'none';
+                          }}
+                        >
+                          필요 금액으로 설정
+                        </button>
+                      </div>
+                      {receivedAmount !== getTotalAmount() - pointPayment && (
+                        <InfoText>
+                          {receivedAmount > getTotalAmount() - pointPayment
+                            ? (() => {
+                                const excessAmount = receivedAmount - (getTotalAmount() - pointPayment);
+                                let message = `초과금액: ${excessAmount.toLocaleString()}원 (포인트로 적립 예정)`;
+                                
+                                if (excessAmount >= 1000000) {
+                                  const millionUnits = Math.floor(excessAmount / 1000000);
+                                  const bonusPoints = millionUnits * 100000;
+                                  message += ` + 보너스 ${bonusPoints.toLocaleString()}원`;
+                                }
+                                
+                                return message;
+                              })()
+                            : `부족금액: ${((getTotalAmount() - pointPayment) - receivedAmount).toLocaleString()}원 (미수금으로 처리 예정)`
+                          }
+                        </InfoText>
+                      )}
+                    </FormGroup>
+
                     <div style={{ fontSize: AppTextStyles.body3.fontSize, color: AppColors.onInput1, textAlign: 'left' }}>
                       <div>시작일: {new Date(startDate).toLocaleDateString('ko-KR')}</div>
                       <div>종료일: {new Date(endDate).toLocaleDateString('ko-KR')}</div>
@@ -1499,6 +1710,9 @@ const LockerManagement: React.FC = () => {
                 setIsAssignmentModalOpen(false);
                 setSelectedLockerForAssignment(null);
                 setSelectedMember(null);
+                setMemberPointBalance(0);
+                setPointPayment(0);
+                setReceivedAmount(0);
                 setSearchQuery('');
                 setSearchResults([]);
                 setStartDate(new Date().toISOString().split('T')[0]);

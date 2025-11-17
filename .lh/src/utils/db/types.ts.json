@@ -3,7 +3,7 @@
     "activeCommit": 0,
     "commits": [
         {
-            "activePatchIndex": 21,
+            "activePatchIndex": 23,
             "patches": [
                 {
                     "date": 1761368450126,
@@ -92,6 +92,14 @@
                 {
                     "date": 1762427972832,
                     "content": "Index: \n===================================================================\n--- \n+++ \n@@ -635,5 +635,7 @@\n   \n   // 메타 정보\n   isActive: boolean;\n   prescriptionDate: Date; // 처방서 작성일\n+  version: number; // 버전 번호 (히스토리 관리용)\n+  isLatest: boolean; // 최신 버전 여부\n }\n\\ No newline at end of file\n"
+                },
+                {
+                    "date": 1763376532017,
+                    "content": "Index: \n===================================================================\n--- \n+++ \n@@ -585,9 +585,9 @@\n     card: number;\n     transfer: number;\n     points: number;\n   };\n-  orderType: 'registration' | 'course_enrollment';\n+  orderType: 'registration' | 'course_enrollment' | 'asset_assignment';\n }\n \n // 운동처방서 관련 타입들\n export interface BodyImagePoint {\n"
+                },
+                {
+                    "date": 1763377239202,
+                    "content": "Index: \n===================================================================\n--- \n+++ \n@@ -83,8 +83,9 @@\n   programType: string; // 프로그램 종류 저장 (조회 성능 향상)\n   sessions?: number; // 횟수 (횟수제인 경우에만 필요)\n   months?: number; // 개월수 (기간제인 경우에만 필요)\n   duration?: number; // 소요시간 (분 단위, 횟수제인 경우에만 필요)\n+  validityMonths?: number; // 유효기간 개월수 (횟수제인 경우에만 필요)\n   price?: number; // 가격\n   description?: string; // 상품소개\n   isActive: boolean;\n }\n"
                 }
             ],
             "date": 1761368450126,

@@ -3,7 +3,7 @@
     "activeCommit": 0,
     "commits": [
         {
-            "activePatchIndex": 4,
+            "activePatchIndex": 5,
             "patches": [
                 {
                     "date": 1762070993750,
@@ -24,6 +24,10 @@
                 {
                     "date": 1762342594970,
                     "content": "Index: \n===================================================================\n--- \n+++ \n@@ -967,8 +967,9 @@\n       isOpen={isOpen}\n       onClose={handleClose}\n       width=\"min(95vw, 800px)\"\n       header=\"수강권 관리\"\n+      disableOutsideClick={true}\n       body={\n         <ModalContent>\n           {/* 기본 정보 (항상 표시) */}\n           {renderBasicInfo()}\n"
+                },
+                {
+                    "date": 1763377560886,
+                    "content": "Index: \n===================================================================\n--- \n+++ \n@@ -656,8 +656,26 @@\n           <InfoLabel>프로그램</InfoLabel>\n           <InfoValue>{courseEnrollment.programName} ({courseEnrollment.programType})</InfoValue>\n         </InfoItem>\n         <InfoItem>\n+          <InfoLabel>시작일</InfoLabel>\n+          <InfoValue>\n+            {courseEnrollment.startDate ? \n+              new Date(courseEnrollment.startDate).toLocaleDateString() : \n+              '미설정'\n+            }\n+          </InfoValue>\n+        </InfoItem>\n+        <InfoItem>\n+          <InfoLabel>종료일</InfoLabel>\n+          <InfoValue>\n+            {courseEnrollment.endDate ? \n+              new Date(courseEnrollment.endDate).toLocaleDateString() : \n+              '미설정'\n+            }\n+          </InfoValue>\n+        </InfoItem>\n+        <InfoItem>\n           <InfoLabel>진행상황</InfoLabel>\n           <InfoValue>\n             {courseEnrollment.programType === '횟수제' && courseEnrollment.sessionCount ? \n               `${courseEnrollment.completedSessions || 0}/${courseEnrollment.sessionCount}회 완료` :\n"
                 }
             ],
             "date": 1762070993750,

@@ -254,6 +254,19 @@ const CoursePaymentPanel: React.FC<CoursePaymentPanelProps> = ({
           convertedProduct.price = product.price || 0;
           // 적용금액도 초기에는 상품 가격과 동일
           convertedProduct.appliedPrice = convertedProduct.price;
+          
+          // 유효기간 설정 (상품에 등록된 validityMonths 사용)
+          if (product.validityMonths) {
+            const tomorrow = new Date();
+            tomorrow.setDate(tomorrow.getDate() + 1);
+            
+            const endDate = new Date(tomorrow);
+            endDate.setMonth(endDate.getMonth() + product.validityMonths);
+            
+            convertedProduct.startDate = tomorrow;
+            convertedProduct.endDate = endDate;
+            convertedProduct.months = product.validityMonths;
+          }
         }
 
         handleProductAdd(convertedProduct);

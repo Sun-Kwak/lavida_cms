@@ -428,14 +428,9 @@ const StaffEditPopup: React.FC<StaffEditPopupProps> = ({
     if (!formData.contractStartDate) {
       newErrors.contractStartDate = '계약 시작일을 선택해주세요.';
     }
-
-    // 코치일 경우 담당프로그램 필수
-    if (formData.role === '코치' && !formData.program) {
-      newErrors.program = '코치는 담당프로그램 선택이 필수입니다.';
-    }
     
     // 횟수제 프로그램 선택 시 근무시간대 필수
-    if (formData.role === '코치' && formData.program) {
+    if (formData.program) {
       const selectedProgram = programs.find(program => program.name === formData.program);
       if (selectedProgram && selectedProgram.type === '횟수제' && !formData.workShift) {
         newErrors.workShift = '횟수제 프로그램은 근무시간대 선택이 필수입니다.';
@@ -478,17 +473,8 @@ const StaffEditPopup: React.FC<StaffEditPopupProps> = ({
       }
     }
 
-    // 직책이 변경되고 코치가 아닌 경우 담당프로그램과 근무시간대 초기화
-    if (field === 'role' && typeof value === 'string' && value !== '코치') {
-      setFormData(prev => ({
-        ...prev,
-        role: value as string,
-        program: '',
-        workShift: ''
-      }));
-    } 
     // 담당프로그램이 변경된 경우 근무시간대 처리
-    else if (field === 'program' && typeof value === 'string') {
+    if (field === 'program' && typeof value === 'string') {
       // 선택된 프로그램의 타입을 찾아서 횟수제인지 확인
       const selectedProgram = programs.find(program => program.name === value);
       // 횟수제 프로그램이 아닌 경우 근무시간대 초기화
@@ -916,9 +902,9 @@ const StaffEditPopup: React.FC<StaffEditPopupProps> = ({
               value={formData.program || ''}
               onChange={(value: string) => handleInputChange('program', value)}
               options={getProgramOptions()}
-              placeholder={formData.role === '코치' ? "담당프로그램을 선택하세요" : "코치만 선택 가능"}
+              placeholder="담당프로그램을 선택하세요"
               error={!!errors.program}
-              disabled={formData.role !== '코치' || isViewer() || isEditorViewingOtherBranch(staff)}
+              disabled={isViewer() || isEditorViewingOtherBranch(staff)}
               inModal={true}
             />
             {errors.program && <div style={{ color: AppColors.error, fontSize: AppTextStyles.label3.fontSize, marginTop: '4px' }}>{errors.program}</div>}
@@ -928,7 +914,7 @@ const StaffEditPopup: React.FC<StaffEditPopupProps> = ({
         {/* 근무시간대 (횟수제 프로그램 선택 시에만 표시) */}
         {(() => {
           const selectedProgram = programs.find(program => program.name === formData.program);
-          return formData.role === '코치' && selectedProgram && selectedProgram.type === '횟수제';
+          return selectedProgram && selectedProgram.type === '횟수제';
         })() && (
           <FieldRow>
             <FieldColumn>

@@ -3,7 +3,7 @@
     "activeCommit": 0,
     "commits": [
         {
-            "activePatchIndex": 8,
+            "activePatchIndex": 10,
             "patches": [
                 {
                     "date": 1760248001088,
@@ -40,6 +40,14 @@
                 {
                     "date": 1761912999992,
                     "content": "Index: \n===================================================================\n--- \n+++ \n@@ -40,9 +40,9 @@\n       \n       setLoading(true);\n       try {\n         console.log('약관 로딩 시작...');\n-        const documents = await dbManager.getAllTermsDocuments();\n+        const documents = await dbManager.terms.getAllTermsDocuments();\n         console.log('DB에서 가져온 약관 수:', documents.length);\n         console.log('모든 약관:', documents);\n         \n         // 활성 문서만 필터링\n"
+                },
+                {
+                    "date": 1763377795881,
+                    "content": "Index: \n===================================================================\n--- \n+++ \n@@ -163,12 +163,40 @@\n       }\n     });\n   };\n \n+  // 전체 동의 처리\n+  const handleAllAgreementChange = (agreed: boolean) => {\n+    const updatedAgreements = formData.agreementInfo.agreements.map(agreement => ({\n+      ...agreement,\n+      agreed\n+    }));\n+    \n+    onUpdate({\n+      agreementInfo: {\n+        ...formData.agreementInfo,\n+        agreements: updatedAgreements\n+      }\n+    });\n+  };\n+\n+  // 전체 동의 상태 확인\n+  const allAgreed = formData.agreementInfo.agreements.length > 0 && \n+    formData.agreementInfo.agreements.every(agreement => agreement.agreed);\n+\n   return (\n     <StepContent>\n       <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '24px' }}>\n-        <StepTitle>동의 및 서명</StepTitle>\n+        <div style={{ display: 'flex', alignItems: 'center', gap: '16px' }}>\n+          <StepTitle>동의 및 서명</StepTitle>\n+          <CheckboxLabel style={{ marginBottom: 0, fontSize: '15px', fontWeight: 600 }}>\n+            <Checkbox\n+              checked={allAgreed}\n+              onChange={(e) => handleAllAgreementChange(e.target.checked)}\n+            />\n+            전체 동의\n+          </CheckboxLabel>\n+        </div>\n         <Button \n           variant=\"outline\" \n           onClick={async () => await openPreviewWindow(formData)}\n           style={{ padding: '8px 16px', fontSize: '14px' }}\n"
+                },
+                {
+                    "date": 1763377853962,
+                    "content": "Index: \n===================================================================\n--- \n+++ \n@@ -184,12 +184,25 @@\n     formData.agreementInfo.agreements.every(agreement => agreement.agreed);\n \n   return (\n     <StepContent>\n-      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '24px' }}>\n+      <div style={{ \n+        display: 'flex', \n+        justifyContent: 'space-between', \n+        alignItems: 'center', \n+        marginBottom: '24px',\n+        minHeight: '48px'\n+      }}>\n         <div style={{ display: 'flex', alignItems: 'center', gap: '16px' }}>\n-          <StepTitle>동의 및 서명</StepTitle>\n-          <CheckboxLabel style={{ marginBottom: 0, fontSize: '15px', fontWeight: 600 }}>\n+          <StepTitle style={{ margin: 0, lineHeight: '48px' }}>동의 및 서명</StepTitle>\n+          <CheckboxLabel style={{ \n+            margin: 0, \n+            fontSize: '15px', \n+            fontWeight: 600,\n+            display: 'flex',\n+            alignItems: 'center',\n+            height: '48px'\n+          }}>\n             <Checkbox\n               checked={allAgreed}\n               onChange={(e) => handleAllAgreementChange(e.target.checked)}\n             />\n@@ -198,9 +211,16 @@\n         </div>\n         <Button \n           variant=\"outline\" \n           onClick={async () => await openPreviewWindow(formData)}\n-          style={{ padding: '8px 16px', fontSize: '14px' }}\n+          style={{ \n+            padding: '12px 20px', \n+            fontSize: '14px',\n+            height: '48px',\n+            display: 'flex',\n+            alignItems: 'center',\n+            justifyContent: 'center'\n+          }}\n         >\n           전체 미리보기\n         </Button>\n       </div>\n"
                 }
             ],
             "date": 1760248001088,

@@ -84,6 +84,7 @@ export interface Product extends DBRecord {
   sessions?: number; // 횟수 (횟수제인 경우에만 필요)
   months?: number; // 개월수 (기간제인 경우에만 필요)
   duration?: number; // 소요시간 (분 단위, 횟수제인 경우에만 필요)
+  validityMonths?: number; // 유효기간 개월수 (횟수제인 경우에만 필요)
   price?: number; // 가격
   description?: string; // 상품소개
   isActive: boolean;
@@ -586,7 +587,7 @@ export interface OrderProcessingData {
     transfer: number;
     points: number;
   };
-  orderType: 'registration' | 'course_enrollment';
+  orderType: 'registration' | 'course_enrollment' | 'asset_assignment';
 }
 
 // 운동처방서 관련 타입들

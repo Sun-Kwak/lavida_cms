@@ -238,6 +238,48 @@ const BreakTimesSection = styled.div`
   margin-top: 12px;
 `;
 
+const BreakTimeGrid = styled.div`
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(70px, 1fr));
+  gap: 6px;
+  margin-top: 8px;
+  padding: 8px;
+  background-color: ${AppColors.background};
+  border-radius: 6px;
+  border: 1px solid ${AppColors.borderLight};
+`;
+
+const TimeSlotButton = styled.button<{ $isActive: boolean; $isDisabled: boolean }>`
+  padding: 6px 4px;
+  border-radius: 4px;
+  font-size: 11px;
+  font-weight: 500;
+  cursor: ${props => props.$isDisabled ? 'not-allowed' : 'pointer'};
+  border: 1px solid ${props => {
+    if (props.$isDisabled) return AppColors.borderLight;
+    if (props.$isActive) return AppColors.error;
+    return AppColors.borderLight;
+  }};
+  background-color: ${props => {
+    if (props.$isDisabled) return AppColors.surface + '50';
+    if (props.$isActive) return AppColors.error + '20';
+    return AppColors.surface;
+  }};
+  color: ${props => {
+    if (props.$isDisabled) return AppColors.onSurface + '40';
+    if (props.$isActive) return AppColors.error;
+    return AppColors.onSurface;
+  }};
+  transition: all 0.2s ease;
+  
+  &:hover {
+    ${props => !props.$isDisabled && `
+      background-color: ${props.$isActive ? AppColors.error + '30' : AppColors.primary + '10'};
+      border-color: ${props.$isActive ? AppColors.error : AppColors.primary};
+    `}
+  }
+`;
+
 /* Unused for now - may be used in future iterations
 const BreakTimeItem = styled.div`
   display: flex;
@@ -341,6 +383,7 @@ const BreakTimesLabel = styled.div`
   align-items: center;
 `;
 
+/* Unused - removed in favor of TimeSlotButton UI
 const BreakTimeRow = styled.div`
   display: flex;
   align-items: center;
@@ -388,6 +431,7 @@ const AddBreakTimeButton = styled.button`
     color: white;
   }
 `;
+*/
 
 const ApplyToAllButton = styled.button`
   background: #f3e5f5;
@@ -957,10 +1001,155 @@ const WeeklyHolidayModal: React.FC<WeeklyHolidayModalProps> = ({
     return null; // 겹치지 않음
   };
 
+  // 30분 단위 타임슬롯 생성 함수
+  const generateTimeSlots = (startMinutes: number, endMinutes: number): number[] => {
+    const slots: number[] = [];
+    for (let time = startMinutes; time < endMinutes; time += 30) {
+      slots.push(time);
+    }
+    return slots;
+  };
 
+  // 특정 타임슬롯이 휴게시간에 포함되는지 확인
+  const isTimeSlotInBreak = (day: keyof typeof weekDaySettings, slotStart: number): boolean => {
+    const daySettings = weekDaySettings[day];
+    const slotEnd = slotStart + 30;
+    
+    // 기본 휴게시간(lunchTime) 확인
+    if (daySettings.lunchTime.start > 0 && daySettings.lunchTime.end > 0) {
+      if (slotStart >= daySettings.lunchTime.start && slotEnd <= daySettings.lunchTime.end) {
+        return true;
+      }
+    }
+    
+    // 추가 휴게시간들 확인
+    for (const breakTime of daySettings.breakTimes) {
+      if (breakTime.start > 0 && breakTime.end > 0) {
+        if (slotStart >= breakTime.start && slotEnd <= breakTime.end) {
+          return true;
+        }
+      }
+    }
+    
+    return false;
+  };
 
+  // 타임슬롯 토글 핸들러
+  const handleTimeSlotToggle = (day: keyof typeof weekDaySettings, slotStart: number) => {
+    const slotEnd = slotStart + 30;
+    const daySettings = weekDaySettings[day];
+    
+    // 기본 휴게시간에 포함되는지 확인
+    const isInLunchTime = daySettings.lunchTime.start > 0 && 
+                          daySettings.lunchTime.end > 0 &&
+                          slotStart >= daySettings.lunchTime.start && 
+                          slotEnd <= daySettings.lunchTime.end;
+    
+    if (isInLunchTime) {
+      // 기본 휴게시간 토글 불가 (경고 메시지)
+      alert(`${daySettings.lunchTime.name}은 여기서 직접 토글할 수 없습니다. 위의 ${daySettings.lunchTime.name} 설정에서 변경해주세요.`);
+      return;
+    }
+    
+    // 추가 휴게시간에 포함되는지 확인
+    let foundBreakIndex = -1;
+    for (let i = 0; i < daySettings.breakTimes.length; i++) {
+      const breakTime = daySettings.breakTimes[i];
+      if (breakTime.start > 0 && breakTime.end > 0) {
+        if (slotStart >= breakTime.start && slotEnd <= breakTime.end) {
+          foundBreakIndex = i;
+          break;
+        }
+      }
+    }
+    
+    if (foundBreakIndex >= 0) {
+      // 이미 휴게시간에 포함된 슬롯 → 해당 휴게시간 삭제
+      const breakTime = daySettings.breakTimes[foundBreakIndex];
+      
+      // 해당 휴게시간이 단일 슬롯(30분)인 경우 삭제
+      if (breakTime.end - breakTime.start === 30) {
+        handleRemoveBreakTime(day, foundBreakIndex);
+      } else {
+        // 여러 슬롯으로 구성된 경우, 클릭한 슬롯을 제외한 부분으로 분할
+        const newBreakTimes: { start: number; end: number; name: string }[] = [];
+        
+        // 클릭한 슬롯 이전 부분
+        if (slotStart > breakTime.start) {
+          newBreakTimes.push({
+            start: breakTime.start,
+            end: slotStart,
+            name: breakTime.name
+          });
+        }
+        
+        // 클릭한 슬롯 이후 부분
+        if (slotEnd < breakTime.end) {
+          newBreakTimes.push({
+            start: slotEnd,
+            end: breakTime.end,
+            name: breakTime.name
+          });
+        }
+        
+        // 기존 휴게시간 제거하고 새 휴게시간들 추가
+        setWeekDaySettings(prev => ({
+          ...prev,
+          [day]: {
+            ...prev[day],
+            breakTimes: [
+              ...prev[day].breakTimes.slice(0, foundBreakIndex),
+              ...newBreakTimes,
+              ...prev[day].breakTimes.slice(foundBreakIndex + 1)
+            ]
+          }
+        }));
+      }
+    } else {
+      // 휴게시간이 아닌 슬롯 → 새 휴게시간 추가 또는 인접한 휴게시간 확장
+      
+      // 인접한 휴게시간 찾기
+      let adjacentBreakIndex = -1;
+      for (let i = 0; i < daySettings.breakTimes.length; i++) {
+        const breakTime = daySettings.breakTimes[i];
+        if (breakTime.end === slotStart || breakTime.start === slotEnd) {
+          adjacentBreakIndex = i;
+          break;
+        }
+      }
+      
+      if (adjacentBreakIndex >= 0) {
+        // 인접한 휴게시간 확장
+        const adjacentBreak = daySettings.breakTimes[adjacentBreakIndex];
+        const newStart = Math.min(adjacentBreak.start, slotStart);
+        const newEnd = Math.max(adjacentBreak.end, slotEnd);
+        
+        setWeekDaySettings(prev => ({
+          ...prev,
+          [day]: {
+            ...prev[day],
+            breakTimes: prev[day].breakTimes.map((bt, i) => 
+              i === adjacentBreakIndex ? { ...bt, start: newStart, end: newEnd } : bt
+            )
+          }
+        }));
+      } else {
+        // 새 휴게시간 추가
+        setWeekDaySettings(prev => ({
+          ...prev,
+          [day]: {
+            ...prev[day],
+            breakTimes: [
+              ...prev[day].breakTimes,
+              { start: slotStart, end: slotEnd, name: '휴게시간' }
+            ]
+          }
+        }));
+      }
+    }
+  };
 
-
+  /* Unused - replaced with TimeSlot toggle UI
   const handleAddBreakTime = (day: keyof typeof weekDaySettings) => {
     // 겹치지 않는 시간을 자동으로 찾는 함수
     const findAvailableTimeSlot = (daySettings: any): { start: number; end: number } => {
@@ -1118,6 +1307,7 @@ const WeeklyHolidayModal: React.FC<WeeklyHolidayModalProps> = ({
       }
     }));
   };
+  */
 
   const handleApplyToAll = (sourceDay: keyof typeof weekDaySettings) => {
     const sourceSettings = weekDaySettings[sourceDay];
@@ -1511,60 +1701,48 @@ const WeeklyHolidayModal: React.FC<WeeklyHolidayModalProps> = ({
                         <BreakTimesSection>
                           <BreakTimesLabel>
                             휴게 시간
-                            <AddBreakTimeButton onClick={() => handleAddBreakTime(key)}>
-                              + 추가
-                            </AddBreakTimeButton>
+                            <ApplyToAllButton onClick={() => {
+                              const sourceBreakTimes = weekDaySettings[key].breakTimes;
+                              const allDayKeys: (keyof typeof weekDaySettings)[] = ['monday', 'tuesday', 'wednesday', 'thursday', 'friday', 'saturday', 'sunday'];
+                              
+                              setWeekDaySettings(prev => {
+                                const newSettings = { ...prev };
+                                
+                                allDayKeys.forEach(dayKey => {
+                                  if (dayKey !== key && !newSettings[dayKey].isHoliday) {
+                                    newSettings[dayKey] = {
+                                      ...newSettings[dayKey],
+                                      breakTimes: sourceBreakTimes.map(bt => ({ ...bt }))
+                                    };
+                                  }
+                                });
+                                
+                                return newSettings;
+                              });
+                            }}>
+                              모두적용
+                            </ApplyToAllButton>
                           </BreakTimesLabel>
-                          {daySettings.breakTimes && daySettings.breakTimes.map((breakTime, index) => (
-                            <BreakTimeRow key={index}>
-                              <BreakTimeInput
-                                type="text"
-                                placeholder="휴게시간명"
-                                value={breakTime.name}
-                                onChange={(e: React.ChangeEvent<HTMLInputElement>) => handleBreakTimeChange(key, index, 'name', e.target.value)}
-                              />
-                              <TimeSelectContainer>
-                                <HourSelect
-                                  value={minutesToHourMinute(breakTime.start).hour}
-                                  onChange={(e) => handleBreakTimeDropdownChange(key, index, 'start', 'hour', e.target.value)}
+                          <BreakTimeGrid>
+                            {generateTimeSlots(daySettings.workingHours.start, daySettings.workingHours.end).map(slotStart => {
+                              const slotEnd = slotStart + 30;
+                              const hour = Math.floor(slotStart / 60);
+                              const minute = slotStart % 60;
+                              const isInBreak = isTimeSlotInBreak(key, slotStart);
+                              
+                              return (
+                                <TimeSlotButton
+                                  key={slotStart}
+                                  $isActive={isInBreak}
+                                  $isDisabled={false}
+                                  onClick={() => handleTimeSlotToggle(key, slotStart)}
+                                  title={`${String(hour).padStart(2, '0')}:${String(minute).padStart(2, '0')} - ${String(Math.floor(slotEnd / 60)).padStart(2, '0')}:${String(slotEnd % 60).padStart(2, '0')}`}
                                 >
-                                  {Array.from({ length: 24 }, (_, i) => i + 1).map(hour => (
-                                    <option key={hour} value={hour}>{String(hour).padStart(2, '0')}</option>
-                                  ))}
-                                </HourSelect>
-                                <span>:</span>
-                                <MinuteSelect
-                                  value={minutesToHourMinute(breakTime.start).minute}
-                                  onChange={(e) => handleBreakTimeDropdownChange(key, index, 'start', 'minute', e.target.value)}
-                                >
-                                  <option value={0}>00</option>
-                                  <option value={30}>30</option>
-                                </MinuteSelect>
-                              </TimeSelectContainer>
-                              <span>~</span>
-                              <TimeSelectContainer>
-                                <HourSelect
-                                  value={minutesToHourMinute(breakTime.end).hour}
-                                  onChange={(e) => handleBreakTimeDropdownChange(key, index, 'end', 'hour', e.target.value)}
-                                >
-                                  {Array.from({ length: 24 }, (_, i) => i + 1).map(hour => (
-                                    <option key={hour} value={hour}>{String(hour).padStart(2, '0')}</option>
-                                  ))}
-                                </HourSelect>
-                                <span>:</span>
-                                <MinuteSelect
-                                  value={minutesToHourMinute(breakTime.end).minute}
-                                  onChange={(e) => handleBreakTimeDropdownChange(key, index, 'end', 'minute', e.target.value)}
-                                >
-                                  <option value={0}>00</option>
-                                  <option value={30}>30</option>
-                                </MinuteSelect>
-                              </TimeSelectContainer>
-                              <RemoveBreakTimeButton onClick={() => handleRemoveBreakTime(key, index)}>
-                                삭제
-                              </RemoveBreakTimeButton>
-                            </BreakTimeRow>
-                          ))}
+                                  {String(hour).padStart(2, '0')}:{String(minute).padStart(2, '0')}
+                                </TimeSlotButton>
+                              );
+                            })}
+                          </BreakTimeGrid>
                         </BreakTimesSection>
                       </WorkingHoursSection>
                     )}

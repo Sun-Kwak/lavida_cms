@@ -164,14 +164,62 @@ const AgreementStep: React.FC<StepProps> = ({ formData, onUpdate }) => {
     });
   };
 
+  // 전체 동의 처리
+  const handleAllAgreementChange = (agreed: boolean) => {
+    const updatedAgreements = formData.agreementInfo.agreements.map(agreement => ({
+      ...agreement,
+      agreed
+    }));
+    
+    onUpdate({
+      agreementInfo: {
+        ...formData.agreementInfo,
+        agreements: updatedAgreements
+      }
+    });
+  };
+
+  // 전체 동의 상태 확인
+  const allAgreed = formData.agreementInfo.agreements.length > 0 && 
+    formData.agreementInfo.agreements.every(agreement => agreement.agreed);
+
   return (
     <StepContent>
-      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '24px' }}>
-        <StepTitle>동의 및 서명</StepTitle>
+      <div style={{ 
+        display: 'flex', 
+        justifyContent: 'space-between', 
+        alignItems: 'center', 
+        marginBottom: '24px',
+        minHeight: '48px'
+      }}>
+        <div style={{ display: 'flex', alignItems: 'center', gap: '16px' }}>
+          <StepTitle style={{ margin: 0, lineHeight: '48px' }}>동의 및 서명</StepTitle>
+          <CheckboxLabel style={{ 
+            margin: 0, 
+            fontSize: '15px', 
+            fontWeight: 600,
+            display: 'flex',
+            alignItems: 'center',
+            height: '48px'
+          }}>
+            <Checkbox
+              checked={allAgreed}
+              onChange={(e) => handleAllAgreementChange(e.target.checked)}
+            />
+            전체 동의
+          </CheckboxLabel>
+        </div>
         <Button 
           variant="outline" 
           onClick={async () => await openPreviewWindow(formData)}
-          style={{ padding: '8px 16px', fontSize: '14px' }}
+          style={{ 
+            padding: '12px 20px', 
+            fontSize: '14px',
+            height: '48px',
+            display: 'flex',
+            alignItems: 'center',
+            justifyContent: 'center'
+          }}
         >
           전체 미리보기
         </Button>

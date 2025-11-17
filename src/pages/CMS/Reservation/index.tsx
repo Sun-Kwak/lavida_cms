@@ -900,20 +900,17 @@ const ReservationPage: React.FC = () => {
     }
 
     if (currentUser.role === 'master') {
-      // Master: 달력에서 하나의 코치만 선택된 경우에만 허용
-      if (selectedStaffIds.length !== 1) {
-        alert('예약을 생성하려면 달력에서 코치를 하나만 선택해주세요.');
-        return;
+      // Master: 여러 코치가 선택되어도 팝업을 띄움 (팝업에서 코치 선택)
+      // staffId가 명시적으로 전달된 경우 (달력에서 특정 코치 셀 클릭) 해당 코치 사용
+      if (staffId) {
+        selectedStaffId = staffId;
+        selectedStaff = staffList.find(s => s.id === selectedStaffId);
+      } else if (selectedStaffIds.length === 1) {
+        // 하나만 선택된 경우 기본값으로 사용
+        selectedStaffId = selectedStaffIds[0];
+        selectedStaff = staffList.find(s => s.id === selectedStaffId);
       }
-      
-      // 선택된 코치 사용
-      selectedStaffId = selectedStaffIds[0];
-      selectedStaff = staffList.find(s => s.id === selectedStaffId);
-      
-      if (!selectedStaff) {
-        alert('선택한 코치 정보를 찾을 수 없습니다.');
-        return;
-      }
+      // 여러 코치가 선택되었거나 아무도 선택 안된 경우에도 팝업을 열고, 팝업에서 코치 선택
     } else if (currentUser.role === 'coach') {
       // 담당 코치: 본인의 코치 ID 사용
       selectedStaffId = currentUser.id;
@@ -938,8 +935,8 @@ const ReservationPage: React.FC = () => {
     setReservationModalData({
       startTime,
       endTime,
-      staffId: selectedStaffId,
-      staffName: selectedStaff.name
+      staffId: selectedStaffId || '', // master인 경우 팝업에서 선택
+      staffName: selectedStaff?.name || '' // master인 경우 팝업에서 선택
     });
     setIsReservationModalOpen(true);
   };
@@ -1102,6 +1099,7 @@ const ReservationPage: React.FC = () => {
           currentUser={currentUser}
           existingEvents={events}
           onReservationCreate={handleReservationCreate}
+          staffList={staffList}
         />
       )}
     </>

@@ -107,6 +107,19 @@ const PaymentInfoStep: React.FC<StepProps> = ({ formData, onUpdate }) => {
           convertedProduct.price = product.price || 0;
           // 적용금액도 초기에는 상품 가격과 동일
           convertedProduct.appliedPrice = convertedProduct.price;
+          
+          // 유효기간 설정 (상품에 등록된 validityMonths 사용)
+          if (product.validityMonths) {
+            const tomorrow = new Date();
+            tomorrow.setDate(tomorrow.getDate() + 1);
+            
+            const endDate = new Date(tomorrow);
+            endDate.setMonth(endDate.getMonth() + product.validityMonths);
+            
+            convertedProduct.startDate = tomorrow;
+            convertedProduct.endDate = endDate;
+            convertedProduct.months = product.validityMonths;
+          }
         }
 
         handleProductAdd(convertedProduct);
@@ -329,24 +342,51 @@ const PaymentInfoStep: React.FC<StepProps> = ({ formData, onUpdate }) => {
                     borderRadius: '6px',
                     border: '1px solid #e9ecef'
                   }}>
-                    <div>
-                      <label style={{ 
-                        fontSize: '12px', 
-                        color: '#666', 
-                        display: 'block', 
-                        marginBottom: '8px',
-                        fontWeight: '600'
-                      }}>
-                        수업 횟수
-                      </label>
-                      <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
-                        <NumberTextField
-                          value={product.sessions || (product.baseSessions || 10)}
-                          onChange={(value) => handleProductEdit(index, 'sessions', value || 1)}
-                          width="100px"
-                          placeholder="횟수"
-                        />
-                        <span style={{ fontSize: '13px', color: '#666', fontWeight: '500' }}>회</span>
+                    <div style={{ display: 'grid', gridTemplateColumns: '1fr 2fr', gap: '16px', alignItems: 'start' }}>
+                      <div>
+                        <label style={{ 
+                          fontSize: '12px', 
+                          color: '#666', 
+                          display: 'block', 
+                          marginBottom: '8px',
+                          fontWeight: '600'
+                        }}>
+                          수업 횟수
+                        </label>
+                        <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+                          <NumberTextField
+                            value={product.sessions || (product.baseSessions || 10)}
+                            onChange={(value) => handleProductEdit(index, 'sessions', value || 1)}
+                            width="100px"
+                            placeholder="횟수"
+                          />
+                          <span style={{ fontSize: '13px', color: '#666', fontWeight: '500' }}>회</span>
+                        </div>
+                      </div>
+                      
+                      <div>
+                        <label style={{ 
+                          fontSize: '12px', 
+                          color: '#666', 
+                          display: 'block', 
+                          marginBottom: '8px',
+                          fontWeight: '600'
+                        }}>
+                          유효기간
+                        </label>
+                        <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '8px' }}>
+                          <CustomDateInput
+                            value={product.startDate ? product.startDate.toISOString().split('T')[0] : ''}
+                            onChange={(value) => handleProductEdit(index, 'startDate', new Date(value))}
+                            placeholder="시작일"
+                          />
+                          <CustomDateInput
+                            value={product.endDate ? product.endDate.toISOString().split('T')[0] : ''}
+                            onChange={(value) => handleProductEdit(index, 'endDate', new Date(value))}
+                            placeholder="종료일"
+                            min={product.startDate ? product.startDate.toISOString().split('T')[0] : undefined}
+                          />
+                        </div>
                       </div>
                     </div>
                   </div>
