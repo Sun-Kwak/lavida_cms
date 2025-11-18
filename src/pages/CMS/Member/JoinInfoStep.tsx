@@ -1,4 +1,5 @@
 import React, { useState, useEffect } from 'react';
+import { toast } from 'react-toastify';
 import { StepContent, StepTitle, FormGrid, FormField, Label, CheckboxLabel, Checkbox } from './StyledComponents';
 import { JoinInfo, StepProps } from './types';
 import CustomDropdown from '../../../components/CustomDropdown';

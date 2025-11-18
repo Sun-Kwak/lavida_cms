@@ -510,7 +510,7 @@ export class StaffService extends BaseDBManager {
   async getAllStaffHolidayStatus(date: string): Promise<{ staffId: string; name: string; isHoliday: boolean }[]> {
     try {
       const allStaff = await this.getAllStaff();
-      const activeCoaches = allStaff.filter(staff => staff.isActive && staff.role === '코치');
+      const activeCoaches = allStaff.filter(staff => staff.isActive && staff.program); // 담당 프로그램이 있는 활성 직원
       
       return await Promise.all(
         activeCoaches.map(async (staff) => ({

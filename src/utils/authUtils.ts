@@ -92,11 +92,11 @@ export const getAccessibleStaff = async (): Promise<string[]> => {
     const currentUser = await getCurrentUser();
     if (!currentUser) return [];
 
-    // 마스터 권한은 모든 활성 코치
+    // 마스터 권한은 모든 담당 프로그램이 있는 활성 직원
     if (currentUser.role === 'master') {
       const allStaff = await dbManager.getAllStaff();
       return allStaff
-        .filter(staff => staff.role === '코치' && staff.isActive)
+        .filter(staff => staff.program && staff.isActive) // 담당 프로그램이 있는 활성 직원
         .map(staff => staff.id);
     }
 

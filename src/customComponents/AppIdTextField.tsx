@@ -1,6 +1,7 @@
 'use client';
 
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
+import { toast } from 'react-toastify';
 import { AppTextField } from './AppTextField';
 
 // 다국어 텍스트 객체
@@ -51,6 +52,7 @@ export const AppIdTextField: React.FC<AppIdTextFieldProps> = ({
   language = 'ko',
 }) => {
   const [internalError, setInternalError] = useState<string>('');
+  const lastToastShownRef = useRef<boolean>(false);
 
   const t = texts[language];
   
@@ -78,8 +80,17 @@ export const AppIdTextField: React.FC<AppIdTextFieldProps> = ({
   useEffect(() => {
     if (value && !isValid && showValidationMessage) {
       setInternalError(t.errorMessage);
+      // 6자 이상 입력했을 때만 토스트 메시지 표시 (한 번만)
+      if (value.length >= 6 && !lastToastShownRef.current) {
+        toast.error(t.errorMessage);
+        lastToastShownRef.current = true;
+      }
     } else {
       setInternalError('');
+      // 에러가 해결되면 토스트 플래그 리셋
+      if (lastToastShownRef.current) {
+        lastToastShownRef.current = false;
+      }
     }
   }, [value, isValid, showValidationMessage, t.errorMessage]);
 

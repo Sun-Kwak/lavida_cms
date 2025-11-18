@@ -289,6 +289,15 @@ const StaffRegister: React.FC = () => {
     if (field === 'phone' && typeof value === 'string') {
       value = formatPhoneNumber(value);
     }
+    
+    // 이메일 필드인 경우 한글 입력 방지
+    if (field === 'email' && typeof value === 'string') {
+      const koreanPattern = /[ㄱ-ㅎ|ㅏ-ㅣ|가-힣]/;
+      if (koreanPattern.test(value)) {
+        toast.error('이메일에는 한글을 입력할 수 없습니다.');
+        return;
+      }
+    }
 
     // 파일 업로드 필드인 경우 검증 수행
     if (field === 'contractFile' && value instanceof File) {
@@ -431,6 +440,13 @@ const StaffRegister: React.FC = () => {
     }
 
     setErrors(newErrors);
+    
+    // validation 에러가 있으면 토스트 메시지로 표시
+    if (Object.keys(newErrors).length > 0) {
+      const firstError = Object.values(newErrors)[0];
+      toast.error(firstError);
+    }
+    
     return Object.keys(newErrors).length === 0;
   };
 

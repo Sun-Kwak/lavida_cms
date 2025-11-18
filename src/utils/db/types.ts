@@ -311,6 +311,7 @@ export interface Member extends DBRecord {
   isActive: boolean;
   registrationDate: string; // 회원가입일
   remarks?: string; // 비고
+  reservationMemo?: string; // 예약 전용 메모
   
   // 라커 정보 (배정된 경우만)
   lockerInfo?: {
@@ -523,6 +524,7 @@ export interface ScheduleEvent extends DBRecord {
   recurrenceRule?: string; // RRULE for recurring events
   sourceType: 'manual' | 'weekly_holiday' | 'booking' | 'period_enrollment'; // 이벤트 생성 출처
   sourceId?: string; // 원본 데이터 ID (WeeklyHolidaySettings ID 등)
+  reservationMemo?: string; // 예약 전용 메모 (회원 remarks와 별도)
 }
 
 // 중복 체크 결과 타입

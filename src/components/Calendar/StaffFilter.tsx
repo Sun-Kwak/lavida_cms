@@ -158,7 +158,7 @@ const StaffFilter: React.FC<StaffFilterProps> = ({
 
   // 코치 직원들만 필터링
   const coachStaff = staffList.filter(staff => 
-    staff.role === '코치' && staff.isActive
+    staff.isActive && staff.program // 담당 프로그램이 있는 활성 직원
   );
 
   const handleStaffToggle = (staffId: string) => {

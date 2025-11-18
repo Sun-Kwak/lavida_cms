@@ -200,10 +200,12 @@ const CoursePaymentPanel: React.FC<CoursePaymentPanelProps> = ({
   // 상품 선택 옵션 생성
   const getProductOptions = () => [
     { value: '', label: loading ? '상품 로딩 중...' : '상품을 선택하세요' },
-    ...availableProducts.map(product => ({
-      value: product.id,
-      label: `${product.name} - ${product.price?.toLocaleString() || '가격미정'}원${product.programType === '기간제' ? ' (기간제)' : ''}`
-    }))
+    ...availableProducts
+      .map(product => ({
+        value: product.id,
+        label: `${product.name} - ${product.price?.toLocaleString() || '가격미정'}원${product.programType === '기간제' ? ' (기간제)' : ''}`
+      }))
+      .sort((a, b) => a.label.localeCompare(b.label, 'ko-KR'))
   ];
 
   // 상품 선택 처리

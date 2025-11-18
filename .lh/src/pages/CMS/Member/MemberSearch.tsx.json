@@ -3,7 +3,7 @@
     "activeCommit": 0,
     "commits": [
         {
-            "activePatchIndex": 32,
+            "activePatchIndex": 33,
             "patches": [
                 {
                     "date": 1759105836006,
@@ -136,6 +136,10 @@
                 {
                     "date": 1762342594855,
                     "content": "Index: \n===================================================================\n--- \n+++ \n@@ -1090,8 +1090,9 @@\n           isOpen={showEditModal}\n           onClose={handleCloseModal}\n           width=\"min(95vw, 1000px)\"\n           header=\"회원 정보 수정\"\n+          disableOutsideClick={true}\n           body={\n             <div style={{ textAlign: 'left' }}>\n               <FormSection>\n                 <SectionTitle>기본 정보</SectionTitle>\n"
+                },
+                {
+                    "date": 1763464456920,
+                    "content": "Index: \n===================================================================\n--- \n+++ \n@@ -844,8 +844,22 @@\n       if (!editFormData.phone?.trim()) {\n         toast.error('연락처를 입력해주세요.');\n         return;\n       }\n+      \n+      // 전화번호 형식 검증\n+      if (editFormData.phone && !/^010-\\d{4}-\\d{4}$/.test(editFormData.phone)) {\n+        toast.error('올바른 전화번호 형식이 아닙니다. (010-1234-5678)');\n+        return;\n+      }\n+      \n+      // 이메일 형식 검증 (이메일이 있는 경우만)\n+      if (editFormData.email && editFormData.email.trim() !== '') {\n+        if (!/^[^\\s@]+@[^\\s@]+\\.[^\\s@]+$/.test(editFormData.email)) {\n+          toast.error('올바른 이메일 형식이 아닙니다.');\n+          return;\n+        }\n+      }\n \n       // 현재 회원을 제외한 다른 회원들의 연락처와 이메일 중복 체크\n       const allMembers = await dbManager.getAllMembers();\n       const otherMembers = allMembers.filter(m => m.id !== editingMember.id);\n@@ -1157,9 +1171,18 @@\n                     <FormLabel>이메일</FormLabel>\n                     <FormInput\n                       type=\"email\"\n                       value={editFormData.email || ''}\n-                      onChange={(e) => setEditFormData(prev => ({ ...prev, email: e.target.value }))}\n+                      onChange={(e) => {\n+                        const value = e.target.value;\n+                        // 한글 입력 방지\n+                        const koreanPattern = /[ㄱ-ㅎ|ㅏ-ㅣ|가-힣]/;\n+                        if (koreanPattern.test(value)) {\n+                          toast.error('이메일에는 한글을 입력할 수 없습니다.');\n+                          return;\n+                        }\n+                        setEditFormData(prev => ({ ...prev, email: value }));\n+                      }}\n                       placeholder=\"이메일을 입력하세요\"\n                     />\n                   </FormGroup>\n                   <FormGroup>\n"
                 }
             ],
             "date": 1759105836006,

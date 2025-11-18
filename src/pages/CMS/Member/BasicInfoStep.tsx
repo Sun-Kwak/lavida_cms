@@ -1,4 +1,5 @@
 import React, { useState, useEffect, useRef } from 'react';
+import { toast } from 'react-toastify';
 import { StepContent, StepTitle, FormGrid, FormField, Label, Input } from './StyledComponents';
 import { BasicInfo, StepProps, AddressInfo } from './types';
 import DaumAddressSearch from '../../../components/DaumAddressSearch';
@@ -8,6 +9,8 @@ import CustomDropdown from '../../../components/CustomDropdown';
 const BasicInfoStep: React.FC<StepProps> = ({ formData, onUpdate, onErrorsChange }) => {
   const [errors, setErrors] = useState<{ [key: string]: string }>({});
   const prevErrorsRef = useRef<{ [key: string]: string }>({});
+  const lastPhoneToastRef = useRef<boolean>(false);
+  const lastEmailToastRef = useRef<boolean>(false);
 
   // 에러 상태가 변경될 때마다 상위 컴포넌트에 전달 (이전 값과 비교해서 변경된 경우에만)
   useEffect(() => {
@@ -74,8 +77,13 @@ const BasicInfoStep: React.FC<StepProps> = ({ formData, onUpdate, onErrorsChange
       // 전화번호 validation
       if (processedValue && !/^010-\d{4}-\d{4}$/.test(processedValue)) {
         newErrors.phone = '올바른 전화번호 형식이 아닙니다. (010-1234-5678)';
+        if (processedValue.length >= 13 && !lastPhoneToastRef.current) {
+          toast.error('올바른 전화번호 형식이 아닙니다. (010-1234-5678)');
+          lastPhoneToastRef.current = true;
+        }
       } else {
         delete newErrors.phone;
+        lastPhoneToastRef.current = false;
       }
     }
 
@@ -85,14 +93,20 @@ const BasicInfoStep: React.FC<StepProps> = ({ formData, onUpdate, onErrorsChange
       const koreanPattern = /[ㄱ-ㅎ|ㅏ-ㅣ|가-힣]/;
       if (processedValue && koreanPattern.test(processedValue)) {
         newErrors.email = '이메일에는 한글을 입력할 수 없습니다.';
+        toast.error('이메일에는 한글을 입력할 수 없습니다.');
         return; // 한글이 포함된 경우 업데이트하지 않음
       }
       
       // 이메일 형식 validation
       if (processedValue && !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(processedValue)) {
         newErrors.email = '올바른 이메일 형식이 아닙니다.';
+        if (processedValue.includes('@') && processedValue.length > 5 && !lastEmailToastRef.current) {
+          toast.error('올바른 이메일 형식이 아닙니다.');
+          lastEmailToastRef.current = true;
+        }
       } else {
         delete newErrors.email;
+        lastEmailToastRef.current = false;
       }
     }
 

@@ -352,10 +352,10 @@ const ReservationModal: React.FC<ReservationModalProps> = ({
   const [availableMembers, setAvailableMembers] = useState<MemberWithCourse[]>([]);
   const [selectedMember, setSelectedMember] = useState<MemberWithCourse | null>(null);
   const [selectedEnrollment, setSelectedEnrollment] = useState<CourseEnrollmentWithDuration | null>(null);
-  const [memo, setMemo] = useState('');
+  const [reservationMemo, setReservationMemo] = useState('');
   const [loading, setLoading] = useState(false);
   const [timeConflict, setTimeConflict] = useState<string>('');
-  const [savingMemo, setSavingMemo] = useState(false);
+  const [savingReservationMemo, setSavingReservationMemo] = useState(false);
   
   // Master인 경우 코치 선택을 위한 state
   const [selectedStaffId, setSelectedStaffId] = useState<string>(staffId);
@@ -447,16 +447,18 @@ const ReservationModal: React.FC<ReservationModalProps> = ({
     try {
       // 해당 지점의 활성 회원 조회
       const allMembers = await dbManager.getAllMembers();
+      const searchLower = searchQuery.toLowerCase();
+      
       let branchMembers = allMembers.filter(member => 
         member.branchId === branchId && 
         member.isActive &&
-        member.name.toLowerCase().includes(searchQuery.toLowerCase())
+        (member.name.toLowerCase().includes(searchLower) || 
+         member.phone.toLowerCase().includes(searchLower) ||
+         (member.email && member.email.toLowerCase().includes(searchLower)))
       );
       
-      // Master인 경우 선택된 코치의 회원들만 필터링
-      if (currentUser?.role === 'master' && selectedStaffId) {
-        branchMembers = branchMembers.filter(member => member.coach === selectedStaffId);
-      }
+      // 회원의 담당직원은 고객응대용이므로 예약 시 필터링하지 않음
+      // (예약은 어떤 코치로든 자유롭게 가능)
 
       // 활성 횟수제 수강권을 가진 회원들만 필터링
       const allEnrollments = await dbManager.getAllCourseEnrollments();
@@ -464,13 +466,41 @@ const ReservationModal: React.FC<ReservationModalProps> = ({
       const membersWithCourse: MemberWithCourse[] = [];
 
       for (const member of branchMembers) {
-        // 해당 회원의 모든 활성 횟수제 수강권 찾기
-        const memberEnrollments = allEnrollments.filter(enrollment =>
-          enrollment.memberId === member.id &&
-          enrollment.programType === '횟수제' &&
-          enrollment.enrollmentStatus === 'active' &&
-          (enrollment.completedSessions || 0) < (enrollment.sessionCount || 0)
-        );
+        // 해당 회원의 모든 활성 횟수제 수강권 찾기 (현재 프로그램과 일치하는 것만)
+        const memberEnrollments = allEnrollments.filter(enrollment => {
+          // 기본 조건: 회원 ID, 프로그램 ID, 프로그램 타입, 상태
+          if (
+            enrollment.memberId !== member.id ||
+            enrollment.programId !== programId ||
+            enrollment.programType !== '횟수제' ||
+            (enrollment.enrollmentStatus !== 'active' && enrollment.enrollmentStatus !== 'unpaid')
+          ) {
+            return false;
+          }
+
+          // 홀드 상태 체크
+          if (enrollment.holdInfo?.isHold) {
+            return false;
+          }
+
+          // 횟수제: 남은 횟수 체크
+          const remainingSessions = (enrollment.sessionCount || 0) - (enrollment.completedSessions || 0);
+          if (remainingSessions <= 0) {
+            return false;
+          }
+
+          // 유효기간 체크 (endDate가 있는 경우)
+          if (enrollment.endDate) {
+            const endDate = new Date(enrollment.endDate);
+            const today = new Date();
+            today.setHours(0, 0, 0, 0);
+            if (endDate < today) {
+              return false;
+            }
+          }
+
+          return true;
+        });
 
         if (memberEnrollments.length > 0) {
           // 수강권에 상품의 duration 정보 추가
@@ -501,31 +531,33 @@ const ReservationModal: React.FC<ReservationModalProps> = ({
     } finally {
       setLoading(false);
     }
-  }, [isOpen, branchId, searchQuery, currentUser, selectedStaffId]);
+  }, [isOpen, branchId, searchQuery, programId]);
 
-  // 메모만 저장하는 함수
-  const handleSaveMemo = async () => {
+
+
+  // 예약 메모만 저장하는 함수
+  const handleSaveReservationMemo = async () => {
     if (!selectedMember) return;
 
-    setSavingMemo(true);
+    setSavingReservationMemo(true);
     try {
       const updatedMember = {
         ...selectedMember,
-        remarks: memo,
+        reservationMemo,
         updatedAt: new Date()
       };
       
       await dbManager.updateMember(updatedMember.id, updatedMember);
       
       // 로컬 상태 업데이트
-      setSelectedMember(prev => prev ? { ...prev, remarks: memo } : null);
+      setSelectedMember(prev => prev ? { ...prev, reservationMemo } : null);
       
-      toast.success('비고가 성공적으로 저장되었습니다.');
+      toast.success('예약 메모가 성공적으로 저장되었습니다.');
     } catch (error) {
-      console.error('비고 저장 실패:', error);
-      toast.error('비고 저장 중 오류가 발생했습니다.');
+      console.error('예약 메모 저장 실패:', error);
+      toast.error('예약 메모 저장 중 오류가 발생했습니다.');
     } finally {
-      setSavingMemo(false);
+      setSavingReservationMemo(false);
     }
   };
 
@@ -560,11 +592,12 @@ const ReservationModal: React.FC<ReservationModalProps> = ({
         memberName: selectedMember.name,
         type: 'class',
         color: '#3b82f6', // 파란색으로 수업 표시
-        description: memo || `${selectedMember.name} 회원의 ${selectedEnrollment.productName} 수업`,
+        description: reservationMemo || `${selectedMember.name} 회원의 ${selectedEnrollment.productName} 수업`,
         branchId,
         branchName,
         sourceType: 'booking',
-        sourceId: selectedMember.id
+        sourceId: selectedMember.id,
+        reservationMemo: reservationMemo || undefined
       };
 
       // 예약 저장
@@ -590,6 +623,7 @@ const ReservationModal: React.FC<ReservationModalProps> = ({
         branchName: savedDBEvent.branchName,
         sourceType: savedDBEvent.sourceType,
         sourceId: savedDBEvent.sourceId,
+        reservationMemo: savedDBEvent.reservationMemo,
         createdAt: savedDBEvent.createdAt,
         updatedAt: savedDBEvent.updatedAt
       };
@@ -603,11 +637,11 @@ const ReservationModal: React.FC<ReservationModalProps> = ({
 
       await dbManager.updateCourseEnrollment(updatedEnrollment.id, updatedEnrollment);
 
-      // 회원 비고 업데이트 (메모가 있는 경우)
-      if (memo.trim() && memo !== selectedMember.remarks) {
+      // 회원 예약 메모 업데이트 (메모가 있고 변경된 경우)
+      if (reservationMemo.trim() && reservationMemo !== selectedMember.reservationMemo) {
         const updatedMember = {
           ...selectedMember,
-          remarks: memo,
+          reservationMemo,
           updatedAt: new Date()
         };
         
@@ -632,7 +666,7 @@ const ReservationModal: React.FC<ReservationModalProps> = ({
     setSearchQuery('');
     setSelectedMember(null);
     setSelectedEnrollment(null);
-    setMemo('');
+    setReservationMemo('');
     setTimeConflict('');
     onClose();
   };
@@ -704,7 +738,7 @@ const ReservationModal: React.FC<ReservationModalProps> = ({
                         // 코치 변경 시 선택된 회원 초기화
                         setSelectedMember(null);
                         setSelectedEnrollment(null);
-                        setMemo('');
+                        setReservationMemo('');
                       }}
                     >
                       <CoachColorDot color={coach.color} />
@@ -747,7 +781,7 @@ const ReservationModal: React.FC<ReservationModalProps> = ({
                       onClick={() => {
                         setSelectedMember(member);
                         setSelectedEnrollment(member.allEnrollments?.[0] || null);
-                        setMemo(member.remarks || '');
+                        setReservationMemo(member.reservationMemo || '');
                       }}
                     >
                       <MemberName>{member.name}</MemberName>
@@ -820,18 +854,18 @@ const ReservationModal: React.FC<ReservationModalProps> = ({
                 
                 <MemoContainer>
                   <MemoRow>
-                    <FormLabel style={{ marginBottom: 0 }}>비고</FormLabel>
+                    <FormLabel style={{ marginBottom: 0 }}>예약 메모</FormLabel>
                     <MemoButton 
-                      onClick={handleSaveMemo}
-                      disabled={savingMemo}
+                      onClick={handleSaveReservationMemo}
+                      disabled={savingReservationMemo || !selectedMember}
                     >
-                      {savingMemo ? '저장 중...' : '저장'}
+                      {savingReservationMemo ? '저장 중...' : '저장'}
                     </MemoButton>
                   </MemoRow>
                   <MemoTextArea
-                    value={memo}
-                    onChange={(e) => setMemo(e.target.value)}
-                    placeholder="회원에 대한 비고사항을 입력하세요"
+                    value={reservationMemo}
+                    onChange={(e) => setReservationMemo(e.target.value)}
+                    placeholder="이 회원의 예약 관련 메모를 입력하세요 (예: 특별 요청사항, 주의사항 등)"
                   />
                 </MemoContainer>
                 </MemoSection>

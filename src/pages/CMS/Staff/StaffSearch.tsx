@@ -512,7 +512,7 @@ const StaffSearch: React.FC = () => {
       title: '담당프로그램',
       width: '120px',
       render: (value, record) => (
-        record.role === '코치' && record.program ? (
+        record.program ? (
           <span style={{ color: AppColors.primary }}>{record.program}</span>
         ) : (
           <span style={{ color: AppColors.onInput1 }}>-</span>

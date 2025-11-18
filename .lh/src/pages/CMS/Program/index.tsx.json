@@ -3,11 +3,15 @@
     "activeCommit": 0,
     "commits": [
         {
-            "activePatchIndex": 0,
+            "activePatchIndex": 1,
             "patches": [
                 {
                     "date": 1760076906195,
                     "content": "Index: \n===================================================================\n--- \n+++ \n"
+                },
+                {
+                    "date": 1763462789962,
+                    "content": "Index: \n===================================================================\n--- \n+++ \n@@ -1,15 +1,8 @@\n import React from 'react';\n-import { Routes, Route } from 'react-router-dom';\n import ProgramManagement from './ProgramManagement';\n-import ProductManagement from './ProductManagement';\n \n const ProgramPage: React.FC = () => {\n-  return (\n-    <Routes>\n-      <Route path=\"/management\" element={<ProgramManagement />} />\n-      <Route path=\"/product\" element={<ProductManagement />} />\n-    </Routes>\n-  );\n+  return <ProgramManagement />;\n };\n \n export default ProgramPage;\n"
                 }
             ],
             "date": 1760076906195,

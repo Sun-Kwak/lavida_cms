@@ -1,6 +1,7 @@
 'use client';
 
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
+import { toast } from 'react-toastify';
 import { AppTextField } from './AppTextField';
 import { AppColors } from '../styles/colors';
 
@@ -73,6 +74,7 @@ export const AppPwdTextField: React.FC<AppPwdTextFieldProps> = ({
   language = 'ko',
 }) => {
   const [internalError, setInternalError] = useState<string>('');
+  const lastToastShownRef = useRef<boolean>(false);
 
   const t = texts[language];
 
@@ -111,11 +113,25 @@ export const AppPwdTextField: React.FC<AppPwdTextFieldProps> = ({
     if (value && !isValid && showValidationMessage) {
       if (fieldType === PwdFieldType.PASSWORD) {
         setInternalError(t.passwordError);
+        // 8자 이상 입력했을 때만 토스트 메시지 표시 (한 번만)
+        if (value.length >= 8 && !lastToastShownRef.current) {
+          toast.error(t.passwordError);
+          lastToastShownRef.current = true;
+        }
       } else {
         setInternalError(t.passwordConfirmError);
+        // 비밀번호 확인은 4자 이상일 때 토스트 표시 (한 번만)
+        if (value.length >= 4 && !lastToastShownRef.current) {
+          toast.error(t.passwordConfirmError);
+          lastToastShownRef.current = true;
+        }
       }
     } else {
       setInternalError('');
+      // 에러가 해결되면 토스트 플래그 리셋
+      if (lastToastShownRef.current) {
+        lastToastShownRef.current = false;
+      }
     }
   }, [value, isValid, showValidationMessage, fieldType, t]);
 

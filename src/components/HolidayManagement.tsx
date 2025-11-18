@@ -242,7 +242,7 @@ const HolidayManagement: React.FC<HolidayManagementProps> = ({
     try {
       const allStaff = await dbManager.getAllStaff();
       const activeCoaches = allStaff.filter(staff => 
-        staff.isActive && staff.role === '코치'
+        staff.isActive && staff.program // 담당 프로그램이 있는 활성 직원
       );
       setStaffList(activeCoaches);
       

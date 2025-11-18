@@ -129,15 +129,17 @@ const TimeColumn = styled.div`
 `;
 
 const TimeSlot = styled.div`
-  height: 30px;
-  padding: 4px 8px;
-  border-bottom: 1px solid ${AppColors.borderLight}20;
+  height: 31px;
+  min-height: 31px;
+  max-height: 31px;
+  padding: 0;
+  border-bottom: 1px solid ${AppColors.borderLight};
   font-size: ${AppTextStyles.label2.fontSize};
   color: ${AppColors.onSurface}60;
   display: flex;
-  align-items: flex-start;
+  align-items: center;
   justify-content: center;
-  box-sizing: border-box;
+  box-sizing: content-box;
   width: 100%;
 `;
 
@@ -153,8 +155,11 @@ const StaffColumn = styled.div`
 `;
 
 const StaffTimeSlot = styled.div<{ $isAvailable: boolean; $isBreakTime: boolean; $isPastTime: boolean }>`
-  height: 30px;
-  border-bottom: 1px solid ${AppColors.borderLight}20;
+  height: 31px;
+  min-height: 31px;
+  max-height: 31px;
+  border-bottom: 1px solid ${AppColors.borderLight};
+  box-sizing: content-box;
   position: relative;
   cursor: pointer;
   transition: background-color 0.2s ease;
@@ -245,7 +250,7 @@ const DayView: React.FC<DayViewProps> = ({
   
   // 필터링된 직원 목록 (선택된 코치만)
   const filteredStaff = staffList.filter(staff => 
-    selectedStaffIds.includes(staff.id) && staff.role === '코치'
+    selectedStaffIds.includes(staff.id) && staff.program // 담당 프로그램이 있는 직원
   );
 
   // 해당 날짜의 이벤트만 필터링

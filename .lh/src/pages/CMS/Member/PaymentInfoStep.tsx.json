@@ -3,7 +3,7 @@
     "activeCommit": 0,
     "commits": [
         {
-            "activePatchIndex": 20,
+            "activePatchIndex": 21,
             "patches": [
                 {
                     "date": 1760248001088,
@@ -88,6 +88,10 @@
                 {
                     "date": 1763377560883,
                     "content": "Index: \n===================================================================\n--- \n+++ \n@@ -106,8 +106,21 @@\n           // 횟수제는 상품 가격이 해당 횟수에 대한 가격이므로 그대로 사용\n           convertedProduct.price = product.price || 0;\n           // 적용금액도 초기에는 상품 가격과 동일\n           convertedProduct.appliedPrice = convertedProduct.price;\n+          \n+          // 유효기간 설정 (상품에 등록된 validityMonths 사용)\n+          if (product.validityMonths) {\n+            const tomorrow = new Date();\n+            tomorrow.setDate(tomorrow.getDate() + 1);\n+            \n+            const endDate = new Date(tomorrow);\n+            endDate.setMonth(endDate.getMonth() + product.validityMonths);\n+            \n+            convertedProduct.startDate = tomorrow;\n+            convertedProduct.endDate = endDate;\n+            convertedProduct.months = product.validityMonths;\n+          }\n         }\n \n         handleProductAdd(convertedProduct);\n       }\n"
+                },
+                {
+                    "date": 1763465080353,
+                    "content": "Index: \n===================================================================\n--- \n+++ \n@@ -52,12 +52,14 @@\n \n   // 상품 선택 옵션 생성\n   const getProductOptions = () => [\n     { value: '', label: loading ? '상품 로딩 중...' : '상품을 선택하세요' },\n-    ...availableProducts.map(product => ({\n-      value: product.id,\n-      label: `${product.name} - ${product.price?.toLocaleString() || '가격미정'}원${product.programType === '기간제' ? ' (기간제)' : ''}`\n-    }))\n+    ...availableProducts\n+      .map(product => ({\n+        value: product.id,\n+        label: `${product.name} - ${product.price?.toLocaleString() || '가격미정'}원${product.programType === '기간제' ? ' (기간제)' : ''}`\n+      }))\n+      .sort((a, b) => a.label.localeCompare(b.label, 'ko-KR'))\n   ];\n \n   const handleProductSelect = (value: string) => {\n     if (value) {\n"
                 }
             ],
             "date": 1760248001088,

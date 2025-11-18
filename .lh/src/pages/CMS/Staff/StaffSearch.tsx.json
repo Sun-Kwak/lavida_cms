@@ -3,7 +3,7 @@
     "activeCommit": 0,
     "commits": [
         {
-            "activePatchIndex": 18,
+            "activePatchIndex": 19,
             "patches": [
                 {
                     "date": 1759900871595,
@@ -80,6 +80,10 @@
                 {
                     "date": 1761369747725,
                     "content": "Index: \n===================================================================\n--- \n+++ \n@@ -420,9 +420,14 @@\n         dbManager.getAllStaff(),\n         dbManager.getAllBranches()\n       ]);\n       \n-      setAllStaff(staffData);\n+      // 최근 등록순으로 정렬 (createdAt 내림차순)\n+      const sortedStaffData = staffData.sort((a, b) => \n+        new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime()\n+      );\n+      \n+      setAllStaff(sortedStaffData);\n       setBranches(branchData);\n     } catch (error) {\n       console.error('데이터 로드 실패:', error);\n     } finally {\n"
+                },
+                {
+                    "date": 1763465420255,
+                    "content": "Index: \n===================================================================\n--- \n+++ \n@@ -511,9 +511,9 @@\n       key: 'program',\n       title: '담당프로그램',\n       width: '120px',\n       render: (value, record) => (\n-        record.role === '코치' && record.program ? (\n+        record.program ? (\n           <span style={{ color: AppColors.primary }}>{record.program}</span>\n         ) : (\n           <span style={{ color: AppColors.onInput1 }}>-</span>\n         )\n"
                 }
             ],
             "date": 1759900871595,

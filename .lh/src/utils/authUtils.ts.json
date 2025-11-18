@@ -3,7 +3,7 @@
     "activeCommit": 0,
     "commits": [
         {
-            "activePatchIndex": 1,
+            "activePatchIndex": 2,
             "patches": [
                 {
                     "date": 1760157680195,
@@ -12,6 +12,10 @@
                 {
                     "date": 1760161170343,
                     "content": "Index: \n===================================================================\n--- \n+++ \n@@ -25,9 +25,9 @@\n     if (!user) return null;\n \n     // 권한에 따른 role 매핑\n     let role: 'master' | 'coach' | 'admin';\n-    if (user.permission === 'master' || user.permission === '마스터') {\n+    if (user.permission === 'MASTER' || user.permission === 'master' || user.permission === '마스터') {\n       role = 'master';\n     } else if (user.role === '코치') {\n       role = 'coach';\n     } else {\n"
+                },
+                {
+                    "date": 1763465420277,
+                    "content": "Index: \n===================================================================\n--- \n+++ \n@@ -91,13 +91,13 @@\n   try {\n     const currentUser = await getCurrentUser();\n     if (!currentUser) return [];\n \n-    // 마스터 권한은 모든 활성 코치\n+    // 마스터 권한은 모든 담당 프로그램이 있는 활성 직원\n     if (currentUser.role === 'master') {\n       const allStaff = await dbManager.getAllStaff();\n       return allStaff\n-        .filter(staff => staff.role === '코치' && staff.isActive)\n+        .filter(staff => staff.program && staff.isActive) // 담당 프로그램이 있는 활성 직원\n         .map(staff => staff.id);\n     }\n \n     // 일반 코치는 본인만\n"
                 }
             ],
             "date": 1760157680195,

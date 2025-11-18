@@ -3,7 +3,7 @@
     "activeCommit": 0,
     "commits": [
         {
-            "activePatchIndex": 23,
+            "activePatchIndex": 25,
             "patches": [
                 {
                     "date": 1761368450126,
@@ -100,6 +100,14 @@
                 {
                     "date": 1763377239202,
                     "content": "Index: \n===================================================================\n--- \n+++ \n@@ -83,8 +83,9 @@\n   programType: string; // 프로그램 종류 저장 (조회 성능 향상)\n   sessions?: number; // 횟수 (횟수제인 경우에만 필요)\n   months?: number; // 개월수 (기간제인 경우에만 필요)\n   duration?: number; // 소요시간 (분 단위, 횟수제인 경우에만 필요)\n+  validityMonths?: number; // 유효기간 개월수 (횟수제인 경우에만 필요)\n   price?: number; // 가격\n   description?: string; // 상품소개\n   isActive: boolean;\n }\n"
+                },
+                {
+                    "date": 1763467722889,
+                    "content": "Index: \n===================================================================\n--- \n+++ \n@@ -522,8 +522,9 @@\n   branchName?: string;\n   recurrenceRule?: string; // RRULE for recurring events\n   sourceType: 'manual' | 'weekly_holiday' | 'booking' | 'period_enrollment'; // 이벤트 생성 출처\n   sourceId?: string; // 원본 데이터 ID (WeeklyHolidaySettings ID 등)\n+  reservationMemo?: string; // 예약 전용 메모 (회원 remarks와 별도)\n }\n \n // 중복 체크 결과 타입\n export interface DuplicateCheckResult {\n"
+                },
+                {
+                    "date": 1763467880681,
+                    "content": "Index: \n===================================================================\n--- \n+++ \n@@ -310,8 +310,9 @@\n   };\n   isActive: boolean;\n   registrationDate: string; // 회원가입일\n   remarks?: string; // 비고\n+  reservationMemo?: string; // 예약 전용 메모\n   \n   // 라커 정보 (배정된 경우만)\n   lockerInfo?: {\n     lockerId: string;\n"
                 }
             ],
             "date": 1761368450126,

@@ -209,10 +209,10 @@ const ReservationPage: React.FC = () => {
 
       const allStaff = await dbManager.getAllStaff();
       let activeCoaches = allStaff.filter(staff => 
-        staff.isActive && staff.role === '코치'
+        staff.isActive && staff.program // 담당 프로그램이 있는 활성 직원
       );
       
-      // 지점이 선택된 경우 해당 지점의 코치만 필터링
+      // 지점이 선택된 경우 해당 지점의 직원만 필터링
       if (selectedBranchId) {
         activeCoaches = activeCoaches.filter(staff => staff.branchId === selectedBranchId);
       }

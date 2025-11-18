@@ -3,7 +3,7 @@
     "activeCommit": 0,
     "commits": [
         {
-            "activePatchIndex": 9,
+            "activePatchIndex": 10,
             "patches": [
                 {
                     "date": 1760154018685,
@@ -44,6 +44,10 @@
                 {
                     "date": 1762253728637,
                     "content": "Index: \n===================================================================\n--- \n+++ \n@@ -296,8 +296,31 @@\n         return; // 과거 날짜인 경우 클릭 이벤트 무시\n       }\n     }\n \n+    // 계약 기간 체크 (선택된 코치들이 있는 경우)\n+    if (onEventCreate && selectedStaffIds.length > 0) {\n+      const canCreateReservation = selectedStaffIds.every(staffId => {\n+        const staff = staffList.find(s => s.id === staffId);\n+        if (!staff?.contractStartDate || !staff?.contractEndDate) return true;\n+        \n+        const contractStart = new Date(staff.contractStartDate);\n+        contractStart.setHours(0, 0, 0, 0);\n+        const contractEnd = new Date(staff.contractEndDate);\n+        contractEnd.setHours(0, 0, 0, 0);\n+        \n+        const selectedDate = new Date(date);\n+        selectedDate.setHours(0, 0, 0, 0);\n+        \n+        return selectedDate >= contractStart && selectedDate <= contractEnd;\n+      });\n+\n+      if (!canCreateReservation) {\n+        alert('선택된 코치(들)의 계약 기간 외입니다. 예약을 생성할 수 없습니다.');\n+        return;\n+      }\n+    }\n+\n     if (onDateClick) {\n       onDateClick(date);\n     } else if (onEventCreate) {\n       const startTime = new Date(date);\n"
+                },
+                {
+                    "date": 1763465420257,
+                    "content": "Index: \n===================================================================\n--- \n+++ \n@@ -231,9 +231,9 @@\n   const dayNames = ['일', '월', '화', '수', '목', '금', '토'];\n   \n   // 필터링된 직원 목록 (선택된 코치만)\n   const filteredStaff = staffList.filter(staff => \n-    selectedStaffIds.includes(staff.id) && staff.role === '코치'\n+    selectedStaffIds.includes(staff.id) && staff.program // 담당 프로그램이 있는 직원\n   );\n \n   // 해당 월의 이벤트만 필터링\n   const monthEvents = events.filter(event => {\n"
                 }
             ],
             "date": 1760154018685,

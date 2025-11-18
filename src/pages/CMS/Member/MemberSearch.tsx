@@ -845,6 +845,20 @@ const MemberSearch: React.FC = () => {
         toast.error('연락처를 입력해주세요.');
         return;
       }
+      
+      // 전화번호 형식 검증
+      if (editFormData.phone && !/^010-\d{4}-\d{4}$/.test(editFormData.phone)) {
+        toast.error('올바른 전화번호 형식이 아닙니다. (010-1234-5678)');
+        return;
+      }
+      
+      // 이메일 형식 검증 (이메일이 있는 경우만)
+      if (editFormData.email && editFormData.email.trim() !== '') {
+        if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(editFormData.email)) {
+          toast.error('올바른 이메일 형식이 아닙니다.');
+          return;
+        }
+      }
 
       // 현재 회원을 제외한 다른 회원들의 연락처와 이메일 중복 체크
       const allMembers = await dbManager.getAllMembers();
@@ -1158,7 +1172,16 @@ const MemberSearch: React.FC = () => {
                     <FormInput
                       type="email"
                       value={editFormData.email || ''}
-                      onChange={(e) => setEditFormData(prev => ({ ...prev, email: e.target.value }))}
+                      onChange={(e) => {
+                        const value = e.target.value;
+                        // 한글 입력 방지
+                        const koreanPattern = /[ㄱ-ㅎ|ㅏ-ㅣ|가-힣]/;
+                        if (koreanPattern.test(value)) {
+                          toast.error('이메일에는 한글을 입력할 수 없습니다.');
+                          return;
+                        }
+                        setEditFormData(prev => ({ ...prev, email: value }));
+                      }}
                       placeholder="이메일을 입력하세요"
                     />
                   </FormGroup>

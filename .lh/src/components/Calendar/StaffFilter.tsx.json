@@ -3,7 +3,7 @@
     "activeCommit": 0,
     "commits": [
         {
-            "activePatchIndex": 6,
+            "activePatchIndex": 7,
             "patches": [
                 {
                     "date": 1760154018716,
@@ -32,6 +32,10 @@
                 {
                     "date": 1760161170343,
                     "content": "Index: \n===================================================================\n--- \n+++ \n@@ -1,9 +1,10 @@\n-import React, { useState } from 'react';\n+import React, { useState, useEffect } from 'react';\n import styled from 'styled-components';\n import { AppColors } from '../../styles/colors';\n import { AppTextStyles } from '../../styles/textStyles';\n import { type StaffInfo } from './types';\n+import { getCurrentUser, canEditStaffHoliday } from '../../utils/authUtils';\n \n interface StaffFilterProps {\n   staffList: StaffInfo[];\n   selectedStaffIds: string[];\n@@ -127,9 +128,35 @@\n   onStaffFilter,\n   onHolidaySettings\n }) => {\n   const [isExpanded, setIsExpanded] = useState(true);\n+  const [currentUser, setCurrentUser] = useState<{ id: string; role: 'master' | 'coach' | 'admin' } | null>(null);\n \n+  // 현재 사용자 정보 로드\n+  useEffect(() => {\n+    const loadCurrentUser = async () => {\n+      try {\n+        const user = await getCurrentUser();\n+        setCurrentUser(user);\n+      } catch (error) {\n+        console.error('현재 사용자 정보 로드 실패:', error);\n+      }\n+    };\n+\n+    loadCurrentUser();\n+  }, []);\n+\n+  // 휴일설정 권한 체크\n+  const canEditHoliday = (staffId: string): boolean => {\n+    if (!currentUser) return false;\n+    \n+    // 마스터 권한은 모든 직원 편집 가능\n+    if (currentUser.role === 'master') return true;\n+    \n+    // 본인만 편집 가능\n+    return currentUser.id === staffId;\n+  };\n+\n   // 코치 직원들만 필터링\n   const coachStaff = staffList.filter(staff => \n     staff.role === '코치' && staff.isActive\n   );\n@@ -191,16 +218,18 @@\n               >\n                 <StaffColorDot $color={staff.color || AppColors.primary} />\n                 <StaffDetails>\n                   <StaffName>{staff.name}</StaffName>\n-                  <HolidayButton \n-                    onClick={(e) => {\n-                      e.stopPropagation();\n-                      onHolidaySettings?.(staff.id);\n-                    }}\n-                  >\n-                    휴일설정\n-                  </HolidayButton>\n+                  {canEditHoliday(staff.id) && (\n+                    <HolidayButton \n+                      onClick={(e) => {\n+                        e.stopPropagation();\n+                        onHolidaySettings?.(staff.id);\n+                      }}\n+                    >\n+                      휴일설정\n+                    </HolidayButton>\n+                  )}\n                 </StaffDetails>\n               </StaffItem>\n             ))}\n           </StaffGrid>\n"
+                },
+                {
+                    "date": 1763465420256,
+                    "content": "Index: \n===================================================================\n--- \n+++ \n@@ -157,9 +157,9 @@\n   };\n \n   // 코치 직원들만 필터링\n   const coachStaff = staffList.filter(staff => \n-    staff.role === '코치' && staff.isActive\n+    staff.isActive && staff.program // 담당 프로그램이 있는 활성 직원\n   );\n \n   const handleStaffToggle = (staffId: string) => {\n     const newSelectedIds = selectedStaffIds.includes(staffId)\n"
                 }
             ],
             "date": 1760154018716,

@@ -394,98 +394,100 @@ export class OrderService extends BaseDBManager {
         }
       }
 
-      // 5. 수강 등록 생성 (상품별) - orderType이 'course_enrollment'일 때만
+      // 5. 수강 등록 생성 (상품별) - 라커를 제외한 모든 프로그램 상품
       const createdCourses = []; // 생성된 수강 정보 저장
       
-      if (orderData.orderType === 'course_enrollment') {
-        console.log('=== 수강 등록 생성 시작 ===');
-        let remainingPaid = totalPaid;
-        
-        for (const product of orderData.products) {
-          console.log(`상품 처리: ${product.name} (적용가격: ${product.price.toLocaleString()}원, 원가: ${(product.originalPrice || product.price).toLocaleString()}원)`);
-          
-          // 이 상품에 할당될 결제액 계산 (적용된 가격 기준)
-          const productPaidAmount = Math.min(remainingPaid, product.price);
-          const productUnpaidAmount = Math.max(0, product.price - productPaidAmount);
-          remainingPaid -= productPaidAmount;
-
-          console.log(`- 상품별 결제액: ${productPaidAmount.toLocaleString()}원`);
-          console.log(`- 상품별 미수액: ${productUnpaidAmount.toLocaleString()}원`);
-
-          // 상품 상세 정보 조회 (세션 수와 기간 정보를 위해)
-          const productDetails = await dependencies.productService.getProductById(product.id);
-          console.log('- 상품 상세 정보:', productDetails);
-          
-          // 시작일과 종료일 설정
-          let startDate: Date;
-          let endDate: Date | undefined;
-          
-          if (product.programType === '기간제') {
-            // 기간제 상품의 경우 사용자가 선택한 시작일/종료일 사용
-            if (product.startDate && product.endDate) {
-              startDate = new Date(product.startDate);
-              endDate = new Date(product.endDate);
-              console.log(`- 기간제 사용자 선택 기간: ${startDate.toLocaleDateString()} ~ ${endDate.toLocaleDateString()}`);
-            } else {
-              // 기본값으로 내일부터 30일
-              startDate = new Date();
-              startDate.setDate(startDate.getDate() + 1);
-              endDate = new Date(startDate);
-              endDate.setDate(endDate.getDate() + (product.duration || 30));
-              console.log(`- 기간제 기본 기간: ${startDate.toLocaleDateString()} ~ ${endDate.toLocaleDateString()}`);
-            }
-          } else {
-            // 횟수제나 기타 상품의 경우 당일 시작
-            startDate = new Date();
-            console.log(`- 횟수제/기타 시작일: ${startDate.toLocaleDateString()}`);
-          }
-
-          const courseData = {
-            orderId,
-            memberId: orderData.memberInfo.id,
-            memberName: orderData.memberInfo.name,
-            productId: product.id,
-            productName: product.name,
-            productPrice: product.originalPrice || product.price, // 계산된 정확한 상품 가격
-            appliedPrice: product.price, // 사용자가 조정한 적용 가격 (required)
-            programId: product.programId,
-            programName: product.programName,
-            programType: product.programType,
-            branchId: orderData.memberInfo.branchId,
-            branchName: orderData.memberInfo.branchName,
-            coach: orderData.memberInfo.coach,
-            coachName: orderData.memberInfo.coachName,
-            enrollmentStatus: (productUnpaidAmount > 0 ? 'unpaid' : 'active') as 'unpaid' | 'active',
-            paidAmount: productPaidAmount,
-            unpaidAmount: productUnpaidAmount,
-            startDate: startDate,
-            endDate: endDate,
-            sessionCount: product.programType === '횟수제' ? (product.sessions || productDetails?.sessions) : undefined,
-            completedSessions: 0,
-            notes: `${orderData.orderType}을 통한 등록`
-          };
-
-          console.log('- 수강 등록 데이터:', courseData);
-
-          try {
-            const courseId = await dependencies.courseService.addCourseEnrollment(courseData);
-            console.log(`✓ 수강 등록 성공: ${courseId}`);
-            
-            // 생성된 수강 정보 저장
-            createdCourses.push({
-              productId: product.id,
-              courseId: courseId,
-              courseName: product.programName
-            });
-          } catch (courseError) {
-            console.error(`✗ 수강 등록 실패:`, courseError);
-            throw courseError;
-          }
+      console.log('=== 수강 등록 생성 시작 ===');
+      let remainingPaid = totalPaid;
+      
+      for (const product of orderData.products) {
+        // 라커 상품은 수강 등록에서 제외 (locker_ 로 시작하는 ID)
+        if (product.id.startsWith('locker_')) {
+          console.log(`라커 상품은 수강 등록에서 제외: ${product.name}`);
+          continue;
         }
-        console.log('=== 수강 등록 생성 완료 ===');
-      } else {
-        console.log(`=== orderType이 '${orderData.orderType}'이므로 수강 등록 생성 건너뜀 ===`);
+
+        console.log(`상품 처리: ${product.name} (적용가격: ${product.price.toLocaleString()}원, 원가: ${(product.originalPrice || product.price).toLocaleString()}원)`);
+        
+        // 이 상품에 할당될 결제액 계산 (적용된 가격 기준)
+        const productPaidAmount = Math.min(remainingPaid, product.price);
+        const productUnpaidAmount = Math.max(0, product.price - productPaidAmount);
+        remainingPaid -= productPaidAmount;
+
+        console.log(`- 상품별 결제액: ${productPaidAmount.toLocaleString()}원`);
+        console.log(`- 상품별 미수액: ${productUnpaidAmount.toLocaleString()}원`);
+
+        // 상품 상세 정보 조회 (세션 수와 기간 정보를 위해)
+        const productDetails = await dependencies.productService.getProductById(product.id);
+        console.log('- 상품 상세 정보:', productDetails);
+        
+        // 시작일과 종료일 설정
+        let startDate: Date;
+        let endDate: Date | undefined;
+        
+        if (product.programType === '기간제') {
+          // 기간제 상품의 경우 사용자가 선택한 시작일/종료일 사용
+          if (product.startDate && product.endDate) {
+            startDate = new Date(product.startDate);
+            endDate = new Date(product.endDate);
+            console.log(`- 기간제 사용자 선택 기간: ${startDate.toLocaleDateString()} ~ ${endDate.toLocaleDateString()}`);
+          } else {
+            // 기본값으로 내일부터 30일
+            startDate = new Date();
+            startDate.setDate(startDate.getDate() + 1);
+            endDate = new Date(startDate);
+            endDate.setDate(endDate.getDate() + (product.duration || 30));
+            console.log(`- 기간제 기본 기간: ${startDate.toLocaleDateString()} ~ ${endDate.toLocaleDateString()}`);
+          }
+        } else {
+          // 횟수제나 기타 상품의 경우 당일 시작
+          startDate = new Date();
+          console.log(`- 횟수제/기타 시작일: ${startDate.toLocaleDateString()}`);
+        }
+
+        const courseData = {
+          orderId,
+          memberId: orderData.memberInfo.id,
+          memberName: orderData.memberInfo.name,
+          productId: product.id,
+          productName: product.name,
+          productPrice: product.originalPrice || product.price, // 계산된 정확한 상품 가격
+          appliedPrice: product.price, // 사용자가 조정한 적용 가격 (required)
+          programId: product.programId,
+          programName: product.programName,
+          programType: product.programType,
+          branchId: orderData.memberInfo.branchId,
+          branchName: orderData.memberInfo.branchName,
+          coach: orderData.memberInfo.coach,
+          coachName: orderData.memberInfo.coachName,
+          enrollmentStatus: (productUnpaidAmount > 0 ? 'unpaid' : 'active') as 'unpaid' | 'active',
+          paidAmount: productPaidAmount,
+          unpaidAmount: productUnpaidAmount,
+          startDate: startDate,
+          endDate: endDate,
+          sessionCount: product.programType === '횟수제' ? (product.sessions || productDetails?.sessions) : undefined,
+          completedSessions: 0,
+          notes: `${orderData.orderType}을 통한 등록`
+        };
+
+        console.log('- 수강 등록 데이터:', courseData);
+
+        try {
+          const courseId = await dependencies.courseService.addCourseEnrollment(courseData);
+          console.log(`✓ 수강 등록 성공: ${courseId}`);
+          
+          // 생성된 수강 정보 저장
+          createdCourses.push({
+            productId: product.id,
+            courseId: courseId,
+            courseName: product.programName
+          });
+        } catch (courseError) {
+          console.error(`✗ 수강 등록 실패:`, courseError);
+          throw courseError;
+        }
       }
+      console.log('=== 수강 등록 생성 완료 ===');
 
       // 6. 포인트 거래에 수강 정보 업데이트 (초과금 적립이 있었고 수강이 생성된 경우)
       if (excessAmount > 0 && createdCourses.length > 0) {

@@ -232,7 +232,7 @@ const MonthView: React.FC<MonthViewProps> = ({
   
   // 필터링된 직원 목록 (선택된 코치만)
   const filteredStaff = staffList.filter(staff => 
-    selectedStaffIds.includes(staff.id) && staff.role === '코치'
+    selectedStaffIds.includes(staff.id) && staff.program // 담당 프로그램이 있는 직원
   );
 
   // 해당 월의 이벤트만 필터링
