@@ -14,6 +14,7 @@ import { CourseService } from './CourseService';
 import { TermsService } from './TermsService';
 import { LockerService } from './LockerService';
 import { ExercisePrescriptionService } from './ExercisePrescriptionService';
+import { ReferralPointService } from './ReferralPointService';
 import { BaseDBManager } from './BaseDBManager';
 
 // 타입 정의 export
@@ -33,6 +34,7 @@ export { CourseService } from './CourseService';
 export { TermsService } from './TermsService';
 export { LockerService } from './LockerService';
 export { ExercisePrescriptionService } from './ExercisePrescriptionService';
+export { ReferralPointService } from './ReferralPointService';
 
 /**
  * 통합 데이터베이스 매니저
@@ -54,6 +56,7 @@ export class IndexedDBManager extends BaseDBManager {
   public terms: TermsService;
   public locker: LockerService;
   public exercisePrescription: ExercisePrescriptionService;
+  public referralPoint: ReferralPointService;
 
   constructor() {
     super();
@@ -74,6 +77,7 @@ export class IndexedDBManager extends BaseDBManager {
     this.terms = new TermsService();
     this.locker = new LockerService();
     this.exercisePrescription = new ExercisePrescriptionService();
+    this.referralPoint = new ReferralPointService();
 
     // 데이터 마이그레이션 실행
     this.runMigrations();

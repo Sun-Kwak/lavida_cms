@@ -12,11 +12,23 @@ const Container = styled.div`
   width: 100%;
 `;
 
-const TablesGrid = styled.div`
+const MainGrid = styled.div`
   display: grid;
-  grid-template-columns: repeat(auto-fit, minmax(400px, 1fr));
+  grid-template-columns: 1fr 1fr;
   gap: 24px;
   max-width: 1400px;
+`;
+
+const LeftSection = styled.div`
+  display: flex;
+  flex-direction: column;
+`;
+
+const RightSection = styled.div`
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 24px;
+  align-content: start;
 `;
 
 const TableSection = styled.div`
@@ -37,37 +49,42 @@ const SectionTitle = styled.h2`
 const SettingsPage: React.FC = () => {
   return (
     <Container>
-      <TablesGrid>
-        {/* 지점 등록 */}
-        <TableSection>
-          <SectionTitle>지점 등록</SectionTitle>
-          <BranchManagement />
-        </TableSection>
+      <MainGrid>
+        {/* 왼쪽: 지점 등록 */}
+        <LeftSection>
+          <TableSection>
+            <SectionTitle>지점 등록</SectionTitle>
+            <BranchManagement />
+          </TableSection>
+        </LeftSection>
 
-        {/* 직급 */}
-        <TableSection>
-          <SectionTitle>직급</SectionTitle>
-          <PositionTable />
-        </TableSection>
+        {/* 오른쪽: 나머지 설정들 2x2 그리드 */}
+        <RightSection>
+          {/* 직급 */}
+          <TableSection>
+            <SectionTitle>직급</SectionTitle>
+            <PositionTable />
+          </TableSection>
 
-        {/* 직책 */}
-        <TableSection>
-          <SectionTitle>직책</SectionTitle>
-          <RoleTable />
-        </TableSection>
+          {/* 직책 */}
+          <TableSection>
+            <SectionTitle>직책</SectionTitle>
+            <RoleTable />
+          </TableSection>
 
-        {/* 고용형태 */}
-        <TableSection>
-          <SectionTitle>고용형태</SectionTitle>
-          <EmploymentTypeTable />
-        </TableSection>
+          {/* 고용형태 */}
+          <TableSection>
+            <SectionTitle>고용형태</SectionTitle>
+            <EmploymentTypeTable />
+          </TableSection>
 
-        {/* 권한 */}
-        <TableSection>
-          <SectionTitle>권한</SectionTitle>
-          <PermissionTable />
-        </TableSection>
-      </TablesGrid>
+          {/* 권한 */}
+          <TableSection>
+            <SectionTitle>권한</SectionTitle>
+            <PermissionTable />
+          </TableSection>
+        </RightSection>
+      </MainGrid>
     </Container>
   );
 };

@@ -7,7 +7,7 @@
 
 export abstract class BaseDBManager {
   protected dbName: string = 'LavidaDB';
-  protected version: number = 16; // 운동처방서 테이블 추가로 버전 업데이트
+  protected version: number = 17; // 추천 포인트 설정 테이블 추가로 버전 업데이트
   protected db: IDBDatabase | null = null;
   protected isInitializing: boolean = false;
 
@@ -338,6 +338,16 @@ export abstract class BaseDBManager {
       exerciseStore.createIndex('createdAt', 'createdAt', { unique: false });
       exerciseStore.createIndex('updatedAt', 'updatedAt', { unique: false });
       exerciseStore.createIndex('memberActive', ['memberId', 'isActive'], { unique: false });
+    }
+
+    // 추천 포인트 설정 테이블 생성
+    if (!db.objectStoreNames.contains('referralPointSettings')) {
+      const referralStore = db.createObjectStore('referralPointSettings', { keyPath: 'id' });
+      referralStore.createIndex('branchId', 'branchId', { unique: true });
+      referralStore.createIndex('branchName', 'branchName', { unique: false });
+      referralStore.createIndex('isActive', 'isActive', { unique: false });
+      referralStore.createIndex('createdAt', 'createdAt', { unique: false });
+      referralStore.createIndex('updatedAt', 'updatedAt', { unique: false });
     }
   }
 

@@ -516,7 +516,7 @@ export interface ScheduleEvent extends DBRecord {
   programName?: string;
   memberId?: string;
   memberName?: string;
-  type: 'class' | 'personal' | 'meeting' | 'break' | 'holiday';
+  type: 'class' | 'personal' | 'meeting' | 'break' | 'holiday' | 'consultation' | 'other';
   color?: string;
   description?: string;
   branchId?: string;
@@ -641,4 +641,13 @@ export interface ExercisePrescription extends DBRecord {
   prescriptionDate: Date; // 처방서 작성일
   version: number; // 버전 번호 (히스토리 관리용)
   isLatest: boolean; // 최신 버전 여부
+}
+
+// 추천 포인트 설정 인터페이스
+export interface ReferralPointSettings extends DBRecord {
+  branchId: string; // 지점 ID
+  branchName: string; // 지점명 (조회 성능을 위해 저장)
+  referrerPoints: number; // 추천한 사람이 받는 포인트
+  referredPoints: number; // 추천받은 사람이 받는 포인트
+  isActive: boolean; // 활성/비활성 상태
 }

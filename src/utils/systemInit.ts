@@ -69,6 +69,23 @@ export const initializeSystemAdmin = async (): Promise<boolean> => {
     });
     console.log("✅ '전체' 지점 처리 완료:", defaultBranch.id);
 
+    // '전체' 지점에 기본 추천 포인트 설정 생성
+    console.log("🎁 '전체' 지점 기본 추천 포인트 설정을 확인합니다...");
+    const existingReferralSettings = await dbManager.referralPoint.getReferralPointSettingsByBranchId(defaultBranch.id);
+    
+    if (!existingReferralSettings) {
+      await dbManager.referralPoint.addReferralPointSettings({
+        branchId: defaultBranch.id,
+        branchName: '전체',
+        referrerPoints: 40000, // 추천한 사람 기본 40,000P (기존 하드코딩 값)
+        referredPoints: 35000, // 추천받은 사람 기본 35,000P (기존 하드코딩 값)
+        isActive: true,
+      });
+      console.log("✅ '전체' 지점 기본 추천 포인트 설정 생성 완료 (40,000P / 35,000P)");
+    } else {
+      console.log("✅ '전체' 지점 추천 포인트 설정이 이미 존재합니다.");
+    }
+
     // 시스템 관리자 계정 생성
     console.log('👤 시스템 관리자 계정을 생성합니다...');
     await dbManager.addStaff({

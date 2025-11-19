@@ -3,7 +3,7 @@
     "activeCommit": 0,
     "commits": [
         {
-            "activePatchIndex": 4,
+            "activePatchIndex": 5,
             "patches": [
                 {
                     "date": 1761368450200,
@@ -24,6 +24,10 @@
                 {
                     "date": 1761463031161,
                     "content": "Index: \n===================================================================\n--- \n+++ \n@@ -6,9 +6,9 @@\n  */\n \n export abstract class BaseDBManager {\n   protected dbName: string = 'LavidaDB';\n-  protected version: number = 15; // 스케줄 이벤트 테이블 추가로 버전 업데이트\n+  protected version: number = 16; // 운동처방서 테이블 추가로 버전 업데이트\n   protected db: IDBDatabase | null = null;\n   protected isInitializing: boolean = false;\n \n   constructor() {\n@@ -326,8 +326,20 @@\n       lockerStore.createIndex('branchActive', ['branchId', 'isActive'], { unique: false });\n       lockerStore.createIndex('userActive', ['userId', 'isActive'], { unique: false });\n       lockerStore.createIndex('createdAt', 'createdAt', { unique: false });\n     }\n+\n+    // 운동처방서 테이블 생성\n+    if (!db.objectStoreNames.contains('exercisePrescriptions')) {\n+      const exerciseStore = db.createObjectStore('exercisePrescriptions', { keyPath: 'id' });\n+      exerciseStore.createIndex('memberId', 'memberId', { unique: false });\n+      exerciseStore.createIndex('memberName', 'memberName', { unique: false });\n+      exerciseStore.createIndex('prescriptionDate', 'prescriptionDate', { unique: false });\n+      exerciseStore.createIndex('isActive', 'isActive', { unique: false });\n+      exerciseStore.createIndex('createdAt', 'createdAt', { unique: false });\n+      exerciseStore.createIndex('updatedAt', 'updatedAt', { unique: false });\n+      exerciseStore.createIndex('memberActive', ['memberId', 'isActive'], { unique: false });\n+    }\n   }\n \n   /**\n    * 고유 ID 생성 (UUID v4 형식)\n"
+                },
+                {
+                    "date": 1763550103661,
+                    "content": "Index: \n===================================================================\n--- \n+++ \n@@ -6,9 +6,9 @@\n  */\n \n export abstract class BaseDBManager {\n   protected dbName: string = 'LavidaDB';\n-  protected version: number = 16; // 운동처방서 테이블 추가로 버전 업데이트\n+  protected version: number = 17; // 추천 포인트 설정 테이블 추가로 버전 업데이트\n   protected db: IDBDatabase | null = null;\n   protected isInitializing: boolean = false;\n \n   constructor() {\n@@ -338,8 +338,18 @@\n       exerciseStore.createIndex('createdAt', 'createdAt', { unique: false });\n       exerciseStore.createIndex('updatedAt', 'updatedAt', { unique: false });\n       exerciseStore.createIndex('memberActive', ['memberId', 'isActive'], { unique: false });\n     }\n+\n+    // 추천 포인트 설정 테이블 생성\n+    if (!db.objectStoreNames.contains('referralPointSettings')) {\n+      const referralStore = db.createObjectStore('referralPointSettings', { keyPath: 'id' });\n+      referralStore.createIndex('branchId', 'branchId', { unique: true });\n+      referralStore.createIndex('branchName', 'branchName', { unique: false });\n+      referralStore.createIndex('isActive', 'isActive', { unique: false });\n+      referralStore.createIndex('createdAt', 'createdAt', { unique: false });\n+      referralStore.createIndex('updatedAt', 'updatedAt', { unique: false });\n+    }\n   }\n \n   /**\n    * 고유 ID 생성 (UUID v4 형식)\n"
                 }
             ],
             "date": 1761368450200,

@@ -16,6 +16,8 @@ const JoinInfoStep: React.FC<StepProps> = ({ formData, onUpdate }) => {
   const [staffSearchResults, setStaffSearchResults] = useState<SearchResultItem[]>([]);
   const [referrerSearchTerm, setReferrerSearchTerm] = useState('');
   const [referrerSearchResults, setReferrerSearchResults] = useState<SearchResultItem[]>([]);
+  const [newMemberPoints, setNewMemberPoints] = useState(0); // 신규 회원이 받을 포인트
+  const [referrerPoints, setReferrerPoints] = useState(0); // 추천인이 받을 포인트
   const joinPaths = ['지인추천', '당근마켓', '네이버 플레이스', '전화', '워크인', '현수막', '인스타', '광고지', '기타'];
 
   // 컴포넌트 마운트 시 데이터 로드
@@ -24,6 +26,48 @@ const JoinInfoStep: React.FC<StepProps> = ({ formData, onUpdate }) => {
     loadStaff();
     loadMembers();
   }, []);
+
+  // 지점 선택 시 신규 회원 포인트 로드
+  useEffect(() => {
+    const loadNewMemberPoints = async () => {
+      if (formData.joinInfo.branchId) {
+        try {
+          const points = await dbManager.referralPoint.getReferralPoints(formData.joinInfo.branchId);
+          setNewMemberPoints(points.referredPoints);
+        } catch (error) {
+          console.error('신규 회원 포인트 로드 실패:', error);
+          setNewMemberPoints(0);
+        }
+      } else {
+        setNewMemberPoints(0);
+      }
+    };
+    loadNewMemberPoints();
+  }, [formData.joinInfo.branchId]);
+
+  // 추천인 선택 시 추천인 포인트 로드
+  useEffect(() => {
+    const loadReferrerPoints = async () => {
+      if (formData.joinInfo.referrerId && formData.joinInfo.joinPath === '지인추천') {
+        try {
+          // 추천인 정보 조회
+          const referrer = members.find(m => m.id === formData.joinInfo.referrerId);
+          if (referrer && referrer.branchId) {
+            const points = await dbManager.referralPoint.getReferralPoints(referrer.branchId);
+            setReferrerPoints(points.referrerPoints);
+          } else {
+            setReferrerPoints(0);
+          }
+        } catch (error) {
+          console.error('추천인 포인트 로드 실패:', error);
+          setReferrerPoints(0);
+        }
+      } else {
+        setReferrerPoints(0);
+      }
+    };
+    loadReferrerPoints();
+  }, [formData.joinInfo.referrerId, formData.joinInfo.joinPath, members]);
 
   // 지점 데이터 로드
   const loadBranches = async () => {
@@ -322,6 +366,48 @@ const JoinInfoStep: React.FC<StepProps> = ({ formData, onUpdate }) => {
             required
           />
         </FormField>
+
+        {/* 포인트 정보 표시 */}
+        {formData.joinInfo.branchId && formData.joinInfo.joinPath === '지인추천' && (
+          <FormField $fullWidth>
+            <div style={{
+              padding: '16px',
+              backgroundColor: '#f8f9fa',
+              borderRadius: '12px',
+              border: '1px solid #e9ecef'
+            }}>
+              <div style={{ marginBottom: '12px', fontWeight: 600, color: '#495057' }}>
+                📊 예상 적립 포인트
+              </div>
+              <div style={{ display: 'flex', gap: '16px', flexWrap: 'wrap' }}>
+                <div style={{ flex: 1, minWidth: '200px' }}>
+                  <div style={{ fontSize: '13px', color: '#6c757d', marginBottom: '4px' }}>
+                    신규 회원 적립 예정
+                  </div>
+                  <div style={{ fontSize: '18px', fontWeight: 600, color: '#28a745' }}>
+                    {newMemberPoints.toLocaleString()}P
+                  </div>
+                  <div style={{ fontSize: '12px', color: '#6c757d', marginTop: '2px' }}>
+                    (선택한 지점 기준)
+                  </div>
+                </div>
+                {formData.joinInfo.referrerId && (
+                  <div style={{ flex: 1, minWidth: '200px' }}>
+                    <div style={{ fontSize: '13px', color: '#6c757d', marginBottom: '4px' }}>
+                      추천인 적립 예정
+                    </div>
+                    <div style={{ fontSize: '18px', fontWeight: 600, color: '#007bff' }}>
+                      {referrerPoints.toLocaleString()}P
+                    </div>
+                    <div style={{ fontSize: '12px', color: '#6c757d', marginTop: '2px' }}>
+                      (추천인 지점 기준)
+                    </div>
+                  </div>
+                )}
+              </div>
+            </div>
+          </FormField>
+        )}
 
         {/* 지인추천일 때만 지인추천인 검색 필드 표시 */}
         {formData.joinInfo.joinPath === '지인추천' && (

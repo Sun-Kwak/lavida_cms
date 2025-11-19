@@ -18,7 +18,7 @@ export interface ScheduleEvent {
   programName?: string;
   memberId?: string;
   memberName?: string;
-  type: 'class' | 'personal' | 'meeting' | 'break' | 'holiday';
+  type: 'class' | 'personal' | 'meeting' | 'break' | 'holiday' | 'consultation' | 'other';
   color?: string;
   description?: string;
   branchId?: string;

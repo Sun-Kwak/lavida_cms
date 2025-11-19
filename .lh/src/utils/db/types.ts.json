@@ -3,7 +3,7 @@
     "activeCommit": 0,
     "commits": [
         {
-            "activePatchIndex": 25,
+            "activePatchIndex": 27,
             "patches": [
                 {
                     "date": 1761368450126,
@@ -108,6 +108,14 @@
                 {
                     "date": 1763467880681,
                     "content": "Index: \n===================================================================\n--- \n+++ \n@@ -310,8 +310,9 @@\n   };\n   isActive: boolean;\n   registrationDate: string; // 회원가입일\n   remarks?: string; // 비고\n+  reservationMemo?: string; // 예약 전용 메모\n   \n   // 라커 정보 (배정된 경우만)\n   lockerInfo?: {\n     lockerId: string;\n"
+                },
+                {
+                    "date": 1763549240683,
+                    "content": "Index: \n===================================================================\n--- \n+++ \n@@ -515,9 +515,9 @@\n   programId?: string;\n   programName?: string;\n   memberId?: string;\n   memberName?: string;\n-  type: 'class' | 'personal' | 'meeting' | 'break' | 'holiday';\n+  type: 'class' | 'personal' | 'meeting' | 'break' | 'holiday' | 'consultation' | 'other';\n   color?: string;\n   description?: string;\n   branchId?: string;\n   branchName?: string;\n"
+                },
+                {
+                    "date": 1763550103665,
+                    "content": "Index: \n===================================================================\n--- \n+++ \n@@ -640,5 +640,14 @@\n   isActive: boolean;\n   prescriptionDate: Date; // 처방서 작성일\n   version: number; // 버전 번호 (히스토리 관리용)\n   isLatest: boolean; // 최신 버전 여부\n+}\n+\n+// 추천 포인트 설정 인터페이스\n+export interface ReferralPointSettings extends DBRecord {\n+  branchId: string; // 지점 ID\n+  branchName: string; // 지점명 (조회 성능을 위해 저장)\n+  referrerPoints: number; // 추천한 사람이 받는 포인트\n+  referredPoints: number; // 추천받은 사람이 받는 포인트\n+  isActive: boolean; // 활성/비활성 상태\n }\n\\ No newline at end of file\n"
                 }
             ],
             "date": 1761368450126,

@@ -298,6 +298,52 @@ const CoachColorDot = styled.div<{ color?: string }>`
   flex-shrink: 0;
 `;
 
+const ReservationTypeSection = styled.div`
+  margin-bottom: 16px;
+  padding: 16px;
+  background: ${AppColors.surface};
+  border: 1px solid ${AppColors.borderLight};
+  border-radius: 8px;
+`;
+
+const CheckboxGroup = styled.div`
+  display: flex;
+  gap: 16px;
+  margin-top: 8px;
+`;
+
+const CheckboxLabel = styled.label`
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  cursor: pointer;
+  font-size: ${AppTextStyles.body2.fontSize};
+  color: ${AppColors.onSurface};
+  user-select: none;
+  
+  &:hover {
+    opacity: 0.8;
+  }
+`;
+
+const Checkbox = styled.input`
+  width: 18px;
+  height: 18px;
+  cursor: pointer;
+  accent-color: ${AppColors.primary};
+`;
+
+const InfoText = styled.div`
+  margin-top: 8px;
+  padding: 8px 12px;
+  background: ${AppColors.primary}15;
+  border-left: 3px solid ${AppColors.primary};
+  border-radius: 4px;
+  font-size: ${AppTextStyles.body3.fontSize};
+  color: ${AppColors.onSurface};
+  line-height: 1.5;
+`;
+
 // 인터페이스 정의
 interface ReservationModalProps {
   isOpen: boolean;
@@ -354,12 +400,14 @@ const ReservationModal: React.FC<ReservationModalProps> = ({
   const [selectedEnrollment, setSelectedEnrollment] = useState<CourseEnrollmentWithDuration | null>(null);
   const [reservationMemo, setReservationMemo] = useState('');
   const [loading, setLoading] = useState(false);
-  const [timeConflict, setTimeConflict] = useState<string>('');
   const [savingReservationMemo, setSavingReservationMemo] = useState(false);
   
   // Master인 경우 코치 선택을 위한 state
   const [selectedStaffId, setSelectedStaffId] = useState<string>(staffId);
   const [selectedStaffName, setSelectedStaffName] = useState<string>(staffName);
+  
+  // 예약 타입 state ('normal' | 'consultation' | 'other')
+  const [reservationType, setReservationType] = useState<'normal' | 'consultation' | 'other'>('normal');
 
   // 선택된 상품의 소요시간에 따른 종료시간 계산
   const calculateEndTime = useCallback((enrollment: CourseEnrollmentWithDuration | null): Date => {
@@ -401,42 +449,6 @@ const ReservationModal: React.FC<ReservationModalProps> = ({
       hour12: false
     });
   };
-
-  // 시간 겹침 체크 - 상품이 선택된 경우에만 실행
-  const checkTimeConflict = useMemo(() => {
-    // 상품이 선택되지 않은 경우 충돌 검사 안함
-    if (!selectedEnrollment) return '';
-    
-    // 현재 사용할 staffId 결정 (master인 경우 선택된 코치, 아니면 기본 staffId)
-    const currentStaffId = currentUser?.role === 'master' ? selectedStaffId : staffId;
-    if (!currentStaffId) return ''; // 코치가 선택되지 않은 경우
-    
-    const conflictingEvents = existingEvents.filter(event => {
-      // 같은 스태프의 이벤트만 체크
-      if (event.staffId !== currentStaffId) return false;
-      
-      // 시간 겹침 체크 - actualEndTime 사용
-      const eventStart = new Date(event.startTime);
-      const eventEnd = new Date(event.endTime);
-      
-      return (
-        (startTime >= eventStart && startTime < eventEnd) ||
-        (actualEndTime > eventStart && actualEndTime <= eventEnd) ||
-        (startTime <= eventStart && actualEndTime >= eventEnd)
-      );
-    });
-
-    if (conflictingEvents.length > 0) {
-      const conflictInfo = conflictingEvents.map(event => 
-        `${formatTime(new Date(event.startTime))} - ${formatTime(new Date(event.endTime))} (${event.title})`
-      ).join(', ');
-      return `선택한 시간대에 다른 일정이 있습니다: ${conflictInfo}`;
-    }
-
-    return '';
-  }, [existingEvents, staffId, startTime, actualEndTime, selectedEnrollment, currentUser, selectedStaffId]);
-
-  // 예약 가능한 회원 로드
   const loadAvailableMembers = useCallback(async () => {
     if (!isOpen || !searchQuery.trim()) {
       setAvailableMembers([]);
@@ -445,7 +457,7 @@ const ReservationModal: React.FC<ReservationModalProps> = ({
     
     setLoading(true);
     try {
-      // 해당 지점의 활성 회원 조회
+      // 해당 지점의 활성 회원 조회 (지점 필터링만 유지)
       const allMembers = await dbManager.getAllMembers();
       const searchLower = searchQuery.toLowerCase();
       
@@ -456,62 +468,32 @@ const ReservationModal: React.FC<ReservationModalProps> = ({
          member.phone.toLowerCase().includes(searchLower) ||
          (member.email && member.email.toLowerCase().includes(searchLower)))
       );
-      
-      // 회원의 담당직원은 고객응대용이므로 예약 시 필터링하지 않음
-      // (예약은 어떤 코치로든 자유롭게 가능)
 
-      // 활성 횟수제 수강권을 가진 회원들만 필터링
+      // 모든 회원의 수강권 정보 가져오기 (필터링 없이)
       const allEnrollments = await dbManager.getAllCourseEnrollments();
-      const allProducts = await dbManager.getAllProducts(); // Product 정보 가져오기
+      const allProducts = await dbManager.getAllProducts();
       const membersWithCourse: MemberWithCourse[] = [];
 
       for (const member of branchMembers) {
-        // 해당 회원의 모든 활성 횟수제 수강권 찾기 (현재 프로그램과 일치하는 것만)
+        // 해당 회원의 모든 횟수제 수강권 찾기 (프로그램 일치만 체크)
         const memberEnrollments = allEnrollments.filter(enrollment => {
-          // 기본 조건: 회원 ID, 프로그램 ID, 프로그램 타입, 상태
-          if (
-            enrollment.memberId !== member.id ||
-            enrollment.programId !== programId ||
-            enrollment.programType !== '횟수제' ||
-            (enrollment.enrollmentStatus !== 'active' && enrollment.enrollmentStatus !== 'unpaid')
-          ) {
-            return false;
-          }
-
-          // 홀드 상태 체크
-          if (enrollment.holdInfo?.isHold) {
-            return false;
-          }
-
-          // 횟수제: 남은 횟수 체크
-          const remainingSessions = (enrollment.sessionCount || 0) - (enrollment.completedSessions || 0);
-          if (remainingSessions <= 0) {
-            return false;
-          }
-
-          // 유효기간 체크 (endDate가 있는 경우)
-          if (enrollment.endDate) {
-            const endDate = new Date(enrollment.endDate);
-            const today = new Date();
-            today.setHours(0, 0, 0, 0);
-            if (endDate < today) {
-              return false;
-            }
-          }
-
-          return true;
+          return (
+            enrollment.memberId === member.id &&
+            enrollment.programId === programId &&
+            enrollment.programType === '횟수제'
+          );
         });
 
-        if (memberEnrollments.length > 0) {
-          // 수강권에 상품의 duration 정보 추가
-          const enrollmentsWithDuration: CourseEnrollmentWithDuration[] = memberEnrollments.map(enrollment => {
-            const product = allProducts.find(p => p.id === enrollment.productId);
-            return {
-              ...enrollment,
-              duration: product?.duration || 30 // 기본값 30분
-            };
-          });
+        // 수강권에 상품의 duration 정보 추가
+        const enrollmentsWithDuration: CourseEnrollmentWithDuration[] = memberEnrollments.map(enrollment => {
+          const product = allProducts.find(p => p.id === enrollment.productId);
+          return {
+            ...enrollment,
+            duration: product?.duration || 30 // 기본값 30분
+          };
+        });
 
+        if (enrollmentsWithDuration.length > 0) {
           // 첫 번째 수강권 정보를 기본으로 저장 (표시용)
           const primaryEnrollment = enrollmentsWithDuration[0];
           const availableSessions = (primaryEnrollment.sessionCount || 0) - (primaryEnrollment.completedSessions || 0);
@@ -521,6 +503,12 @@ const ReservationModal: React.FC<ReservationModalProps> = ({
             courseEnrollment: primaryEnrollment,
             availableSessions,
             allEnrollments: enrollmentsWithDuration // 모든 수강권 정보 저장
+          });
+        } else {
+          // 수강권이 없는 회원도 포함 (상담/기타 예약용)
+          membersWithCourse.push({
+            ...member,
+            allEnrollments: []
           });
         }
       }
@@ -561,9 +549,67 @@ const ReservationModal: React.FC<ReservationModalProps> = ({
     }
   };
 
+  // 예약 타입 체크박스 핸들러
+  const handleReservationTypeChange = (type: 'consultation' | 'other') => {
+    if (reservationType === type) {
+      // 이미 선택된 것을 다시 클릭하면 normal로 변경
+      setReservationType('normal');
+    } else {
+      // 다른 타입 선택
+      setReservationType(type);
+      // 상담/기타 선택 시 상품 선택 초기화
+      setSelectedEnrollment(null);
+    }
+  };
+
   // 예약 생성
   const handleCreateReservation = async () => {
-    if (!selectedMember || !selectedEnrollment || !hasPermission) return;
+    if (!hasPermission) return;
+
+    // 회원 선택 확인
+    if (!selectedMember) {
+      toast.error('회원을 선택해주세요.');
+      return;
+    }
+
+    // 일반 예약인 경우 상품 선택 필수
+    if (reservationType === 'normal' && !selectedEnrollment) {
+      toast.error('수강 상품을 선택해주세요.');
+      return;
+    }
+
+    // 일반 예약인 경우 수강권 유효성 검증
+    if (reservationType === 'normal' && selectedEnrollment) {
+      // 1. 수강권 상태 체크
+      if (selectedEnrollment.enrollmentStatus !== 'active' && selectedEnrollment.enrollmentStatus !== 'unpaid') {
+        toast.error(`수강권 상태가 '${selectedEnrollment.enrollmentStatus}'입니다. 활성 상태의 수강권만 사용 가능합니다.`);
+        return;
+      }
+
+      // 2. 홀드 상태 체크
+      if (selectedEnrollment.holdInfo?.isHold) {
+        toast.error('홀드 중인 수강권입니다. 홀드를 해제한 후 예약해주세요.');
+        return;
+      }
+
+      // 3. 남은 횟수 체크
+      const remainingSessions = (selectedEnrollment.sessionCount || 0) - (selectedEnrollment.completedSessions || 0);
+      if (remainingSessions <= 0) {
+        toast.error('수강권의 남은 횟수가 없습니다.');
+        return;
+      }
+
+      // 4. 유효기간 체크
+      if (selectedEnrollment.endDate) {
+        const endDate = new Date(selectedEnrollment.endDate);
+        const today = new Date();
+        today.setHours(0, 0, 0, 0);
+        if (endDate < today) {
+          toast.error(`수강권이 만료되었습니다. (만료일: ${endDate.toLocaleDateString('ko-KR')})`);
+          return;
+        }
+      }
+    }
 
     // Master인 경우 코치가 선택되어 있는지 확인
     if (currentUser?.role === 'master' && !selectedStaffId) {
@@ -571,28 +617,68 @@ const ReservationModal: React.FC<ReservationModalProps> = ({
       return;
     }
 
-    // 시간 겹침 체크
-    if (timeConflict) {
-      toast.error('시간이 겹치는 다른 일정이 있어 예약할 수 없습니다.');
+    // 시간 겹침 체크 (상담/기타 예약도 시간 겹침 체크)
+    const currentStaffId = currentUser?.role === 'master' ? selectedStaffId : staffId;
+    const conflictingEvents = existingEvents.filter(event => {
+      if (event.staffId !== currentStaffId) return false;
+      const eventStart = new Date(event.startTime);
+      const eventEnd = new Date(event.endTime);
+      const checkEndTime = reservationType === 'normal' ? actualEndTime : endTime;
+      
+      return (
+        (startTime >= eventStart && startTime < eventEnd) ||
+        (checkEndTime > eventStart && checkEndTime <= eventEnd) ||
+        (startTime <= eventStart && checkEndTime >= eventEnd)
+      );
+    });
+
+    if (conflictingEvents.length > 0) {
+      const conflictInfo = conflictingEvents.map(event => 
+        `${formatTime(new Date(event.startTime))} - ${formatTime(new Date(event.endTime))} (${event.title})`
+      ).join(', ');
+      toast.error(`시간이 겹치는 다른 일정이 있습니다: ${conflictInfo}`);
       return;
     }
 
     setLoading(true);
     try {
+      // 예약 타입에 따른 제목과 설명 생성
+      let title: string;
+      let description: string;
+      let eventType: 'class' | 'consultation' | 'other';
+      let eventColor: string;
+
+      if (reservationType === 'consultation') {
+        title = `[상담] ${selectedMember.name}`;
+        description = reservationMemo || `${selectedMember.name} 회원 상담`;
+        eventType = 'consultation';
+        eventColor = '#10b981'; // 녹색
+      } else if (reservationType === 'other') {
+        title = `[기타] ${selectedMember.name}`;
+        description = reservationMemo || `${selectedMember.name} 회원 기타 일정`;
+        eventType = 'other';
+        eventColor = '#f59e0b'; // 주황색
+      } else {
+        title = `${selectedMember.name} (${selectedEnrollment!.productName})`;
+        description = reservationMemo || `${selectedMember.name} 회원의 ${selectedEnrollment!.productName} 수업`;
+        eventType = 'class';
+        eventColor = '#3b82f6'; // 파란색
+      }
+
       // 새 예약 이벤트 생성 (데이터베이스용 타입으로)
       const newReservationForDB: Omit<import('../utils/db/types').ScheduleEvent, 'id' | 'createdAt' | 'updatedAt'> = {
-        title: `${selectedMember.name} (${selectedEnrollment.productName})`,
+        title,
         startTime,
-        endTime: actualEndTime, // 계산된 종료시간 사용
+        endTime: reservationType === 'normal' ? actualEndTime : endTime, // 일반 예약은 상품 시간, 상담/기타는 기본 시간
         staffId: selectedStaffId || staffId,
         staffName: selectedStaffName || staffName,
-        programId: selectedEnrollment.programId || programId,
-        programName: selectedEnrollment.programName || programName,
+        programId: reservationType === 'normal' ? (selectedEnrollment!.programId || programId) : programId,
+        programName: reservationType === 'normal' ? (selectedEnrollment!.programName || programName) : programName,
         memberId: selectedMember.id,
         memberName: selectedMember.name,
-        type: 'class',
-        color: '#3b82f6', // 파란색으로 수업 표시
-        description: reservationMemo || `${selectedMember.name} 회원의 ${selectedEnrollment.productName} 수업`,
+        type: eventType,
+        color: eventColor,
+        description,
         branchId,
         branchName,
         sourceType: 'booking',
@@ -628,14 +714,16 @@ const ReservationModal: React.FC<ReservationModalProps> = ({
         updatedAt: savedDBEvent.updatedAt
       };
 
-      // 선택된 상품의 수강권 세션 수 업데이트
-      const updatedEnrollment = {
-        ...selectedEnrollment,
-        completedSessions: (selectedEnrollment.completedSessions || 0) + 1,
-        updatedAt: new Date()
-      };
+      // 일반 예약인 경우에만 선택된 상품의 수강권 세션 수 업데이트
+      if (reservationType === 'normal' && selectedEnrollment) {
+        const updatedEnrollment = {
+          ...selectedEnrollment,
+          completedSessions: (selectedEnrollment.completedSessions || 0) + 1,
+          updatedAt: new Date()
+        };
 
-      await dbManager.updateCourseEnrollment(updatedEnrollment.id, updatedEnrollment);
+        await dbManager.updateCourseEnrollment(updatedEnrollment.id, updatedEnrollment);
+      }
 
       // 회원 예약 메모 업데이트 (메모가 있고 변경된 경우)
       if (reservationMemo.trim() && reservationMemo !== selectedMember.reservationMemo) {
@@ -651,7 +739,14 @@ const ReservationModal: React.FC<ReservationModalProps> = ({
       // 부모 컴포넌트에 새 예약 알림
       onReservationCreate(calendarEvent);
 
-      toast.success('예약이 성공적으로 등록되었습니다.');
+      // 예약 타입에 따른 성공 메시지
+      if (reservationType === 'consultation') {
+        toast.success('상담 일정이 성공적으로 등록되었습니다.');
+      } else if (reservationType === 'other') {
+        toast.success('기타 일정이 성공적으로 등록되었습니다.');
+      } else {
+        toast.success('예약이 성공적으로 등록되었습니다.');
+      }
       handleClose();
     } catch (error) {
       console.error('예약 생성 실패:', error);
@@ -667,7 +762,7 @@ const ReservationModal: React.FC<ReservationModalProps> = ({
     setSelectedMember(null);
     setSelectedEnrollment(null);
     setReservationMemo('');
-    setTimeConflict('');
+    setReservationType('normal');
     onClose();
   };
 
@@ -677,11 +772,6 @@ const ReservationModal: React.FC<ReservationModalProps> = ({
       loadAvailableMembers();
     }
   }, [isOpen, loadAvailableMembers]);
-
-  // 시간 겹침 체크
-  useEffect(() => {
-    setTimeConflict(checkTimeConflict);
-  }, [checkTimeConflict]);
 
   // 권한 없음 처리
   if (isOpen && !hasPermission) {
@@ -801,6 +891,36 @@ const ReservationModal: React.FC<ReservationModalProps> = ({
             <PanelTitle>예약 정보</PanelTitle>
             {selectedMember ? (
               <MemoSection>
+                {/* 예약 타입 선택 */}
+                <ReservationTypeSection>
+                  <FormLabel>예약 유형</FormLabel>
+                  <CheckboxGroup>
+                    <CheckboxLabel>
+                      <Checkbox
+                        type="checkbox"
+                        checked={reservationType === 'consultation'}
+                        onChange={() => handleReservationTypeChange('consultation')}
+                      />
+                      상담 (회원권 차감 안됨)
+                    </CheckboxLabel>
+                    <CheckboxLabel>
+                      <Checkbox
+                        type="checkbox"
+                        checked={reservationType === 'other'}
+                        onChange={() => handleReservationTypeChange('other')}
+                      />
+                      기타 (회원권 차감 안됨)
+                    </CheckboxLabel>
+                  </CheckboxGroup>
+                  {reservationType !== 'normal' && (
+                    <InfoText>
+                      💡 {reservationType === 'consultation' ? '상담' : '기타'} 예약은 회원권 횟수를 차감하지 않고 일정만 등록됩니다.
+                    </InfoText>
+                  )}
+                </ReservationTypeSection>
+
+                {/* 일반 예약인 경우에만 상품 선택 표시 */}
+                {reservationType === 'normal' && (
                 <FormGroup>
                   <FormLabel>수강 상품 선택</FormLabel>
                   <CustomDropdown
@@ -812,9 +932,27 @@ const ReservationModal: React.FC<ReservationModalProps> = ({
                     options={selectedMember.allEnrollments?.map(enrollment => {
                       const availableSessions = (enrollment.sessionCount || 0) - (enrollment.completedSessions || 0);
                       const durationText = enrollment.duration ? `${enrollment.duration}분` : '시간미정';
+                      
+                      // 수강권 상태 체크
+                      let statusTag = '';
+                      if (enrollment.enrollmentStatus !== 'active' && enrollment.enrollmentStatus !== 'unpaid') {
+                        statusTag = ` [${enrollment.enrollmentStatus}]`;
+                      } else if (enrollment.holdInfo?.isHold) {
+                        statusTag = ' [홀드중]';
+                      } else if (availableSessions <= 0) {
+                        statusTag = ' [횟수소진]';
+                      } else if (enrollment.endDate) {
+                        const endDate = new Date(enrollment.endDate);
+                        const today = new Date();
+                        today.setHours(0, 0, 0, 0);
+                        if (endDate < today) {
+                          statusTag = ' [만료]';
+                        }
+                      }
+                      
                       return {
                         value: enrollment.id,
-                        label: `${enrollment.productName} (잔여 ${availableSessions}회 • ${durationText})`
+                        label: `${enrollment.productName} (잔여 ${availableSessions}회 • ${durationText})${statusTag}`
                       };
                     }).sort((a, b) => a.label.localeCompare(b.label, 'ko-KR')) || []}
                     placeholder="상품을 선택하세요"
@@ -829,20 +967,6 @@ const ReservationModal: React.FC<ReservationModalProps> = ({
                             * 50분 수업은 쉬는시간 포함하여 1시간 예약됩니다
                           </div>
                         )}
-                        {/* 시간 겹침 경고 */}
-                        {timeConflict && (
-                          <div style={{ 
-                            background: '#fff3cd',
-                            border: '1px solid #ffeaa7',
-                            borderRadius: '4px',
-                            padding: '8px',
-                            marginTop: '8px',
-                            color: '#856404',
-                            fontSize: '12px'
-                          }}>
-                            {timeConflict}
-                          </div>
-                        )}
                       </>
                     ) : (
                       <div style={{ color: AppColors.onInput1, fontSize: '14px' }}>
@@ -851,6 +975,17 @@ const ReservationModal: React.FC<ReservationModalProps> = ({
                     )}
                   </TimeDisplay>
                 </FormGroup>
+                )}
+
+                {/* 상담/기타 예약인 경우 시간 정보 표시 */}
+                {reservationType !== 'normal' && (
+                  <FormGroup>
+                    <FormLabel>예약 시간</FormLabel>
+                    <TimeDisplay>
+                      {formatTime(startTime)} - {formatTime(endTime)}
+                    </TimeDisplay>
+                  </FormGroup>
+                )}
                 
                 <MemoContainer>
                   <MemoRow>
@@ -885,9 +1020,16 @@ const ReservationModal: React.FC<ReservationModalProps> = ({
           <Button 
             variant="primary" 
             onClick={handleCreateReservation}
-            disabled={!selectedMember || !selectedEnrollment || !!timeConflict || loading}
+            disabled={
+              !selectedMember || 
+              (reservationType === 'normal' && !selectedEnrollment) || 
+              loading
+            }
           >
-            {loading ? '등록 중...' : '예약 등록'}
+            {loading ? '등록 중...' : 
+              reservationType === 'consultation' ? '상담 등록' :
+              reservationType === 'other' ? '기타 일정 등록' : '예약 등록'
+            }
           </Button>
         </ButtonGroup>
       }

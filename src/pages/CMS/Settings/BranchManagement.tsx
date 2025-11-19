@@ -2,7 +2,9 @@ import React, { useState, useEffect } from 'react';
 import styled from 'styled-components';
 import { AppColors } from '../../../styles/colors';
 import { AppTextStyles } from '../../../styles/textStyles';
-import { dbManager, Branch } from '../../../utils/indexedDB';
+import { dbManager, Branch, ReferralPointSettings, Staff } from '../../../utils/indexedDB';
+import { AppNumberTextField } from '../../../customComponents/AppNumberTextField';
+import { SYSTEM_ADMIN_CONFIG } from '../../../constants/staffConstants';
 
 const Container = styled.div`
   width: 100%;
@@ -288,39 +290,77 @@ const CancelButton = styled.button`
 
 const BranchManagement: React.FC = () => {
   const [branches, setBranches] = useState<Branch[]>([]);
+  const [referralSettings, setReferralSettings] = useState<ReferralPointSettings[]>([]);
   const [isAdding, setIsAdding] = useState(false);
   const [editingId, setEditingId] = useState<string | null>(null);
+  const [editingPointsId, setEditingPointsId] = useState<string | null>(null);
   const [newBranchName, setNewBranchName] = useState('');
   const [newBranchAddress, setNewBranchAddress] = useState('');
   const [newBranchPhone, setNewBranchPhone] = useState('');
   const [editBranchName, setEditBranchName] = useState('');
   const [editBranchAddress, setEditBranchAddress] = useState('');
   const [editBranchPhone, setEditBranchPhone] = useState('');
+  const [editReferrerPoints, setEditReferrerPoints] = useState('');
+  const [editReferredPoints, setEditReferredPoints] = useState('');
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [currentUserInfo, setCurrentUserInfo] = useState<Staff | null>(null);
 
   // 컴포넌트 마운트 시 데이터 로드
   useEffect(() => {
-    loadBranches();
+    loadData();
   }, []);
 
-  const loadBranches = async () => {
+  const loadData = async () => {
     try {
       setLoading(true);
       setError(null);
-      const branchData = await dbManager.getAllBranches();
+      
+      // 현재 사용자 정보 로드
+      const adminId = sessionStorage.getItem('adminId');
+      if (adminId) {
+        const allStaff = await dbManager.getAllStaff();
+        const currentUser = allStaff.find(staff => staff.loginId === adminId);
+        setCurrentUserInfo(currentUser || null);
+      }
+      
+      const [branchData, settingsData] = await Promise.all([
+        dbManager.getAllBranches(),
+        dbManager.referralPoint.getAllReferralPointSettings(),
+      ]);
+      
       // 오래된 등록 순서로 정렬 (createdAt 오름차순)
       const sortedBranches = branchData.sort((a, b) => 
         new Date(a.createdAt).getTime() - new Date(b.createdAt).getTime()
       );
       setBranches(sortedBranches);
+      setReferralSettings(settingsData);
     } catch (err) {
-      console.error('지점 데이터 로드 실패:', err);
-      setError('지점 데이터를 불러오는데 실패했습니다.');
+      console.error('데이터 로드 실패:', err);
+      setError('데이터를 불러오는데 실패했습니다.');
     } finally {
       setLoading(false);
     }
+  };
+
+  const getReferralPointsForBranch = (branchId: string): ReferralPointSettings | null => {
+    return referralSettings.find(s => s.branchId === branchId) || null;
+  };
+
+  // MASTER 권한 체크
+  const isMaster = (): boolean => {
+    if (!currentUserInfo) return false;
+    const adminId = sessionStorage.getItem('adminId');
+    return currentUserInfo.permission === 'MASTER' || adminId === SYSTEM_ADMIN_CONFIG.SYSTEM_ADMIN_LOGIN_ID;
+  };
+
+  // 특정 지점의 포인트 편집 권한 체크 (EDITOR는 본인 지점만)
+  const canEditPoints = (branchId: string): boolean => {
+    if (!currentUserInfo) return false;
+    if (isMaster()) return true;
+    // EDITOR는 본인 지점만 포인트 설정 가능
+    return currentUserInfo.permission === 'EDITOR' && currentUserInfo.branchId === branchId;
   };
 
   const handleAddBranch = async () => {
@@ -467,9 +507,79 @@ const BranchManagement: React.FC = () => {
     setNewBranchPhone('');
     setIsAdding(false);
     setEditingId(null);
+    setEditingPointsId(null);
     setEditBranchName('');
     setEditBranchAddress('');
     setEditBranchPhone('');
+    setEditReferrerPoints('');
+    setEditReferredPoints('');
+    setError(null);
+  };
+
+  // 포인트 설정 관련 핸들러
+  const handleEditPoints = (branch: Branch) => {
+    const points = getReferralPointsForBranch(branch.id);
+    setEditingPointsId(branch.id);
+    setEditReferrerPoints(points?.referrerPoints.toString() || '');
+    setEditReferredPoints(points?.referredPoints.toString() || '');
+    setEditingId(null);
+    setIsAdding(false);
+  };
+
+  const handleSavePoints = async (branchId: string, branchName: string) => {
+    const referrerPointsNum = parseInt(editReferrerPoints);
+    const referredPointsNum = parseInt(editReferredPoints);
+
+    if (isNaN(referrerPointsNum) || referrerPointsNum < 0) {
+      alert('추천한 사람 포인트를 올바르게 입력해주세요.');
+      return;
+    }
+
+    if (isNaN(referredPointsNum) || referredPointsNum < 0) {
+      alert('추천받은 사람 포인트를 올바르게 입력해주세요.');
+      return;
+    }
+
+    try {
+      setSaving(true);
+      setError(null);
+
+      const existingSettings = getReferralPointsForBranch(branchId);
+
+      if (existingSettings) {
+        // 업데이트
+        await dbManager.referralPoint.updateReferralPointSettings(existingSettings.id, {
+          referrerPoints: referrerPointsNum,
+          referredPoints: referredPointsNum,
+        });
+      } else {
+        // 새로 추가
+        await dbManager.referralPoint.addReferralPointSettings({
+          branchId,
+          branchName,
+          referrerPoints: referrerPointsNum,
+          referredPoints: referredPointsNum,
+          isActive: true,
+        });
+      }
+
+      // 데이터 다시 로드
+      await loadData();
+      setEditingPointsId(null);
+      setEditReferrerPoints('');
+      setEditReferredPoints('');
+    } catch (err) {
+      console.error('포인트 설정 저장 실패:', err);
+      setError('포인트 설정 저장에 실패했습니다.');
+    } finally {
+      setSaving(false);
+    }
+  };
+
+  const handleCancelPoints = () => {
+    setEditingPointsId(null);
+    setEditReferrerPoints('');
+    setEditReferredPoints('');
     setError(null);
   };
 
@@ -498,7 +608,7 @@ const BranchManagement: React.FC = () => {
       {error && (
         <ErrorState>
           {error}
-          <RefreshButton onClick={loadBranches}>
+          <RefreshButton onClick={loadData}>
             다시 시도
           </RefreshButton>
         </ErrorState>
@@ -548,7 +658,7 @@ const BranchManagement: React.FC = () => {
         </AddForm>
       )}
 
-      {!isAdding && (
+      {!isAdding && isMaster() && (
         <AddButton onClick={() => {
           setIsAdding(true);
           setEditingId(null);
@@ -644,6 +754,77 @@ const BranchManagement: React.FC = () => {
                     </CancelButton>
                   </div>
                 </div>
+              ) : editingPointsId === branch.id ? (
+                // 포인트 설정 모드
+                <div style={{ 
+                  width: '100%', 
+                  display: 'flex', 
+                  flexDirection: 'column', 
+                  gap: '16px',
+                  padding: '8px 0'
+                }}>
+                  <div style={{ 
+                    fontWeight: 500, 
+                    marginBottom: '4px',
+                    color: AppColors.onSurface,
+                    fontSize: '16px'
+                  }}>
+                    {branch.name} - 추천 포인트 설정
+                  </div>
+                  <div style={{ 
+                    display: 'grid', 
+                    gridTemplateColumns: '1fr 1fr',
+                    gap: '16px' 
+                  }}>
+                    <AppNumberTextField
+                      value={editReferrerPoints}
+                      onChange={(e) => setEditReferrerPoints(e.target.value)}
+                      label="추천한 사람 포인트"
+                      placeholder="포인트 입력"
+                      minValue={0}
+                      unit="P"
+                      readOnly={saving}
+                    />
+                    <AppNumberTextField
+                      value={editReferredPoints}
+                      onChange={(e) => setEditReferredPoints(e.target.value)}
+                      label="추천받은 사람 포인트"
+                      placeholder="포인트 입력"
+                      minValue={0}
+                      unit="P"
+                      readOnly={saving}
+                    />
+                  </div>
+                  <div style={{ 
+                    display: 'flex', 
+                    gap: '8px', 
+                    justifyContent: 'flex-end',
+                    marginTop: '4px'
+                  }}>
+                    <SaveButton 
+                      onClick={() => handleSavePoints(branch.id, branch.name)} 
+                      disabled={saving}
+                      style={{ 
+                        padding: '6px 16px', 
+                        fontSize: '13px',
+                        minWidth: '60px'
+                      }}
+                    >
+                      {saving ? '저장 중...' : '저장'}
+                    </SaveButton>
+                    <CancelButton 
+                      onClick={handleCancelPoints} 
+                      disabled={saving}
+                      style={{ 
+                        padding: '6px 16px', 
+                        fontSize: '13px',
+                        minWidth: '60px'
+                      }}
+                    >
+                      취소
+                    </CancelButton>
+                  </div>
+                </div>
               ) : (
                 // 보기 모드
                 <>
@@ -662,22 +843,49 @@ const BranchManagement: React.FC = () => {
                           <DetailValue>{branch.phone}</DetailValue>
                         </DetailItem>
                       )}
+                      {(() => {
+                        const points = getReferralPointsForBranch(branch.id);
+                        if (points) {
+                          return (
+                            <DetailItem>
+                              <DetailLabel>포인트:</DetailLabel>
+                              <DetailValue style={{ color: AppColors.primary, fontWeight: 500 }}>
+                                추천인 {points.referrerPoints.toLocaleString()}P / 신규 {points.referredPoints.toLocaleString()}P
+                              </DetailValue>
+                            </DetailItem>
+                          );
+                        }
+                        return null;
+                      })()}
                     </BranchDetails>
                   </BranchInfo>
                   <ActionButtons>
-                    <EditButton 
-                      onClick={() => handleEditBranch(branch)}
-                      disabled={saving || editingId !== null}
-                    >
-                      수정
-                    </EditButton>
-                    <DeleteButton 
-                      onClick={() => handleDeleteBranch(branch.id)}
-                      disabled={saving || editingId !== null || branch.name === '전체'}
-                      title={branch.name === '전체' ? '전체 지점은 삭제할 수 없습니다' : ''}
-                    >
-                      삭제
-                    </DeleteButton>
+                    {branch.name !== '전체' && canEditPoints(branch.id) && (
+                      <EditButton 
+                        onClick={() => handleEditPoints(branch)}
+                        disabled={saving || editingId !== null || editingPointsId !== null}
+                        style={{ backgroundColor: '#FF8C00', color: '#FFFFFF' }}
+                      >
+                        포인트설정
+                      </EditButton>
+                    )}
+                    {isMaster() && (
+                      <EditButton 
+                        onClick={() => handleEditBranch(branch)}
+                        disabled={saving || editingId !== null || editingPointsId !== null}
+                      >
+                        수정
+                      </EditButton>
+                    )}
+                    {isMaster() && (
+                      <DeleteButton 
+                        onClick={() => handleDeleteBranch(branch.id)}
+                        disabled={saving || editingId !== null || editingPointsId !== null || branch.name === '전체'}
+                        title={branch.name === '전체' ? '전체 지점은 삭제할 수 없습니다' : ''}
+                      >
+                        삭제
+                      </DeleteButton>
+                    )}
                   </ActionButtons>
                 </>
               )}

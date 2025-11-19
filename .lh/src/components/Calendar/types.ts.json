@@ -3,7 +3,7 @@
     "activeCommit": 0,
     "commits": [
         {
-            "activePatchIndex": 14,
+            "activePatchIndex": 15,
             "patches": [
                 {
                     "date": 1760154018682,
@@ -64,6 +64,10 @@
                 {
                     "date": 1763467722892,
                     "content": "Index: \n===================================================================\n--- \n+++ \n@@ -25,8 +25,9 @@\n   branchName?: string;\n   recurrenceRule?: string; // RRULE for recurring events\n   sourceType: 'manual' | 'weekly_holiday' | 'booking' | 'period_enrollment'; // 이벤트 생성 출처\n   sourceId?: string; // 원본 데이터 ID (WeeklyHolidaySettings ID 등)\n+  reservationMemo?: string; // 예약 전용 메모 (회원 remarks와 별도)\n   createdAt?: Date;\n   updatedAt?: Date;\n }\n \n"
+                },
+                {
+                    "date": 1763549240685,
+                    "content": "Index: \n===================================================================\n--- \n+++ \n@@ -17,9 +17,9 @@\n   programId?: string;\n   programName?: string;\n   memberId?: string;\n   memberName?: string;\n-  type: 'class' | 'personal' | 'meeting' | 'break' | 'holiday';\n+  type: 'class' | 'personal' | 'meeting' | 'break' | 'holiday' | 'consultation' | 'other';\n   color?: string;\n   description?: string;\n   branchId?: string;\n   branchName?: string;\n"
                 }
             ],
             "date": 1760154018682,

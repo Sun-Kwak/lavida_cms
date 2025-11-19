@@ -424,34 +424,42 @@ const MemberRegister: React.FC = () => {
         console.log('=== 지인추천 포인트 적립 처리 ===');
         
         try {
-          // 추천인(기존 회원)에게 40,000 포인트 적립
+          // 해당 지점의 추천 포인트 설정 조회 (없으면 "전체" 지점 설정 사용)
+          const referralPoints = await dbManager.referralPoint.getReferralPoints(formData.joinInfo.branchId);
+          console.log('추천 포인트 설정:', referralPoints);
+          
+          // 추천인(기존 회원)에게 포인트 적립
           const referrerMember = await dbManager.getMemberById(formData.joinInfo.referrerId);
           const referrerName = referrerMember?.name || formData.joinInfo.referrerName || 'Unknown';
           
-          await dbManager.point.addPointTransaction({
-            memberId: formData.joinInfo.referrerId,
-            memberName: referrerName,
-            amount: 40000,
-            transactionType: 'earn',
-            source: '지인추천 보상',
-            description: `${formData.basicInfo.name} 님 추천으로 적립`,
-            earnedDate: new Date(),
-            isExpired: false
-          });
-          console.log(`추천인(${referrerName})에게 40,000 포인트 적립 완료`);
+          if (referralPoints.referrerPoints > 0) {
+            await dbManager.point.addPointTransaction({
+              memberId: formData.joinInfo.referrerId,
+              memberName: referrerName,
+              amount: referralPoints.referrerPoints,
+              transactionType: 'earn',
+              source: '지인추천 보상',
+              description: `${formData.basicInfo.name} 님 추천으로 적립`,
+              earnedDate: new Date(),
+              isExpired: false
+            });
+            console.log(`추천인(${referrerName})에게 ${referralPoints.referrerPoints.toLocaleString()} 포인트 적립 완료`);
+          }
           
-          // 신규 회원에게 35,000 포인트 적립
-          await dbManager.point.addPointTransaction({
-            memberId: memberId,
-            memberName: formData.basicInfo.name,
-            amount: 35000,
-            transactionType: 'earn',
-            source: '지인추천 가입 혜택',
-            description: `${referrerName} 님 추천으로 가입`,
-            earnedDate: new Date(),
-            isExpired: false
-          });
-          console.log(`신규 회원(${formData.basicInfo.name})에게 35,000 포인트 적립 완료`);
+          // 신규 회원에게 포인트 적립
+          if (referralPoints.referredPoints > 0) {
+            await dbManager.point.addPointTransaction({
+              memberId: memberId,
+              memberName: formData.basicInfo.name,
+              amount: referralPoints.referredPoints,
+              transactionType: 'earn',
+              source: '지인추천 가입 혜택',
+              description: `${referrerName} 님 추천으로 가입`,
+              earnedDate: new Date(),
+              isExpired: false
+            });
+            console.log(`신규 회원(${formData.basicInfo.name})에게 ${referralPoints.referredPoints.toLocaleString()} 포인트 적립 완료`);
+          }
           
         } catch (pointError) {
           console.error('지인추천 포인트 적립 실패:', pointError);
@@ -469,11 +477,19 @@ const MemberRegister: React.FC = () => {
       
       // 지인추천 포인트 적립 정보 추가
       if (formData.joinInfo.joinPath === '지인추천' && formData.joinInfo.referrerId) {
+        const referrerPoints = await dbManager.referralPoint.getReferralPoints(formData.joinInfo.branchId);
         const referrerStaff = staff.find(s => s.id === formData.joinInfo.referrerId);
         const referrerName = referrerStaff?.name || formData.joinInfo.referrerName || 'Unknown';
-        successMessage += `\n\n🎁 지인추천 혜택`;
-        successMessage += `\n👨‍💼 추천인(${referrerName}): 40,000 포인트 적립`;
-        successMessage += `\n🙋‍♀️ 신규회원: 35,000 포인트 적립`;
+        
+        if (referrerPoints.referrerPoints > 0 || referrerPoints.referredPoints > 0) {
+          successMessage += `\n\n🎁 지인추천 혜택`;
+          if (referrerPoints.referrerPoints > 0) {
+            successMessage += `\n👨‍💼 추천인(${referrerName}): ${referrerPoints.referrerPoints.toLocaleString()} 포인트 적립`;
+          }
+          if (referrerPoints.referredPoints > 0) {
+            successMessage += `\n🙋‍♀️ 신규회원: ${referrerPoints.referredPoints.toLocaleString()} 포인트 적립`;
+          }
+        }
       }
       
       if (formData.paymentInfo.selectedProducts.length > 0 && orderId) {
