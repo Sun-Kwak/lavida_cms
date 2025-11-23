@@ -3,8 +3,9 @@ import styled from 'styled-components';
 import { AppColors } from '../../styles/colors';
 import { AppTextStyles } from '../../styles/textStyles';
 import { dbManager } from '../../utils/indexedDB';
-import type { WeeklyHolidaySettings } from '../../utils/db/types';
+import type { DailyScheduleSettings, WeeklyHolidaySettings } from '../../utils/db/types';
 import { getUnifiedShiftSettings } from '../../utils/shiftUtils';
+import { formatDateToLocal } from './utils';
 
 /**
  * 주별 근무 스케줄 모달
@@ -486,7 +487,6 @@ const WeeklyHolidayModal: React.FC<WeeklyHolidayModalProps> = ({
   staffList,
   currentUser,
   onSave,
-  existingWeeklyHolidays = [],
   onRefresh
 }) => {
 
@@ -577,42 +577,36 @@ const WeeklyHolidayModal: React.FC<WeeklyHolidayModalProps> = ({
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
-  // 현재 설정 가능한 주의 월요일 날짜 계산
-  // 휴일설정은 이번주 토요일부터 다음주 금요일까지에 대한 결정
+  // 현재 설정 가능한 주의 토요일 날짜 계산 (주의 시작 = 토요일)
   const getCurrentSettableWeekStartDate = (): string => {
     const today = new Date();
-    const dayOfWeek = today.getDay(); // 0: 일요일, 1: 월요일, ..., 5: 금요일, 6: 토요일
+    const dayOfWeek = today.getDay();
     
-    // 이번주 토요일 계산
-    let thisWeekSaturday = new Date(today);
-    const daysUntilSaturday = 6 - dayOfWeek; // 토요일까지 남은 일수 (토요일이면 0)
-    thisWeekSaturday.setDate(today.getDate() + daysUntilSaturday);
+    // 다가오는 토요일 계산
+    const nextSaturday = new Date(today);
+    if (dayOfWeek === 6) {
+      // 오늘이 토요일이면 다음 토요일
+      nextSaturday.setDate(today.getDate() + 7);
+    } else {
+      // 아니면 이번주 토요일
+      const daysUntilSaturday = 6 - dayOfWeek;
+      nextSaturday.setDate(today.getDate() + daysUntilSaturday);
+    }
     
-    // 토요일부터 시작하는 주의 월요일 계산 (토요일 + 2일)
-    const targetMonday = new Date(thisWeekSaturday);
-    targetMonday.setDate(thisWeekSaturday.getDate() + 2); // 토요일 + 2일 = 월요일
-    
-    return targetMonday.toISOString().split('T')[0];
-  };  // 주 날짜 범위 표시 (토요일부터 금요일까지)
+    // 토요일을 주의 시작일로 반환
+    return formatDateToLocal(nextSaturday);
+  };
+
+  // 주 날짜 범위 표시 (토요일부터 금요일까지)
   const getWeekDateRange = (): string => {
     if (!currentWeekStartDate) return '';
     
-    const mondayDate = new Date(currentWeekStartDate + 'T00:00:00');
-    if (isNaN(mondayDate.getTime())) return '';
+    const saturday = new Date(currentWeekStartDate + 'T00:00:00');
+    const friday = new Date(saturday);
+    friday.setDate(saturday.getDate() + 6); // 토요일 + 6일 = 금요일
     
-    // 월요일에서 토요일로 이동 (월요일 - 2일 = 토요일)
-    const saturdayDate = new Date(mondayDate);
-    saturdayDate.setDate(mondayDate.getDate() - 2);
-    
-    // 토요일에서 금요일로 이동 (토요일 + 6일 = 금요일)
-    const fridayDate = new Date(saturdayDate);
-    fridayDate.setDate(saturdayDate.getDate() + 6);
-    
-    const formatDate = (date: Date) => {
-      return `${date.getMonth() + 1}/${date.getDate()}`;
-    };
-    
-    return `${formatDate(saturdayDate)} - ${formatDate(fridayDate)}`;
+    const format = (date: Date) => `${date.getMonth() + 1}/${date.getDate()}`;
+    return `${format(saturday)} ~ ${format(friday)}`;
   };
 
   // 초기화
@@ -642,152 +636,192 @@ const WeeklyHolidayModal: React.FC<WeeklyHolidayModalProps> = ({
     }
   }, [isOpen, staffId, currentUser]);
 
-  // 기존 설정 로드
+  // 기존 설정 로드 (dailyScheduleSettings에서)
   useEffect(() => {
     console.log('useEffect triggered:', { isOpen, currentWeekStartDate, selectedStaffIds: selectedStaffIds.length });
     
     if (isOpen && currentWeekStartDate && selectedStaffIds.length > 0) {
-      const existingSetting = existingWeeklyHolidays.find(
-        setting => setting.weekStartDate === currentWeekStartDate && 
-                  selectedStaffIds.includes(setting.staffId)
-      );
+      const loadDailySchedules = async () => {
+        try {
+          // 첫 번째 선택된 직원의 dailyScheduleSettings 로드
+          const staffId = selectedStaffIds[0];
+          
+          // 해당 주의 토요일부터 금요일까지 날짜 계산 (타임존 문제 방지)
+          const weekStart = new Date(currentWeekStartDate + 'T00:00:00');
+          const dailySettings: { [key: string]: DailyScheduleSettings | null } = {};
+          const dayKeys = ['saturday', 'sunday', 'monday', 'tuesday', 'wednesday', 'thursday', 'friday'];
+          
+          for (let i = 0; i < 7; i++) {
+            const date = new Date(weekStart);
+            date.setDate(weekStart.getDate() + i);
+            const dateStr = formatDateToLocal(date);
+            
+            const setting = await dbManager.getDailyScheduleByStaffAndDate(staffId, dateStr);
+            dailySettings[dayKeys[i]] = setting;
+          }
+          
+          console.log('Loaded daily schedules:', dailySettings);
+          
+          // dailySettings가 있으면 weekDaySettings로 변환
+          const hasAnySettings = Object.values(dailySettings).some(s => s !== null);
+          
+          if (hasAnySettings) {
+            // 선택된 직원들의 shift 정보를 기반으로 기본 설정 생성
+            const defaultSettings = getDefaultSettingsForSelectedStaff();
+            
+            // breakTimes에서 lunchTime 분리
+            const extractLunchAndBreaks = (breakTimes: any[] | undefined, defaultBreakTime: any) => {
+              if (!breakTimes || breakTimes.length === 0) {
+                return {
+                  lunchTime: defaultBreakTime,
+                  breakTimes: []
+                };
+              }
+              
+              // 첫 번째 breakTime을 lunchTime으로 사용
+              const [first, ...rest] = breakTimes;
+              return {
+                lunchTime: first || defaultBreakTime,
+                breakTimes: rest
+              };
+            };
+            
+            const normalizedWeekDays = {
+              monday: dailySettings.monday ? {
+                isHoliday: dailySettings.monday.isHoliday,
+                workingHours: dailySettings.monday.workingHours || defaultSettings.workingHours,
+                ...extractLunchAndBreaks(dailySettings.monday.breakTimes, defaultSettings.defaultBreakTime)
+              } : {
+                isHoliday: false,
+                workingHours: defaultSettings.workingHours,
+                lunchTime: defaultSettings.defaultBreakTime,
+                breakTimes: []
+              },
+              tuesday: dailySettings.tuesday ? {
+                isHoliday: dailySettings.tuesday.isHoliday,
+                workingHours: dailySettings.tuesday.workingHours || defaultSettings.workingHours,
+                ...extractLunchAndBreaks(dailySettings.tuesday.breakTimes, defaultSettings.defaultBreakTime)
+              } : {
+                isHoliday: false,
+                workingHours: defaultSettings.workingHours,
+                lunchTime: defaultSettings.defaultBreakTime,
+                breakTimes: []
+              },
+              wednesday: dailySettings.wednesday ? {
+                isHoliday: dailySettings.wednesday.isHoliday,
+                workingHours: dailySettings.wednesday.workingHours || defaultSettings.workingHours,
+                ...extractLunchAndBreaks(dailySettings.wednesday.breakTimes, defaultSettings.defaultBreakTime)
+              } : {
+                isHoliday: false,
+                workingHours: defaultSettings.workingHours,
+                lunchTime: defaultSettings.defaultBreakTime,
+                breakTimes: []
+              },
+              thursday: dailySettings.thursday ? {
+                isHoliday: dailySettings.thursday.isHoliday,
+                workingHours: dailySettings.thursday.workingHours || defaultSettings.workingHours,
+                ...extractLunchAndBreaks(dailySettings.thursday.breakTimes, defaultSettings.defaultBreakTime)
+              } : {
+                isHoliday: false,
+                workingHours: defaultSettings.workingHours,
+                lunchTime: defaultSettings.defaultBreakTime,
+                breakTimes: []
+              },
+              friday: dailySettings.friday ? {
+                isHoliday: dailySettings.friday.isHoliday,
+                workingHours: dailySettings.friday.workingHours || defaultSettings.workingHours,
+                ...extractLunchAndBreaks(dailySettings.friday.breakTimes, defaultSettings.defaultBreakTime)
+              } : {
+                isHoliday: false,
+                workingHours: defaultSettings.workingHours,
+                lunchTime: defaultSettings.defaultBreakTime,
+                breakTimes: []
+              },
+              saturday: dailySettings.saturday ? {
+                isHoliday: dailySettings.saturday.isHoliday,
+                workingHours: dailySettings.saturday.workingHours || defaultSettings.workingHours,
+                ...extractLunchAndBreaks(dailySettings.saturday.breakTimes, defaultSettings.defaultBreakTime)
+              } : {
+                isHoliday: true,
+                workingHours: defaultSettings.workingHours,
+                lunchTime: defaultSettings.defaultBreakTime,
+                breakTimes: []
+              },
+              sunday: dailySettings.sunday ? {
+                isHoliday: dailySettings.sunday.isHoliday,
+                workingHours: dailySettings.sunday.workingHours || defaultSettings.workingHours,
+                ...extractLunchAndBreaks(dailySettings.sunday.breakTimes, defaultSettings.defaultBreakTime)
+              } : {
+                isHoliday: true,
+                workingHours: defaultSettings.workingHours,
+                lunchTime: defaultSettings.defaultBreakTime,
+                breakTimes: []
+              }
+            };
+            
+            console.log('Setting weekDaySettings from daily schedules:', normalizedWeekDays);
+            setWeekDaySettings(normalizedWeekDays);
+          } else {
+            console.log('No existing setting found, using shift-based default state');
+            
+            // 선택된 직원들의 shift 정보를 기반으로 기본 설정 생성
+            const defaultSettings = getDefaultSettingsForSelectedStaff();
+            
+            // 기본값으로 리셋 (주말만 휴일)
+            setWeekDaySettings({
+              monday: {
+                isHoliday: false,
+                workingHours: defaultSettings.workingHours,
+                lunchTime: defaultSettings.defaultBreakTime,
+                breakTimes: []
+              },
+              tuesday: {
+                isHoliday: false,
+                workingHours: defaultSettings.workingHours,
+                lunchTime: defaultSettings.defaultBreakTime,
+                breakTimes: []
+              },
+              wednesday: {
+                isHoliday: false,
+                workingHours: defaultSettings.workingHours,
+                lunchTime: defaultSettings.defaultBreakTime,
+                breakTimes: []
+              },
+              thursday: {
+                isHoliday: false,
+                workingHours: defaultSettings.workingHours,
+                lunchTime: defaultSettings.defaultBreakTime,
+                breakTimes: []
+              },
+              friday: {
+                isHoliday: false,
+                workingHours: defaultSettings.workingHours,
+                lunchTime: defaultSettings.defaultBreakTime,
+                breakTimes: []
+              },
+              saturday: {
+                isHoliday: true,
+                workingHours: defaultSettings.workingHours,
+                lunchTime: defaultSettings.defaultBreakTime,
+                breakTimes: []
+              },
+              sunday: {
+                isHoliday: true,
+                workingHours: defaultSettings.workingHours,
+                lunchTime: defaultSettings.defaultBreakTime,
+                breakTimes: []
+              }
+            });
+          }
+        } catch (error) {
+          console.error('Failed to load daily schedules:', error);
+        }
+      };
       
-      if (existingSetting) {
-        console.log('Found existing setting:', existingSetting);
-        
-        // 선택된 직원들의 shift 정보를 기반으로 기본 설정 생성
-        const defaultSettings = getDefaultSettingsForSelectedStaff();
-        
-        // 기존 설정이 있다면 로드하되, 구조가 맞지 않으면 shift 기반 기본값 사용
-        const normalizedWeekDays = {
-          monday: {
-            isHoliday: existingSetting.weekDays.monday?.isHoliday ?? false,
-            workingHours: existingSetting.weekDays.monday?.workingHours ?? defaultSettings.workingHours,
-            lunchTime: defaultSettings.defaultBreakTime, // 항상 shift 기반 기본값 사용
-            breakTimes: (existingSetting.weekDays.monday?.breakTimes ?? []).map(bt => ({
-              start: bt.start,
-              end: bt.end,
-              name: bt.name || '휴게시간'
-            }))
-          },
-          tuesday: {
-            isHoliday: existingSetting.weekDays.tuesday?.isHoliday ?? false,
-            workingHours: existingSetting.weekDays.tuesday?.workingHours ?? defaultSettings.workingHours,
-            lunchTime: defaultSettings.defaultBreakTime,
-            breakTimes: (existingSetting.weekDays.tuesday?.breakTimes ?? []).map(bt => ({
-              start: bt.start,
-              end: bt.end,
-              name: bt.name || '휴게시간'
-            }))
-          },
-          wednesday: {
-            isHoliday: existingSetting.weekDays.wednesday?.isHoliday ?? false,
-            workingHours: existingSetting.weekDays.wednesday?.workingHours ?? defaultSettings.workingHours,
-            lunchTime: defaultSettings.defaultBreakTime,
-            breakTimes: (existingSetting.weekDays.wednesday?.breakTimes ?? []).map(bt => ({
-              start: bt.start,
-              end: bt.end,
-              name: bt.name || '휴게시간'
-            }))
-          },
-          thursday: {
-            isHoliday: existingSetting.weekDays.thursday?.isHoliday ?? false,
-            workingHours: existingSetting.weekDays.thursday?.workingHours ?? defaultSettings.workingHours,
-            lunchTime: defaultSettings.defaultBreakTime,
-            breakTimes: (existingSetting.weekDays.thursday?.breakTimes ?? []).map(bt => ({
-              start: bt.start,
-              end: bt.end,
-              name: bt.name || '휴게시간'
-            }))
-          },
-          friday: {
-            isHoliday: existingSetting.weekDays.friday?.isHoliday ?? false,
-            workingHours: existingSetting.weekDays.friday?.workingHours ?? defaultSettings.workingHours,
-            lunchTime: defaultSettings.defaultBreakTime,
-            breakTimes: (existingSetting.weekDays.friday?.breakTimes ?? []).map(bt => ({
-              start: bt.start,
-              end: bt.end,
-              name: bt.name || '휴게시간'
-            }))
-          },
-          saturday: {
-            isHoliday: existingSetting.weekDays.saturday?.isHoliday ?? true,
-            workingHours: existingSetting.weekDays.saturday?.workingHours ?? defaultSettings.workingHours,
-            lunchTime: defaultSettings.defaultBreakTime,
-            breakTimes: (existingSetting.weekDays.saturday?.breakTimes ?? []).map(bt => ({
-              start: bt.start,
-              end: bt.end,
-              name: bt.name || '휴게시간'
-            }))
-          },
-          sunday: {
-            isHoliday: existingSetting.weekDays.sunday?.isHoliday ?? true,
-            workingHours: existingSetting.weekDays.sunday?.workingHours ?? defaultSettings.workingHours,
-            lunchTime: defaultSettings.defaultBreakTime,
-            breakTimes: (existingSetting.weekDays.sunday?.breakTimes ?? []).map(bt => ({
-              start: bt.start,
-              end: bt.end,
-              name: bt.name || '휴게시간'
-            }))
-          }
-        };
-        
-        setWeekDaySettings(normalizedWeekDays);
-      } else {
-        console.log('No existing setting found, using shift-based default state');
-        
-        // 선택된 직원들의 shift 정보를 기반으로 기본 설정 생성
-        const defaultSettings = getDefaultSettingsForSelectedStaff();
-        
-        // 기본값으로 리셋 (주말만 휴일)
-        setWeekDaySettings({
-          monday: {
-            isHoliday: false,
-            workingHours: defaultSettings.workingHours,
-            lunchTime: defaultSettings.defaultBreakTime,
-            breakTimes: []
-          },
-          tuesday: {
-            isHoliday: false,
-            workingHours: defaultSettings.workingHours,
-            lunchTime: defaultSettings.defaultBreakTime,
-            breakTimes: []
-          },
-          wednesday: {
-            isHoliday: false,
-            workingHours: defaultSettings.workingHours,
-            lunchTime: defaultSettings.defaultBreakTime,
-            breakTimes: []
-          },
-          thursday: {
-            isHoliday: false,
-            workingHours: defaultSettings.workingHours,
-            lunchTime: defaultSettings.defaultBreakTime,
-            breakTimes: []
-          },
-          friday: {
-            isHoliday: false,
-            workingHours: defaultSettings.workingHours,
-            lunchTime: defaultSettings.defaultBreakTime,
-            breakTimes: []
-          },
-          saturday: {
-            isHoliday: true,
-            workingHours: defaultSettings.workingHours,
-            lunchTime: defaultSettings.defaultBreakTime,
-            breakTimes: []
-          },
-          sunday: {
-            isHoliday: true,
-            workingHours: defaultSettings.workingHours,
-            lunchTime: defaultSettings.defaultBreakTime,
-            breakTimes: []
-          }
-        });
-      }
+      loadDailySchedules();
     }
   // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [isOpen, currentWeekStartDate, selectedStaffIds, existingWeeklyHolidays]);
+  }, [isOpen, currentWeekStartDate, selectedStaffIds]);
 
   const handleStaffToggle = (staffId: string) => {
     setSelectedStaffIds(prev => 
@@ -1416,74 +1450,67 @@ const WeeklyHolidayModal: React.FC<WeeklyHolidayModalProps> = ({
         return;
       }
 
-      // 1. 기존 주별 휴일 설정 저장
-      const settings: Omit<WeeklyHolidaySettings, 'id' | 'createdAt' | 'updatedAt'>[] = [];
+      // 토요일부터 금요일까지 7일치 DailyScheduleSettings 생성
+      const weekStart = new Date(currentWeekStartDate + 'T00:00:00');
       
-      selectedStaffIds.forEach(staffId => {
-        // lunchTime을 breakTimes에 포함하여 저장
-        const processedWeekDays = Object.entries(weekDaySettings).reduce((acc, [dayKey, daySettings]) => {
-          const allBreakTimes = [...daySettings.breakTimes];
-          
-          // lunchTime이 유효한 경우에만 breakTimes에 추가
-          if (daySettings.lunchTime.start > 0 && daySettings.lunchTime.end > 0 && !daySettings.isHoliday) {
-            allBreakTimes.unshift({
-              start: daySettings.lunchTime.start,
-              end: daySettings.lunchTime.end,
-              name: daySettings.lunchTime.name
-            });
-          }
-          
-          acc[dayKey as keyof typeof weekDaySettings] = {
-            isHoliday: daySettings.isHoliday,
-            workingHours: daySettings.workingHours,
-            breakTimes: allBreakTimes
-          };
-          
-          return acc;
-        }, {} as any);
-        
-        settings.push({
-          staffId,
-          weekStartDate: currentWeekStartDate,
-          weekDays: processedWeekDays
-        });
-      });
-      
-      await onSave(settings);
-
-      // 2. 휴일로 체크된 날짜들을 직원의 holidays 배열에 누적
-      // 체크 해제된 날짜들은 배열에서 제거
-      const weekStart = new Date(currentWeekStartDate);
-      const dayKeys = ['monday', 'tuesday', 'wednesday', 'thursday', 'friday', 'saturday', 'sunday'] as const;
+      console.log('🔍 [휴일설정 저장] weekStart:', weekStart, 'currentWeekStartDate:', currentWeekStartDate);
       
       for (const staffId of selectedStaffIds) {
-        const holidayDates: string[] = [];
-        const removeDates: string[] = [];
+        const dailySchedules: Omit<DailyScheduleSettings, 'id' | 'createdAt' | 'updatedAt'>[] = [];
         
-        // 각 요일별로 휴일인지 확인하고 날짜 계산
-        dayKeys.forEach((dayKey, index) => {
+        // 7일간 반복 (토요일부터 금요일까지)
+        for (let i = 0; i < 7; i++) {
           const date = new Date(weekStart);
-          // 월요일부터 시작하므로 index를 그대로 사용
-          date.setDate(weekStart.getDate() + index);
-          const dateString = date.toISOString().split('T')[0];
+          date.setDate(weekStart.getDate() + i);
+          const dateString = formatDateToLocal(date);
           
-          if (weekDaySettings[dayKey].isHoliday) {
-            holidayDates.push(dateString);
+          // 요일 이름 가져오기 (UI 표시용만)
+          const dayOfWeek = date.getDay(); // 0=일, 1=월, ..., 6=토
+          const dayKeyMap = ['sunday', 'monday', 'tuesday', 'wednesday', 'thursday', 'friday', 'saturday'];
+          const dayKey = dayKeyMap[dayOfWeek] as keyof typeof weekDaySettings;
+          const daySettings = weekDaySettings[dayKey];
+          
+          console.log(`🔍 [휴일설정 저장] 날짜: ${dateString}, 요일: ${dayKey}:`, {
+            date: date,
+            dateString: dateString,
+            isHoliday: daySettings.isHoliday
+          });
+          
+          if (daySettings.isHoliday) {
+            dailySchedules.push({
+              staffId,
+              date: dateString,
+              isHoliday: true,
+              workingHours: { start: 0, end: 0 },
+              breakTimes: []
+            });
           } else {
-            removeDates.push(dateString);
+            const allBreakTimes = [...daySettings.breakTimes];
+            
+            // lunchTime이 유효한 경우에만 breakTimes에 추가
+            if (daySettings.lunchTime.start > 0 && daySettings.lunchTime.end > 0) {
+              allBreakTimes.unshift({
+                start: daySettings.lunchTime.start,
+                end: daySettings.lunchTime.end,
+                name: daySettings.lunchTime.name
+              });
+            }
+            
+            dailySchedules.push({
+              staffId,
+              date: dateString,
+              isHoliday: false,
+              workingHours: daySettings.workingHours,
+              breakTimes: allBreakTimes
+            });
           }
-        });
-        
-        // 휴일 날짜들을 직원의 holidays 배열에 추가
-        for (const dateString of holidayDates) {
-          await dbManager.addStaffHoliday(staffId, dateString);
         }
         
-        // 체크 해제된 날짜들을 직원의 holidays 배열에서 제거
-        for (const dateString of removeDates) {
-          await dbManager.removeStaffHoliday(staffId, dateString);
-        }
+        // 일별 스케줄 저장
+        await dbManager.dailySchedule.saveDailySchedules(dailySchedules);
       }
+      
+      console.log('일별 스케줄 설정 저장 완료:', selectedStaffIds.length, '명');
       
       // 데이터베이스 작업이 완전히 완료되도록 약간의 지연
       await new Promise(resolve => setTimeout(resolve, 100));
@@ -1569,15 +1596,25 @@ const WeeklyHolidayModal: React.FC<WeeklyHolidayModalProps> = ({
                 const daySettings = weekDaySettings[key];
                 
                 // 토요일부터 시작하는 주간에서 각 요일의 날짜 계산
-                const mondayDate = new Date(currentWeekStartDate);
-                const saturdayDate = new Date(mondayDate);
-                saturdayDate.setDate(mondayDate.getDate() - 2); // 월요일 - 2일 = 토요일
+                const saturdayDate = new Date(currentWeekStartDate + 'T00:00:00');
                 
-                // 토요일부터의 요일 순서로 계산
-                const dayOrder = ['saturday', 'sunday', 'monday', 'tuesday', 'wednesday', 'thursday', 'friday'];
-                const dayIndex = dayOrder.indexOf(key);
+                // 현재 요일에 해당하는 날짜 계산
+                const dayOfWeek = saturdayDate.getDay(); // 토요일=6
+                const dayKeyMap = ['sunday', 'monday', 'tuesday', 'wednesday', 'thursday', 'friday', 'saturday'];
+                const currentDayIndex = dayKeyMap.indexOf(key);
+                
+                // 토요일(6)부터 시작해서 현재 요일까지의 일수 계산
+                let daysFromSaturday;
+                if (currentDayIndex === 6) { // saturday
+                  daysFromSaturday = 0;
+                } else if (currentDayIndex === 0) { // sunday
+                  daysFromSaturday = 1;
+                } else { // monday~friday
+                  daysFromSaturday = currentDayIndex + 1;
+                }
+                
                 const currentDate = new Date(saturdayDate);
-                currentDate.setDate(saturdayDate.getDate() + dayIndex);
+                currentDate.setDate(saturdayDate.getDate() + daysFromSaturday);
                 
                 return (
                   <WeekDay key={key} $isWeekend={isWeekend} $isHoliday={daySettings.isHoliday}>

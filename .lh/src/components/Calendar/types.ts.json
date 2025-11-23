@@ -3,7 +3,7 @@
     "activeCommit": 0,
     "commits": [
         {
-            "activePatchIndex": 15,
+            "activePatchIndex": 16,
             "patches": [
                 {
                     "date": 1760154018682,
@@ -68,6 +68,10 @@
                 {
                     "date": 1763549240685,
                     "content": "Index: \n===================================================================\n--- \n+++ \n@@ -17,9 +17,9 @@\n   programId?: string;\n   programName?: string;\n   memberId?: string;\n   memberName?: string;\n-  type: 'class' | 'personal' | 'meeting' | 'break' | 'holiday';\n+  type: 'class' | 'personal' | 'meeting' | 'break' | 'holiday' | 'consultation' | 'other';\n   color?: string;\n   description?: string;\n   branchId?: string;\n   branchName?: string;\n"
+                },
+                {
+                    "date": 1763872381219,
+                    "content": "Index: \n===================================================================\n--- \n+++ \n@@ -2,9 +2,9 @@\n  * 달력 컴포넌트 관련 타입 정의\n  */\n \n // Calendar에서는 IndexedDB의 HolidaySettings를 그대로 사용\n-import type { HolidaySettings, WeeklyHolidaySettings } from '../../utils/db/types';\n+import type { HolidaySettings, WeeklyHolidaySettings, DailyScheduleSettings } from '../../utils/db/types';\n \n export type CalendarView = 'day' | 'week' | 'month';\n \n export interface ScheduleEvent {\n@@ -72,9 +72,9 @@\n   onStaffFilter: (staffIds: string[]) => void;\n   onEventClick?: (event: ScheduleEvent) => void;\n   onEventCreate?: (startTime: Date, endTime: Date, staffId?: string, replaceEventId?: string) => void;\n   onHolidaySettings?: (staffId?: string) => void; // 휴일설정 핸들러 추가\n-  weeklyHolidaySettings?: WeeklyHolidaySettings[]; // 주별 휴일설정 추가\n+  dailyScheduleSettings?: DailyScheduleSettings[]; // 일별 스케줄 설정\n   staffHolidays?: { staffId: string; holidays: string[] }[]; // 직원별 휴일 정보\n   allowEmptyStaff?: boolean; // 코치가 없어도 달력 표시 허용 (기간제용)\n   programDuration?: number; // 프로그램 소요시간 (분 단위)\n   hideViewOptions?: CalendarView[]; // 숨길 뷰 옵션들 (기간제용)\n"
                 }
             ],
             "date": 1760154018682,

@@ -3,7 +3,7 @@
  */
 
 // Calendar에서는 IndexedDB의 HolidaySettings를 그대로 사용
-import type { HolidaySettings, WeeklyHolidaySettings } from '../../utils/db/types';
+import type { HolidaySettings, WeeklyHolidaySettings, DailyScheduleSettings } from '../../utils/db/types';
 
 export type CalendarView = 'day' | 'week' | 'month';
 
@@ -73,7 +73,7 @@ export interface CalendarProps {
   onEventClick?: (event: ScheduleEvent) => void;
   onEventCreate?: (startTime: Date, endTime: Date, staffId?: string, replaceEventId?: string) => void;
   onHolidaySettings?: (staffId?: string) => void; // 휴일설정 핸들러 추가
-  weeklyHolidaySettings?: WeeklyHolidaySettings[]; // 주별 휴일설정 추가
+  dailyScheduleSettings?: DailyScheduleSettings[]; // 일별 스케줄 설정
   staffHolidays?: { staffId: string; holidays: string[] }[]; // 직원별 휴일 정보
   allowEmptyStaff?: boolean; // 코치가 없어도 달력 표시 허용 (기간제용)
   programDuration?: number; // 프로그램 소요시간 (분 단위)

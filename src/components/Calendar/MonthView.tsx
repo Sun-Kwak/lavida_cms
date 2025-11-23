@@ -3,8 +3,8 @@ import styled from 'styled-components';
 import { AppColors } from '../../styles/colors';
 import { AppTextStyles } from '../../styles/textStyles';
 import { ScheduleEvent, StaffInfo } from './types';
-import { getMonthDates, isEventOnDate, isSameMonth, getHolidayStaffNames, formatHolidayInfo } from './utils';
-import type { WeeklyHolidaySettings } from '../../utils/db/types';
+import { getMonthDates, isEventOnDate, isSameMonth, getHolidayStaffNames, formatHolidayInfo, formatDateToLocal } from './utils';
+import type { DailyScheduleSettings } from '../../utils/db/types';
 
 interface MonthViewProps {
   currentDate: Date;
@@ -17,8 +17,7 @@ interface MonthViewProps {
   allowEmptyStaff?: boolean; // 코치가 없어도 달력 표시 허용
   programDuration?: number; // 프로그램 소요시간 (분 단위)
   disablePastTime?: boolean; // 과거 시간 비활성화 여부
-  staffHolidays?: { staffId: string; holidays: string[] }[]; // 직원별 휴일 정보 (기존 방식)
-  weeklyHolidaySettings?: WeeklyHolidaySettings[]; // 새로운 주별 휴일 설정
+  dailyScheduleSettings?: DailyScheduleSettings[]; // 일별 스케줄 설정
 }
 
 const MonthContainer = styled.div`
@@ -224,8 +223,7 @@ const MonthView: React.FC<MonthViewProps> = ({
   allowEmptyStaff = false,
   programDuration,
   disablePastTime = false,
-  staffHolidays = [],
-  weeklyHolidaySettings = []
+  dailyScheduleSettings = []
 }) => {
   const monthWeeks = getMonthDates(currentDate);
   const dayNames = ['일', '월', '화', '수', '목', '금', '토'];
@@ -254,35 +252,22 @@ const MonthView: React.FC<MonthViewProps> = ({
     return monthEvents.filter(event => isEventOnDate(event.startTime, event.endTime, date));
   };
 
-  // 특정 날짜에 휴일인 직원들의 이름 가져오기 (새로운 주별 휴일 설정 우선 사용)
+  // 특정 날짜에 휴일인 직원들의 이름 가져오기 (일별 스케줄 설정 사용)
   const getHolidayStaffInfo = (date: Date) => {
-    const holidayStaffNames = getHolidayStaffNames(date, weeklyHolidaySettings, staffList);
+    const dateStr = formatDateToLocal(date); // 타임존 문제 해결
     
-    // 새로운 주별 설정에서 휴일인 직원들 중 선택된 직원들만 필터링
-    const weeklyHolidayNames = holidayStaffNames.filter(name => {
-      const staff = staffList.find(s => s.name === name);
-      return staff && selectedStaffIds.includes(staff.id);
+    const holidayStaff = staffList.filter(s => {
+      const daySchedule = dailyScheduleSettings.find(ds => 
+        ds.staffId === s.id && ds.date === dateStr
+      );
+      return daySchedule?.isHoliday;
     });
     
-    // 주별 설정이 있으면 그것을 우선 사용
-    if (weeklyHolidayNames.length > 0) {
-      return formatHolidayInfo(weeklyHolidayNames);
-    }
+    // 선택된 직원들만 필터링
+    const selectedHolidayStaff = holidayStaff.filter(s => selectedStaffIds.includes(s.id));
+    const holidayStaffNames = selectedHolidayStaff.map(s => s.name);
     
-    // 기존 방식 (하위 호환성)
-    const dateString = date.toISOString().split('T')[0];
-    const legacyHolidayNames = selectedStaffIds
-      .filter(staffId => {
-        const staffHolidayData = staffHolidays.find(data => data.staffId === staffId);
-        return staffHolidayData?.holidays.includes(dateString);
-      })
-      .map(staffId => {
-        const staff = staffList.find(s => s.id === staffId);
-        return staff?.name || '';
-      })
-      .filter(name => name);
-    
-    return formatHolidayInfo(legacyHolidayNames);
+    return formatHolidayInfo(holidayStaffNames);
   };
 
   const handleDayClick = (date: Date) => {

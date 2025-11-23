@@ -90,7 +90,24 @@ export interface Product extends DBRecord {
   isActive: boolean;
 }
 
+// 일별 스케줄 설정 인터페이스 (간소화된 구조)
+export interface DailyScheduleSettings extends DBRecord {
+  staffId: string;
+  date: string; // YYYY-MM-DD 형식
+  isHoliday: boolean;
+  workingHours?: {
+    start: number; // 분 단위 (예: 540 = 9:00)
+    end: number;   // 분 단위 (예: 1260 = 21:00)
+  };
+  breakTimes?: Array<{
+    start: number;  // 분 단위
+    end: number;    // 분 단위
+    name?: string;  // 휴게시간 이름 (예: "점심시간")
+  }>;
+}
+
 // 주별 근무 스케줄 인터페이스 (휴일은 Staff.holidays 사용, 근무시간/휴게시간만 관리)
+// @deprecated - DailyScheduleSettings로 대체됨
 export interface WeeklyWorkSchedule extends DBRecord {
   staffId: string;
   weekStartDate: string; // 해당 주의 월요일 날짜 (YYYY-MM-DD 형식)
@@ -176,6 +193,7 @@ export interface WeeklyWorkSchedule extends DBRecord {
 }
 
 // 새로운 주별 휴일 설정 인터페이스
+// @deprecated - DailyScheduleSettings로 대체됨
 export interface WeeklyHolidaySettings extends DBRecord {
   staffId: string;
   weekStartDate: string; // 해당 주의 월요일 날짜 (YYYY-MM-DD 형식)

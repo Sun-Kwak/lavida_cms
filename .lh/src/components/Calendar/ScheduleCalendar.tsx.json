@@ -3,7 +3,7 @@
     "activeCommit": 0,
     "commits": [
         {
-            "activePatchIndex": 10,
+            "activePatchIndex": 12,
             "patches": [
                 {
                     "date": 1760154018694,
@@ -48,6 +48,14 @@
                 {
                     "date": 1762171198368,
                     "content": "Index: \n===================================================================\n--- \n+++ \n@@ -94,8 +94,9 @@\n             allowEmptyStaff={allowEmptyStaff}\n             programDuration={programDuration}\n             disablePastTime={disablePastTime}\n             staffHolidays={staffHolidays}\n+            weeklyHolidaySettings={weeklyHolidaySettings}\n           />\n         );\n       default:\n         return null;\n"
+                },
+                {
+                    "date": 1763872381220,
+                    "content": "Index: \n===================================================================\n--- \n+++ \n@@ -32,9 +32,9 @@\n   onStaffFilter,\n   onEventClick,\n   onEventCreate,\n   onHolidaySettings,\n-  weeklyHolidaySettings,\n+  dailyScheduleSettings,\n   staffHolidays = [],\n   allowEmptyStaff = false,\n   programDuration,\n   hideViewOptions = [],\n@@ -57,9 +57,9 @@\n             staffList={staffList}\n             selectedStaffIds={selectedStaffIds}\n             onEventClick={onEventClick}\n             onEventCreate={onEventCreate}\n-            weeklyHolidaySettings={weeklyHolidaySettings}\n+            dailyScheduleSettings={dailyScheduleSettings}\n             allowEmptyStaff={allowEmptyStaff}\n             programDuration={programDuration}\n             disablePastTime={disablePastTime}\n             currentUser={currentUser}\n@@ -76,9 +76,9 @@\n             onEventCreate={onEventCreate}\n             allowEmptyStaff={allowEmptyStaff}\n             programDuration={programDuration}\n             disablePastTime={disablePastTime}\n-            weeklyHolidaySettings={weeklyHolidaySettings}\n+            dailyScheduleSettings={dailyScheduleSettings}\n             currentUser={currentUser}\n           />\n         );\n       case 'month':\n"
+                },
+                {
+                    "date": 1763872828598,
+                    "content": "Index: \n===================================================================\n--- \n+++ \n@@ -94,9 +94,9 @@\n             allowEmptyStaff={allowEmptyStaff}\n             programDuration={programDuration}\n             disablePastTime={disablePastTime}\n             staffHolidays={staffHolidays}\n-            weeklyHolidaySettings={weeklyHolidaySettings}\n+            dailyScheduleSettings={dailyScheduleSettings}\n           />\n         );\n       default:\n         return null;\n"
                 }
             ],
             "date": 1760154018694,

@@ -33,7 +33,7 @@ const ScheduleCalendar: React.FC<CalendarProps> = ({
   onEventClick,
   onEventCreate,
   onHolidaySettings,
-  weeklyHolidaySettings,
+  dailyScheduleSettings,
   staffHolidays = [],
   allowEmptyStaff = false,
   programDuration,
@@ -58,7 +58,7 @@ const ScheduleCalendar: React.FC<CalendarProps> = ({
             selectedStaffIds={selectedStaffIds}
             onEventClick={onEventClick}
             onEventCreate={onEventCreate}
-            weeklyHolidaySettings={weeklyHolidaySettings}
+            dailyScheduleSettings={dailyScheduleSettings}
             allowEmptyStaff={allowEmptyStaff}
             programDuration={programDuration}
             disablePastTime={disablePastTime}
@@ -77,7 +77,7 @@ const ScheduleCalendar: React.FC<CalendarProps> = ({
             allowEmptyStaff={allowEmptyStaff}
             programDuration={programDuration}
             disablePastTime={disablePastTime}
-            weeklyHolidaySettings={weeklyHolidaySettings}
+            dailyScheduleSettings={dailyScheduleSettings}
             currentUser={currentUser}
           />
         );
@@ -95,7 +95,7 @@ const ScheduleCalendar: React.FC<CalendarProps> = ({
             programDuration={programDuration}
             disablePastTime={disablePastTime}
             staffHolidays={staffHolidays}
-            weeklyHolidaySettings={weeklyHolidaySettings}
+            dailyScheduleSettings={dailyScheduleSettings}
           />
         );
       default:

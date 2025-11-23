@@ -3,7 +3,7 @@
     "activeCommit": 0,
     "commits": [
         {
-            "activePatchIndex": 5,
+            "activePatchIndex": 7,
             "patches": [
                 {
                     "date": 1761368450200,
@@ -28,6 +28,14 @@
                 {
                     "date": 1763550103661,
                     "content": "Index: \n===================================================================\n--- \n+++ \n@@ -6,9 +6,9 @@\n  */\n \n export abstract class BaseDBManager {\n   protected dbName: string = 'LavidaDB';\n-  protected version: number = 16; // 운동처방서 테이블 추가로 버전 업데이트\n+  protected version: number = 17; // 추천 포인트 설정 테이블 추가로 버전 업데이트\n   protected db: IDBDatabase | null = null;\n   protected isInitializing: boolean = false;\n \n   constructor() {\n@@ -338,8 +338,18 @@\n       exerciseStore.createIndex('createdAt', 'createdAt', { unique: false });\n       exerciseStore.createIndex('updatedAt', 'updatedAt', { unique: false });\n       exerciseStore.createIndex('memberActive', ['memberId', 'isActive'], { unique: false });\n     }\n+\n+    // 추천 포인트 설정 테이블 생성\n+    if (!db.objectStoreNames.contains('referralPointSettings')) {\n+      const referralStore = db.createObjectStore('referralPointSettings', { keyPath: 'id' });\n+      referralStore.createIndex('branchId', 'branchId', { unique: true });\n+      referralStore.createIndex('branchName', 'branchName', { unique: false });\n+      referralStore.createIndex('isActive', 'isActive', { unique: false });\n+      referralStore.createIndex('createdAt', 'createdAt', { unique: false });\n+      referralStore.createIndex('updatedAt', 'updatedAt', { unique: false });\n+    }\n   }\n \n   /**\n    * 고유 ID 생성 (UUID v4 형식)\n"
+                },
+                {
+                    "date": 1763871650863,
+                    "content": "Index: \n===================================================================\n--- \n+++ \n@@ -156,17 +156,26 @@\n       holidayStore.createIndex('isHoliday', 'isHoliday', { unique: false });\n       holidayStore.createIndex('staffDate', ['staffId', 'date'], { unique: true });\n     }\n \n-    // 주별 휴일설정 테이블 생성\n+    // 주별 휴일설정 테이블 생성 (@deprecated - dailyScheduleSettings로 대체)\n     if (!db.objectStoreNames.contains('weeklyHolidaySettings')) {\n       const weeklyHolidayStore = db.createObjectStore('weeklyHolidaySettings', { keyPath: 'id' });\n       weeklyHolidayStore.createIndex('staffId', 'staffId', { unique: false });\n       weeklyHolidayStore.createIndex('weekStartDate', 'weekStartDate', { unique: false });\n       weeklyHolidayStore.createIndex('staffWeek', ['staffId', 'weekStartDate'], { unique: true });\n       weeklyHolidayStore.createIndex('createdAt', 'createdAt', { unique: false });\n     }\n \n+    // 일별 스케줄 설정 테이블 생성\n+    if (!db.objectStoreNames.contains('dailyScheduleSettings')) {\n+      const dailyScheduleStore = db.createObjectStore('dailyScheduleSettings', { keyPath: 'id' });\n+      dailyScheduleStore.createIndex('staffId', 'staffId', { unique: false });\n+      dailyScheduleStore.createIndex('date', 'date', { unique: false });\n+      dailyScheduleStore.createIndex('staffDate', ['staffId', 'date'], { unique: true });\n+      dailyScheduleStore.createIndex('createdAt', 'createdAt', { unique: false });\n+    }\n+\n     // 스케줄 이벤트 테이블 생성\n     if (!db.objectStoreNames.contains('scheduleEvents')) {\n       const scheduleStore = db.createObjectStore('scheduleEvents', { keyPath: 'id' });\n       scheduleStore.createIndex('staffId', 'staffId', { unique: false });\n"
+                },
+                {
+                    "date": 1763871957018,
+                    "content": "Index: \n===================================================================\n--- \n+++ \n@@ -6,9 +6,9 @@\n  */\n \n export abstract class BaseDBManager {\n   protected dbName: string = 'LavidaDB';\n-  protected version: number = 17; // 추천 포인트 설정 테이블 추가로 버전 업데이트\n+  protected version: number = 18; // dailyScheduleSettings 테이블 추가로 버전 업데이트\n   protected db: IDBDatabase | null = null;\n   protected isInitializing: boolean = false;\n \n   constructor() {\n"
                 }
             ],
             "date": 1761368450200,

@@ -1,0 +1,18 @@
+{
+    "sourceFile": "HOLIDAY_REFACTORING_PLAN.md",
+    "activeCommit": 0,
+    "commits": [
+        {
+            "activePatchIndex": 0,
+            "patches": [
+                {
+                    "date": 1763878962465,
+                    "content": "Index: \n===================================================================\n--- \n+++ \n"
+                }
+            ],
+            "date": 1763878962465,
+            "name": "Commit-0",
+            "content": "# 휴일 설정 리팩토링 계획\n\n## 문제점\n- 요일 기반(WeekSchedule)으로 휴일을 설정하여 복잡함\n- 담당프로그램 등록 시, 예약/스케줄 시 요일과 날짜 계산이 복잡하게 얽혀있음\n- 주간 단위 계산(토요일~금요일) 로직이 여러 곳에 중복\n\n## 해결 방안\n날짜 기반으로 단순화:\n- Staff.holidays: string[] (YYYY-MM-DD 형식의 날짜 배열)\n- 요일은 단순히 UI 표시용으로만 사용\n- 휴일 체크는 특정 날짜가 holidays 배열에 포함되는지만 확인\n\n## 수정 대상 파일\n\n### 1. DB 모델 (이미 완료)\n- ✅ StaffService.ts: holidays 배열 CRUD 메서드 구현됨\n- ✅ HolidayManagement.tsx: 캘린더 기반 날짜별 휴일 설정 UI\n\n### 2. 담당프로그램 등록 (StaffRegister.tsx)\n**현재**: WeekSchedule 타입으로 요일별 휴일/근무시간 설정\n**변경**: \n- 휴일 설정은 HolidayManagement 컴포넌트 사용\n- 직원 등록 후 HolidayManagement 컴포넌트 표시\n- 근무시간대(주간/야간)만 선택, 휴일은 별도 관리\n\n### 3. 예약/스케줄 (Reservation/index.tsx)\n**현재**: WeeklyHolidayModal로 주간 단위 설정\n**변경**:\n- DailyScheduleSettings 사용 (날짜별 설정)\n- isStaffHoliday(staffId, date) 함수로 간단히 체크\n\n### 4. weekUtils.ts\n**변경**:\n- 주간 계산 유틸리티는 UI 표시용으로만 사용\n- 요일 관련 비즈니스 로직 제거\n\n## 구현 순서\n1. ✅ DB 구조 확인 (Staff.holidays 필드)\n2. 🔄 StaffRegister 단순화 (휴일 설정 제거, HolidayManagement 분리)\n3. ⏳ Reservation 휴일 체크 로직 날짜 기반으로 수정\n4. ⏳ weekUtils 정리\n5. ⏳ 테스트 및 검증\n\n## 주의사항\n- 기존 데이터 마이그레이션 필요 없음 (Staff.holidays는 빈 배열로 시작)\n- 점진적 마이그레이션: 새로 등록되는 직원부터 새 방식 적용\n"
+        }
+    ]
+}

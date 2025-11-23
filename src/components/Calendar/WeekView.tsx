@@ -3,8 +3,8 @@ import styled from 'styled-components';
 import { AppColors } from '../../styles/colors';
 import { AppTextStyles } from '../../styles/textStyles';
 import { ScheduleEvent, StaffInfo } from './types';
-import { getWeekDates, isEventOnDate, generateTimeSlots, getHolidayStaffNames, formatHolidayInfo } from './utils';
-import type { WeeklyHolidaySettings } from '../../utils/db/types';
+import { getWeekDates, isEventOnDate, generateTimeSlots, getHolidayStaffNames, formatHolidayInfo, formatDateToLocal } from './utils';
+import type { DailyScheduleSettings } from '../../utils/db/types';
 
 interface WeekViewProps {
   currentDate: Date;
@@ -16,7 +16,7 @@ interface WeekViewProps {
   allowEmptyStaff?: boolean; // 코치가 없어도 달력 표시 허용
   programDuration?: number; // 프로그램 소요시간 (분 단위)
   disablePastTime?: boolean; // 과거 시간 비활성화 여부
-  weeklyHolidaySettings?: WeeklyHolidaySettings[]; // 주별 휴일설정 추가
+  dailyScheduleSettings?: DailyScheduleSettings[]; // 일별 스케줄 설정
   currentUser?: {
     id: string;
     role: 'master' | 'coach' | 'admin';
@@ -292,7 +292,7 @@ const WeekView: React.FC<WeekViewProps> = ({
   allowEmptyStaff = false,
   programDuration,
   disablePastTime = false,
-  weeklyHolidaySettings = [],
+  dailyScheduleSettings = [],
   currentUser
 }) => {
   const weekDates = getWeekDates(currentDate);
@@ -389,42 +389,39 @@ const WeekView: React.FC<WeekViewProps> = ({
   };
 
   // 특정 직원의 특정 시간대가 예약 가능한지 확인하는 함수 (휴일 제외, 근무시간과 휴게시간만 체크)
-  const isTimeSlotAvailable = (staffId: string, hour: number, minute: number, targetDate: Date) => {
-    const dayOfWeek = targetDate.getDay();
-    const weekStartDate = (() => {
-      const monday = new Date(targetDate);
-      monday.setDate(targetDate.getDate() - (dayOfWeek === 0 ? 6 : dayOfWeek - 1));
-      return monday.toISOString().split('T')[0];
-    })();
-
-    if (!weeklyHolidaySettings) return true;
-
-    const weeklySettings = weeklyHolidaySettings.find(
-      s => s.staffId === staffId && s.weekStartDate === weekStartDate
+  const isTimeSlotAvailable = (staffId: string, hour: number, minute: number, targetDate: Date): boolean => {
+    const dateStr = formatDateToLocal(targetDate);
+    
+    // 해당 날짜의 스케줄 찾기
+    const daySchedule = dailyScheduleSettings.find(s => 
+      s.staffId === staffId && s.date === dateStr
     );
+    
+    if (!daySchedule) {
+      // 스케줄이 없으면 예약 가능
+      return true;
+    }
 
-    if (weeklySettings) {
-      const dayKeys = ['sunday', 'monday', 'tuesday', 'wednesday', 'thursday', 'friday', 'saturday'];
-      const dayKey = dayKeys[dayOfWeek] as keyof typeof weeklySettings.weekDays;
-      const daySettings = weeklySettings.weekDays[dayKey];
+    // 휴일이면 예약 불가
+    if (daySchedule.isHoliday) {
+      return false;
+    }
 
-      if (daySettings) {
-        // 휴일이면 근무시간 체크 안함 (항상 true 반환)
-        if (daySettings.isHoliday) return true;
+    // 근무시간 체크
+    if (daySchedule.workingHours) {
+      const { start, end } = daySchedule.workingHours;
+      const currentTimeInMinutes = hour * 60 + minute;
+      if (currentTimeInMinutes < start || currentTimeInMinutes >= end) {
+        return false;
+      }
+    }
 
-        // 근무시간 외면 예약 불가
-        if (daySettings.workingHours) {
-          const { start, end } = daySettings.workingHours;
-          const currentTimeInMinutes = hour * 60 + minute;
-          if (currentTimeInMinutes < start || currentTimeInMinutes >= end) return false;
-        }
-
-        // 휴게시간이면 예약 불가
-        if (daySettings.breakTimes) {
-          for (const breakTime of daySettings.breakTimes) {
-            const currentTimeInMinutes = hour * 60 + minute;
-            if (currentTimeInMinutes >= breakTime.start && currentTimeInMinutes < breakTime.end) return false;
-          }
+    // 휴게시간 체크
+    if (daySchedule.breakTimes) {
+      const currentTimeInMinutes = hour * 60 + minute;
+      for (const breakTime of daySchedule.breakTimes) {
+        if (currentTimeInMinutes >= breakTime.start && currentTimeInMinutes < breakTime.end) {
+          return false;
         }
       }
     }
@@ -486,11 +483,18 @@ const WeekView: React.FC<WeekViewProps> = ({
     }
 
     // staffId가 있는 경우에만 휴일/휴게시간/근무시간 체크 수행
-    // (Master가 여러 코치 선택 시 staffId가 undefined이므로 체크 건너뜀)
+    // (Master가 여러 코치 선택 시 staffId가 undefined이므로 체크 건너뛀)
     if (staffId) {
       // 해당 날짜가 휴일인지 확인 (날짜 레벨에서)
       const staffName = staff?.name || '';
-      const holidayStaffNames = getHolidayStaffNames(dayDate, weeklyHolidaySettings || [], staffList);
+      const dateStr = formatDateToLocal(dayDate);
+      const holidayStaff = staffList.filter(s => {
+        const daySchedule = dailyScheduleSettings.find(ds => 
+          ds.staffId === s.id && ds.date === dateStr
+        );
+        return daySchedule?.isHoliday;
+      });
+      const holidayStaffNames = holidayStaff.map(s => s.name);
       const isStaffOnHoliday = holidayStaffNames.includes(staffName);
       
       if (isStaffOnHoliday) {
@@ -573,7 +577,14 @@ const WeekView: React.FC<WeekViewProps> = ({
         <TimeHeader>시간</TimeHeader>
         {weekDates.map(day => {
           // 각 날짜의 휴일 정보 가져오기
-          const holidayStaffNames = getHolidayStaffNames(day.date, weeklyHolidaySettings || [], staffList);
+          const dateStr = formatDateToLocal(day.date);
+          const holidayStaff = staffList.filter(s => {
+            const daySchedule = dailyScheduleSettings.find(ds => 
+              ds.staffId === s.id && ds.date === dateStr
+            );
+            return daySchedule?.isHoliday;
+          });
+          const holidayStaffNames = holidayStaff.map(s => s.name);
           const holidayInfo = formatHolidayInfo(holidayStaffNames);
           
           return (
@@ -674,7 +685,7 @@ const WeekView: React.FC<WeekViewProps> = ({
                         <EventTitle>
                           {event.type === 'holiday' ? '휴일' : 
                            event.type === 'break' ? event.title :
-                           (event.memberName || '예약자')}
+                           event.title || event.memberName || '예약자'}
                         </EventTitle>
                       </EventBlock>
                     );

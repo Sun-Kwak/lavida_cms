@@ -3,7 +3,7 @@
     "activeCommit": 0,
     "commits": [
         {
-            "activePatchIndex": 27,
+            "activePatchIndex": 28,
             "patches": [
                 {
                     "date": 1761368450126,
@@ -116,6 +116,10 @@
                 {
                     "date": 1763550103665,
                     "content": "Index: \n===================================================================\n--- \n+++ \n@@ -640,5 +640,14 @@\n   isActive: boolean;\n   prescriptionDate: Date; // 처방서 작성일\n   version: number; // 버전 번호 (히스토리 관리용)\n   isLatest: boolean; // 최신 버전 여부\n+}\n+\n+// 추천 포인트 설정 인터페이스\n+export interface ReferralPointSettings extends DBRecord {\n+  branchId: string; // 지점 ID\n+  branchName: string; // 지점명 (조회 성능을 위해 저장)\n+  referrerPoints: number; // 추천한 사람이 받는 포인트\n+  referredPoints: number; // 추천받은 사람이 받는 포인트\n+  isActive: boolean; // 활성/비활성 상태\n }\n\\ No newline at end of file\n"
+                },
+                {
+                    "date": 1763871650919,
+                    "content": "Index: \n===================================================================\n--- \n+++ \n@@ -89,9 +89,26 @@\n   description?: string; // 상품소개\n   isActive: boolean;\n }\n \n+// 일별 스케줄 설정 인터페이스 (간소화된 구조)\n+export interface DailyScheduleSettings extends DBRecord {\n+  staffId: string;\n+  date: string; // YYYY-MM-DD 형식\n+  isHoliday: boolean;\n+  workingHours?: {\n+    start: number; // 분 단위 (예: 540 = 9:00)\n+    end: number;   // 분 단위 (예: 1260 = 21:00)\n+  };\n+  breakTimes?: Array<{\n+    start: number;  // 분 단위\n+    end: number;    // 분 단위\n+    name?: string;  // 휴게시간 이름 (예: \"점심시간\")\n+  }>;\n+}\n+\n // 주별 근무 스케줄 인터페이스 (휴일은 Staff.holidays 사용, 근무시간/휴게시간만 관리)\n+// @deprecated - DailyScheduleSettings로 대체됨\n export interface WeeklyWorkSchedule extends DBRecord {\n   staffId: string;\n   weekStartDate: string; // 해당 주의 월요일 날짜 (YYYY-MM-DD 형식)\n   weekDays: {\n@@ -175,8 +192,9 @@\n   };\n }\n \n // 새로운 주별 휴일 설정 인터페이스\n+// @deprecated - DailyScheduleSettings로 대체됨\n export interface WeeklyHolidaySettings extends DBRecord {\n   staffId: string;\n   weekStartDate: string; // 해당 주의 월요일 날짜 (YYYY-MM-DD 형식)\n   weekDays: {\n"
                 }
             ],
             "date": 1761368450126,

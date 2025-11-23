@@ -4,6 +4,14 @@
 
 import { DayColumn, TimeSlot } from './types';
 
+// 로컬 시간 기준으로 YYYY-MM-DD 형식의 날짜 문자열 반환 (타임존 문제 해결)
+export const formatDateToLocal = (date: Date): string => {
+  const year = date.getFullYear();
+  const month = String(date.getMonth() + 1).padStart(2, '0');
+  const day = String(date.getDate()).padStart(2, '0');
+  return `${year}-${month}-${day}`;
+};
+
 // 시간대 생성 (오전 6시 ~ 오후 10시) - 항상 30분 단위
 export const generateTimeSlots = (duration?: number): TimeSlot[] => {
   const slots: TimeSlot[] = [];

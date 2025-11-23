@@ -497,19 +497,19 @@ export class WeeklyWorkScheduleService extends BaseDBManager {
   }
 }
 
-// 주별 휴일설정 서비스 클래스
-export class WeeklyHolidayService extends BaseDBManager {
+// 일별 스케줄설정 서비스 클래스
+export class DailyScheduleService extends BaseDBManager {
 
   /**
-   * 주별 휴일설정 추가/업데이트
+   * 일별 스케줄설정 저장/업데이트 (배열 일괄 처리)
    */
-  async saveWeeklyHolidaySettings(settingsArray: Omit<import('./types').WeeklyHolidaySettings, 'id' | 'createdAt' | 'updatedAt'>[]): Promise<import('./types').WeeklyHolidaySettings[]> {
+  async saveDailySchedules(settingsArray: Omit<import('./types').DailyScheduleSettings, 'id' | 'createdAt' | 'updatedAt'>[]): Promise<import('./types').DailyScheduleSettings[]> {
     try {
-      const savedSettings: import('./types').WeeklyHolidaySettings[] = [];
+      const savedSettings: import('./types').DailyScheduleSettings[] = [];
       
       for (const setting of settingsArray) {
-        // 기존 설정이 있는지 확인
-        const existingSettings = await this.getWeeklyHolidaySettingsByStaffAndWeek(setting.staffId, setting.weekStartDate);
+        // 기존 설정이 있는지 확인 (staffId + date 조합)
+        const existingSettings = await this.getDailySchedulesByStaffAndDate(setting.staffId, setting.date);
         
         let savedSetting: import('./types').WeeklyHolidaySettings;
         
@@ -542,10 +542,10 @@ export class WeeklyHolidayService extends BaseDBManager {
         savedSettings.push(savedSetting);
       }
 
-      console.log('주별 휴일설정 저장 성공:', savedSettings.length);
+      console.log('일별 스케줄설정 저장 성공:', savedSettings.length);
       return savedSettings;
     } catch (error) {
-      console.error('주별 휴일설정 저장 실패:', error);
+      console.error('일별 스케줄설정 저장 실패:', error);
       throw error;
     }
   }
@@ -877,6 +877,56 @@ export class ScheduleEventService extends BaseDBManager {
       });
     } catch (error) {
       console.error('스케줄 이벤트 조회 실패:', error);
+      throw error;
+    }
+  }
+
+  /**
+   * 스케줄 이벤트 업데이트
+   */
+  async updateScheduleEvent(eventId: string, updates: Partial<import('./types').ScheduleEvent>): Promise<import('./types').ScheduleEvent> {
+    try {
+      await this.initDB();
+      if (!this.db) throw new Error('데이터베이스 연결 실패');
+
+      const transaction = this.db.transaction(['scheduleEvents'], 'readwrite');
+      const store = transaction.objectStore('scheduleEvents');
+      
+      // 기존 이벤트 조회
+      const getRequest = store.get(eventId);
+      
+      return new Promise((resolve, reject) => {
+        getRequest.onsuccess = () => {
+          const existingEvent = getRequest.result as import('./types').ScheduleEvent;
+          if (!existingEvent) {
+            reject(new Error('이벤트를 찾을 수 없습니다'));
+            return;
+          }
+
+          // 업데이트된 이벤트 생성
+          const updatedEvent: import('./types').ScheduleEvent = {
+            ...existingEvent,
+            ...updates,
+            id: eventId, // ID는 변경 불가
+            createdAt: existingEvent.createdAt, // 생성일은 유지
+            updatedAt: new Date() // 수정일 업데이트
+          };
+
+          // 업데이트 수행
+          const putRequest = store.put(updatedEvent);
+          
+          putRequest.onsuccess = () => {
+            console.log('스케줄 이벤트 업데이트 완료:', eventId);
+            resolve(updatedEvent);
+          };
+          
+          putRequest.onerror = () => reject(putRequest.error);
+        };
+        
+        getRequest.onerror = () => reject(getRequest.error);
+      });
+    } catch (error) {
+      console.error('스케줄 이벤트 업데이트 실패:', error);
       throw error;
     }
   }

@@ -20,7 +20,7 @@ export type {
 } from './types';
 
 // HolidaySettings는 indexedDB에서 직접 import
-export type { HolidaySettings, WeeklyHolidaySettings } from '../../utils/indexedDB';
+export type { HolidaySettings, WeeklyHolidaySettings, DailyScheduleSettings } from '../../utils/indexedDB';
 
 // 유틸리티 함수들
 export * from './utils';

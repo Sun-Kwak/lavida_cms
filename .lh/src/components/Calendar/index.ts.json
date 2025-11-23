@@ -3,7 +3,7 @@
     "activeCommit": 0,
     "commits": [
         {
-            "activePatchIndex": 3,
+            "activePatchIndex": 4,
             "patches": [
                 {
                     "date": 1760154018694,
@@ -20,6 +20,10 @@
                 {
                     "date": 1761451696665,
                     "content": "Index: \n===================================================================\n--- \n+++ \n@@ -5,8 +5,9 @@\n export { default as DayView } from './DayView';\n export { default as WeekView } from './WeekView';\n export { default as MonthView } from './MonthView';\n export { default as HolidayModal } from './HolidayModal';\n+export { default as WeeklyHolidayModal } from './WeeklyHolidayModal';\n \n // 타입 정의들\n export type {\n   CalendarView,\n@@ -18,8 +19,8 @@\n   HolidayModalProps\n } from './types';\n \n // HolidaySettings는 indexedDB에서 직접 import\n-export type { HolidaySettings } from '../../utils/indexedDB';\n+export type { HolidaySettings, WeeklyHolidaySettings } from '../../utils/indexedDB';\n \n // 유틸리티 함수들\n export * from './utils';\n"
+                },
+                {
+                    "date": 1763872342194,
+                    "content": "Index: \n===================================================================\n--- \n+++ \n@@ -19,8 +19,8 @@\n   HolidayModalProps\n } from './types';\n \n // HolidaySettings는 indexedDB에서 직접 import\n-export type { HolidaySettings, WeeklyHolidaySettings } from '../../utils/indexedDB';\n+export type { HolidaySettings, WeeklyHolidaySettings, DailyScheduleSettings } from '../../utils/indexedDB';\n \n // 유틸리티 함수들\n export * from './utils';\n"
                 }
             ],
             "date": 1760154018694,

@@ -659,7 +659,7 @@ const ReservationModal: React.FC<ReservationModalProps> = ({
         eventType = 'other';
         eventColor = '#f59e0b'; // 주황색
       } else {
-        title = `${selectedMember.name} (${selectedEnrollment!.productName})`;
+        title = `[예약] ${selectedMember.name}`;
         description = reservationMemo || `${selectedMember.name} 회원의 ${selectedEnrollment!.productName} 수업`;
         eventType = 'class';
         eventColor = '#3b82f6'; // 파란색

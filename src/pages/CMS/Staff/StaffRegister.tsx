@@ -10,6 +10,37 @@ import { AppColors } from '../../../styles/colors';
 import { AppTextStyles } from '../../../styles/textStyles';
 import { dbManager, type Branch } from '../../../utils/indexedDB';
 import { POSITIONS, ROLES, EMPLOYMENT_TYPES, PERMISSIONS, SYSTEM_ADMIN_CONFIG, WORK_SHIFTS } from '../../../constants/staffConstants';
+import type { DailyScheduleSettings } from '../../../utils/db/types';
+import { formatDateToLocal } from '../../../components/Calendar/utils';
+
+// 주간 휴일 설정 타입 정의 (분 단위로 저장)
+type DaySchedule = {
+  isHoliday: boolean;
+  workingHours: {
+    start: number; // 분 단위 (예: 540 = 9:00)
+    end: number;   // 분 단위
+  };
+  lunchTime: {
+    start: number; // 분 단위
+    end: number;
+    name: string;  // "기본 휴게시간"
+  };
+  breakTimes: Array<{
+    start: number; // 분 단위
+    end: number;
+    name: string;
+  }>;
+};
+
+type WeekSchedule = {
+  monday: DaySchedule;
+  tuesday: DaySchedule;
+  wednesday: DaySchedule;
+  thursday: DaySchedule;
+  friday: DaySchedule;
+  saturday: DaySchedule;
+  sunday: DaySchedule;
+};
 
 const Label = styled.label<{ $required?: boolean }>`
   font-size: ${AppTextStyles.label1.fontSize};
@@ -215,6 +246,119 @@ const StaffRegister: React.FC = () => {
   const [currentUserId, setCurrentUserId] = useState<string | null>(null);
   const [currentUserInfo, setCurrentUserInfo] = useState<any>(null); // 현재 로그인한 사용자 정보
   const [isPasswordVisible, setIsPasswordVisible] = useState(false);
+  
+  // 시간을 분으로 변환하는 헬퍼 함수
+  const hourMinuteToMinutes = (hour: number, minute: number = 0): number => {
+    return hour * 60 + minute;
+  };
+
+  // 분을 시와 분으로 분리하는 함수
+  const minutesToHourMinute = (minutes: number): { hour: number; minute: number } => {
+    const hour = Math.floor(minutes / 60);
+    const minute = minutes % 60;
+    return { hour, minute };
+  };
+
+  // 이번주 토요일부터 금요일까지의 날짜 범위 계산 (지난 토요일 ~ 돌아오는 금요일)
+  const getThisWeekDateRange = () => {
+    const today = new Date();
+    const dayOfWeek = today.getDay();
+    
+    // 이번주 토요일 계산
+    let daysFromSaturday;
+    if (dayOfWeek === 6) {
+      daysFromSaturday = 0;
+    } else {
+      daysFromSaturday = dayOfWeek === 0 ? 1 : dayOfWeek + 1;
+    }
+    
+    const saturday = new Date(today);
+    saturday.setDate(today.getDate() - daysFromSaturday);
+    
+    const friday = new Date(saturday);
+    friday.setDate(saturday.getDate() + 6);
+    
+    const format = (date: Date) => `${date.getMonth() + 1}/${date.getDate()}`;
+    return `${format(saturday)} ~ ${format(friday)}`;
+  };
+
+  // 특정 요일이 오늘 또는 과거인지 확인 (지난 토요일 기준)
+  const isDayInPastOrToday = (day: keyof WeekSchedule): boolean => {
+    const today = new Date();
+    const dayOfWeek = today.getDay();
+    
+    let daysFromSaturday;
+    if (dayOfWeek === 6) {
+      daysFromSaturday = 0;
+    } else {
+      daysFromSaturday = dayOfWeek === 0 ? 1 : dayOfWeek + 1;
+    }
+    
+    const saturday = new Date(today);
+    saturday.setDate(today.getDate() - daysFromSaturday);
+    
+    // 요일별 인덱스 (토요일부터 시작)
+    const dayOrder = ['saturday', 'sunday', 'monday', 'tuesday', 'wednesday', 'thursday', 'friday'];
+    const dayIndex = dayOrder.indexOf(day);
+    
+    // 해당 요일의 날짜 계산
+    const targetDate = new Date(saturday);
+    targetDate.setDate(saturday.getDate() + dayIndex);
+    
+    // 오늘 또는 과거인지 확인
+    today.setHours(0, 0, 0, 0);
+    targetDate.setHours(0, 0, 0, 0);
+    return targetDate <= today;
+  };
+
+  // 특정 요일의 날짜 가져오기 (지난 토요일 기준)
+  const getDayDate = (day: keyof WeekSchedule): Date => {
+    const today = new Date();
+    const dayOfWeek = today.getDay();
+    
+    let daysFromSaturday;
+    if (dayOfWeek === 6) {
+      daysFromSaturday = 0;
+    } else {
+      daysFromSaturday = dayOfWeek === 0 ? 1 : dayOfWeek + 1;
+    }
+    
+    const saturday = new Date(today);
+    saturday.setDate(today.getDate() - daysFromSaturday);
+    
+    const dayOrder = ['saturday', 'sunday', 'monday', 'tuesday', 'wednesday', 'thursday', 'friday'];
+    const dayIndex = dayOrder.indexOf(day);
+    const targetDate = new Date(saturday);
+    targetDate.setDate(saturday.getDate() + dayIndex);
+    
+    return targetDate;
+  };
+
+  // 주간 휴일 설정 상태 초기화 함수 (오늘까지는 휴일로 설정)
+  const getInitialWeeklyHolidayData = (): WeekSchedule => {
+    const days: (keyof WeekSchedule)[] = ['monday', 'tuesday', 'wednesday', 'thursday', 'friday', 'saturday', 'sunday'];
+    const initialData: any = {};
+    
+    days.forEach(day => {
+      const isPastOrToday = isDayInPastOrToday(day);
+      initialData[day] = isPastOrToday ? {
+        isHoliday: true,
+        workingHours: { start: 0, end: 0 },
+        lunchTime: { start: 0, end: 0, name: '기본 휴게시간' },
+        breakTimes: []
+      } : {
+        isHoliday: false,
+        workingHours: { start: hourMinuteToMinutes(9), end: hourMinuteToMinutes(21) },
+        lunchTime: { start: hourMinuteToMinutes(12), end: hourMinuteToMinutes(13), name: '기본 휴게시간' },
+        breakTimes: []
+      };
+    });
+    
+    return initialData as WeekSchedule;
+  };
+
+  // 주간 휴일 설정 상태 (분 단위로 저장)
+  const [weeklyHolidayData, setWeeklyHolidayData] = useState<WeekSchedule>(getInitialWeeklyHolidayData());
 
   useEffect(() => {
     const fetchBranches = async () => {
@@ -327,11 +471,44 @@ const StaffRegister: React.FC = () => {
           workShift: ''
         }));
       } else {
+        // 횟수제인 경우 기본값을 '주간'으로 설정
         setFormData(prev => ({
           ...prev,
-          program: value as string
+          program: value as string,
+          workShift: prev.workShift || '주간' // 이미 선택된 값이 없으면 '주간'으로 설정
         }));
       }
+    }
+    // 근무시간대가 변경된 경우 주간 휴일 설정 업데이트
+    else if (field === 'workShift' && typeof value === 'string') {
+      setFormData(prev => ({
+        ...prev,
+        workShift: value as string
+      }));
+      
+      // 근무시간대에 따른 기본 설정 적용 (분 단위)
+      const isNightShift = value === '야간';
+      const defaultStart = hourMinuteToMinutes(isNightShift ? 15 : 9);   // 야간: 15:00, 주간: 9:00
+      const defaultEnd = hourMinuteToMinutes(isNightShift ? 24 : 21);     // 야간: 24:00, 주간: 21:00
+      const defaultLunchStart = hourMinuteToMinutes(isNightShift ? 18 : 12);  // 야간: 18:00, 주간: 12:00
+      const defaultLunchEnd = hourMinuteToMinutes(isNightShift ? 19 : 13);    // 야간: 19:00, 주간: 13:00
+      
+      // 모든 근무일에 대해 기본 근무시간과 기본 휴게시간 설정 (과거/오늘은 제외)
+      setWeeklyHolidayData(prev => {
+        const updated: WeekSchedule = { ...prev };
+        (['monday', 'tuesday', 'wednesday', 'thursday', 'friday', 'saturday', 'sunday'] as const).forEach(day => {
+          const isPastOrToday = isDayInPastOrToday(day);
+          if (!isPastOrToday && !updated[day].isHoliday) {
+            updated[day] = {
+              ...updated[day],
+              workingHours: { start: defaultStart, end: defaultEnd },
+              lunchTime: { start: defaultLunchStart, end: defaultLunchEnd, name: '기본 휴게시간' },
+              breakTimes: [] // breakTimes는 초기화
+            };
+          }
+        });
+        return updated;
+      });
     }
     // 고용형태가 정규직으로 변경되면 계약종료일 초기화
     else if (field === 'employmentType' && typeof value === 'string' && value === '정규직') {
@@ -380,6 +557,108 @@ const StaffRegister: React.FC = () => {
     setIsPasswordVisible(prev => !prev);
   };
 
+  // 근무시간 드롭다운 변경 핸들러 (분 단위)
+  const handleTimeDropdownChange = (
+    day: keyof WeekSchedule,
+    timeType: 'start' | 'end',
+    unit: 'hour' | 'minute',
+    value: string
+  ) => {
+    const numValue = parseInt(value);
+    const currentTime = timeType === 'start' 
+      ? weeklyHolidayData[day].workingHours.start 
+      : weeklyHolidayData[day].workingHours.end;
+    
+    const { hour, minute } = minutesToHourMinute(currentTime);
+    const newMinutes = unit === 'hour' 
+      ? hourMinuteToMinutes(numValue, minute)
+      : hourMinuteToMinutes(hour, numValue);
+    
+    setWeeklyHolidayData(prev => ({
+      ...prev,
+      [day]: {
+        ...prev[day],
+        workingHours: {
+          ...prev[day].workingHours,
+          [timeType]: newMinutes
+        }
+      }
+    }));
+  };
+
+  // 기본 휴게시간 드롭다운 변경 핸들러 (분 단위)
+  const handleLunchTimeDropdownChange = (
+    day: keyof WeekSchedule,
+    timeType: 'start' | 'end',
+    unit: 'hour' | 'minute',
+    value: string
+  ) => {
+    const numValue = parseInt(value);
+    const currentTime = timeType === 'start' 
+      ? weeklyHolidayData[day].lunchTime.start 
+      : weeklyHolidayData[day].lunchTime.end;
+    
+    const { hour, minute } = minutesToHourMinute(currentTime);
+    const newMinutes = unit === 'hour' 
+      ? hourMinuteToMinutes(numValue, minute)
+      : hourMinuteToMinutes(hour, numValue);
+    
+    setWeeklyHolidayData(prev => ({
+      ...prev,
+      [day]: {
+        ...prev[day],
+        lunchTime: {
+          ...prev[day].lunchTime,
+          [timeType]: newMinutes
+        }
+      }
+    }));
+  };
+
+  // 휴게시간 30분 슬롯 토글 핸들러
+  const handleBreakTimeSlotToggle = (day: keyof WeekSchedule, slotMinutes: number) => {
+    const dayData = weeklyHolidayData[day];
+    const breakTimes = dayData.breakTimes || [];
+    
+    // 이미 선택된 슬롯인지 확인
+    const existingIndex = breakTimes.findIndex(bt => bt.start === slotMinutes);
+    
+    if (existingIndex >= 0) {
+      // 이미 선택되어 있으면 제거
+      setWeeklyHolidayData(prev => ({
+        ...prev,
+        [day]: {
+          ...prev[day],
+          breakTimes: breakTimes.filter((_, i) => i !== existingIndex)
+        }
+      }));
+    } else {
+      // 선택되어 있지 않으면 추가 (30분 슬롯)
+      const newBreakTime = {
+        start: slotMinutes,
+        end: slotMinutes + 30,
+        name: `휴게시간 ${minutesToHourMinute(slotMinutes).hour}:${String(minutesToHourMinute(slotMinutes).minute).padStart(2, '0')}`
+      };
+      
+      setWeeklyHolidayData(prev => ({
+        ...prev,
+        [day]: {
+          ...prev[day],
+          breakTimes: [...breakTimes, newBreakTime].sort((a, b) => a.start - b.start)
+        }
+      }));
+    }
+  };
+
+  // 30분 단위 시간 슬롯 생성 함수
+  const generateTimeSlots = (startMinutes: number, endMinutes: number): number[] => {
+    const slots: number[] = [];
+    for (let minutes = startMinutes; minutes < endMinutes; minutes += 30) {
+      slots.push(minutes);
+    }
+    return slots;
+  };
+
   const validateForm = (): boolean => {
     const newErrors: FormErrors = {};
 
@@ -406,6 +685,13 @@ const StaffRegister: React.FC = () => {
       const selectedProgram = programs.find(program => program.name === formData.program);
       if (selectedProgram && selectedProgram.type === '횟수제' && !formData.workShift) {
         newErrors.workShift = '횟수제 프로그램은 근무시간대 선택이 필수입니다.';
+      }
+      
+      // 담당프로그램이 있으면 주간 휴일 설정 검증
+      const hasAtLeastOneWorkday = Object.values(weeklyHolidayData).some(day => !day.isHoliday);
+      if (!hasAtLeastOneWorkday) {
+        newErrors.program = '최소 하나 이상의 근무일을 설정해야 합니다.';
+        toast.error('최소 하나 이상의 근무일을 설정해야 합니다.');
       }
     }
 
@@ -470,14 +756,90 @@ const StaffRegister: React.FC = () => {
 
       const staffData = {
         ...formData,
-        id: Date.now().toString(),
         registrationDate: new Date().toISOString().split('T')[0],
         contractStartDate: new Date(formData.contractStartDate),
         contractEndDate: formData.employmentType === '정규직' ? null : new Date(formData.contractEndDate),
         isActive: true // 신규 등록 직원은 기본적으로 활성 상태
       };
 
-      await dbManager.addStaff(staffData);
+      // 직원 먼저 등록 (ID 생성을 위해)
+      const savedStaff = await dbManager.addStaff(staffData);
+
+      // 담당프로그램이 있는 경우 휴일 설정 저장
+      if (formData.program) {
+        // 이번주 토요일부터 금요일까지 7일치 데이터 생성
+        const today = new Date();
+        const dayOfWeek = today.getDay(); // 0(일) ~ 6(토)
+        
+        // 이번주 토요일 계산
+        let daysFromSaturday;
+        if (dayOfWeek === 6) {
+          daysFromSaturday = 0; // 오늘이 토요일
+        } else {
+          daysFromSaturday = dayOfWeek === 0 ? 1 : dayOfWeek + 1;
+        }
+        
+        const thisSaturday = new Date(today);
+        thisSaturday.setDate(today.getDate() - daysFromSaturday);
+        
+        console.log('일별 스케줄 설정 저장 시도:', {
+          today: formatDateToLocal(today),
+          thisSaturday: formatDateToLocal(thisSaturday),
+          staffId: savedStaff.id,
+          weeklyHolidayData
+        });
+        
+        // 7일치 데이터 생성 (토요일 ~ 금요일)
+        const dailySchedules: Omit<DailyScheduleSettings, 'id' | 'createdAt' | 'updatedAt'>[] = [];
+        const dayKeys = ['saturday', 'sunday', 'monday', 'tuesday', 'wednesday', 'thursday', 'friday'];
+        
+        for (let i = 0; i < 7; i++) {
+          const targetDate = new Date(thisSaturday);
+          targetDate.setDate(thisSaturday.getDate() + i);
+          const dateStr = formatDateToLocal(targetDate);
+          const dayKey = dayKeys[i] as keyof typeof weeklyHolidayData;
+          const daySettings = weeklyHolidayData[dayKey];
+          
+          if (daySettings.isHoliday) {
+            dailySchedules.push({
+              staffId: savedStaff.id,
+              date: dateStr,
+              isHoliday: true,
+              workingHours: { start: 0, end: 0 },
+              breakTimes: []
+            });
+          } else {
+            const allBreakTimes = [...daySettings.breakTimes];
+            
+            // lunchTime이 유효한 경우에만 breakTimes에 추가
+            if (daySettings.lunchTime.start > 0 && daySettings.lunchTime.end > 0) {
+              allBreakTimes.unshift({
+                start: daySettings.lunchTime.start,
+                end: daySettings.lunchTime.end,
+                name: daySettings.lunchTime.name
+              });
+            }
+            
+            dailySchedules.push({
+              staffId: savedStaff.id,
+              date: dateStr,
+              isHoliday: false,
+              workingHours: daySettings.workingHours,
+              breakTimes: allBreakTimes
+            });
+          }
+        }
+        
+        try {
+          // 일별 스케줄 저장
+          await dbManager.dailySchedule.saveDailySchedules(dailySchedules);
+          console.log('일별 스케줄 설정 저장 성공:', dailySchedules.length);
+        } catch (error) {
+          console.error('일별 스케줄 설정 저장 실패:', error);
+          toast.error('스케줄 설정 저장에 실패했습니다.');
+          // 직원은 이미 등록되었으므로 계속 진행
+        }
+      }
       
       // 성공 시 폼 초기화
       setFormData({
@@ -497,6 +859,9 @@ const StaffRegister: React.FC = () => {
         contractEndDate: '',
         contractFile: null
       });
+      
+      // 주간 휴일 데이터 초기화 (오늘까지는 휴일로 설정)
+      setWeeklyHolidayData(getInitialWeeklyHolidayData());
       
       toast.success('직원이 성공적으로 등록되었습니다.');
     } catch (error) {
@@ -525,6 +890,10 @@ const StaffRegister: React.FC = () => {
       contractEndDate: '',
       contractFile: null
     });
+    
+    // 주간 휴일 데이터 초기화 (오늘까지는 휴일로 설정)
+    setWeeklyHolidayData(getInitialWeeklyHolidayData());
+    
     setErrors({});
   };
 
@@ -839,6 +1208,378 @@ const StaffRegister: React.FC = () => {
                   {/* 빈 칸 */}
                 </FieldColumn>
               </FieldRow>
+            )}
+            
+            {/* 주간 휴일 설정 (담당프로그램이 있을 때만 표시) */}
+            {formData.program && (
+              <>
+                <div style={{ 
+                  marginTop: '24px', 
+                  padding: '20px', 
+                  background: AppColors.surface,
+                  borderRadius: '12px',
+                  border: `1px solid ${AppColors.borderLight}`
+                }}>
+                  <div style={{ 
+                    fontSize: AppTextStyles.title3.fontSize, 
+                    fontWeight: 600,
+                    color: AppColors.onSurface,
+                    marginBottom: '8px'
+                  }}>
+                    📅 이번주 휴일 설정 ({getThisWeekDateRange()}) <span style={{ color: AppColors.error }}>*</span>
+                  </div>
+                  <div style={{ 
+                    fontSize: AppTextStyles.body2.fontSize, 
+                    color: AppColors.onSurface + '80',
+                    marginBottom: '20px'
+                  }}>
+                    담당프로그램이 있는 직원은 이번주(지난 토요일~돌아오는 금요일) 휴일 및 근무시간을 설정해야 합니다.
+                    <br />
+                    체크하면 휴일, 체크 해제하면 근무일입니다. (오늘까지는 자동으로 휴일 처리됩니다)
+                  </div>
+                  
+                  <div style={{
+                    display: 'grid',
+                    gridTemplateColumns: 'repeat(auto-fit, minmax(320px, 1fr))',
+                    gap: '12px'
+                  }}>
+                    {(['monday', 'tuesday', 'wednesday', 'thursday', 'friday', 'saturday', 'sunday'] as const).map((day) => {
+                      const dayLabels = {
+                        monday: '월요일',
+                        tuesday: '화요일',
+                        wednesday: '수요일',
+                        thursday: '목요일',
+                        friday: '금요일',
+                        saturday: '토요일',
+                        sunday: '일요일'
+                      };
+                      
+                      const isWeekend = day === 'saturday' || day === 'sunday';
+                      const dayData = weeklyHolidayData[day];
+                      const isPastOrToday = isDayInPastOrToday(day);
+                      const dayDate = getDayDate(day);
+                      
+                      return (
+                        <div 
+                          key={day} 
+                          style={{ 
+                            backgroundColor: dayData.isHoliday ? AppColors.error + '10' : AppColors.surface,
+                            border: `1px solid ${dayData.isHoliday ? AppColors.error + '30' : AppColors.borderLight}`,
+                            borderRadius: '8px',
+                            padding: '12px',
+                            transition: 'all 0.2s ease',
+                            opacity: isPastOrToday ? 0.6 : 1
+                          }}
+                        >
+                          <div style={{ 
+                            fontSize: AppTextStyles.body1.fontSize,
+                            fontWeight: 600,
+                            color: dayData.isHoliday ? AppColors.error : (isWeekend ? AppColors.primary : AppColors.onSurface),
+                            marginBottom: '12px',
+                            display: 'flex',
+                            justifyContent: 'space-between',
+                            alignItems: 'center'
+                          }}>
+                            <span>{dayLabels[day]} ({dayDate.getMonth() + 1}/{dayDate.getDate()})</span>
+                            <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+                              <input
+                                type="checkbox"
+                                id={`holiday-${day}`}
+                                checked={dayData.isHoliday}
+                                disabled={isPastOrToday}
+                                onChange={(e) => {
+                                  const isHoliday = e.target.checked;
+                                  const isNightShift = formData.workShift === '야간';
+                                  setWeeklyHolidayData(prev => ({
+                                    ...prev,
+                                    [day]: isHoliday ? { isHoliday: true } as any : {
+                                      isHoliday: false,
+                                      workingHours: { 
+                                        start: hourMinuteToMinutes(isNightShift ? 15 : 9), 
+                                        end: hourMinuteToMinutes(isNightShift ? 24 : 21) 
+                                      },
+                                      lunchTime: {
+                                        start: hourMinuteToMinutes(isNightShift ? 18 : 12),
+                                        end: hourMinuteToMinutes(isNightShift ? 19 : 13),
+                                        name: '기본 휴게시간'
+                                      },
+                                      breakTimes: []
+                                    }
+                                  }));
+                                }}
+                                style={{ width: '16px', height: '16px', accentColor: AppColors.error, cursor: isPastOrToday ? 'not-allowed' : 'pointer' }}
+                              />
+                              <label 
+                                htmlFor={`holiday-${day}`}
+                                style={{ 
+                                  fontSize: AppTextStyles.body2.fontSize,
+                                  color: AppColors.onSurface,
+                                  cursor: 'pointer',
+                                  fontWeight: 500
+                                }}
+                              >
+                                휴일
+                              </label>
+                            </div>
+                          </div>
+                          
+                          {!dayData.isHoliday && (
+                            <div style={{ display: 'flex', flexDirection: 'column', gap: '12px', marginTop: '12px' }}>
+                              {/* 근무시간 */}
+                              <div>
+                                <div style={{ 
+                                  fontSize: '0.9rem',
+                                  fontWeight: 600,
+                                  marginBottom: '8px',
+                                  color: '#333',
+                                  display: 'flex',
+                                  justifyContent: 'space-between',
+                                  alignItems: 'center',
+                                  flexWrap: 'wrap',
+                                  gap: '12px'
+                                }}>
+                                  근무 시간
+                                  <div style={{ display: 'flex', alignItems: 'center', gap: '8px', flexWrap: 'wrap' }}>
+                                    <div style={{ display: 'flex', alignItems: 'center', gap: '4px' }}>
+                                      <select
+                                        value={minutesToHourMinute(dayData.workingHours.start).hour}
+                                        onChange={(e) => handleTimeDropdownChange(day, 'start', 'hour', e.target.value)}
+                                        style={{
+                                          padding: '4px 6px',
+                                          border: '1px solid #ddd',
+                                          borderRadius: '4px',
+                                          fontSize: '0.9rem',
+                                          fontWeight: 500,
+                                          backgroundColor: 'white',
+                                          width: '50px'
+                                        }}
+                                      >
+                                        {Array.from({ length: 24 }, (_, i) => i + 1).map(h => (
+                                          <option key={h} value={h}>{String(h).padStart(2, '0')}</option>
+                                        ))}
+                                      </select>
+                                      <span>:</span>
+                                      <select
+                                        value={minutesToHourMinute(dayData.workingHours.start).minute}
+                                        onChange={(e) => handleTimeDropdownChange(day, 'start', 'minute', e.target.value)}
+                                        style={{
+                                          padding: '4px 6px',
+                                          border: '1px solid #ddd',
+                                          borderRadius: '4px',
+                                          fontSize: '0.9rem',
+                                          fontWeight: 500,
+                                          backgroundColor: 'white',
+                                          width: '50px'
+                                        }}
+                                      >
+                                        <option value={0}>00</option>
+                                        <option value={30}>30</option>
+                                      </select>
+                                    </div>
+                                    <span style={{ color: '#666', fontSize: '0.9rem', fontWeight: 500 }}>~</span>
+                                    <div style={{ display: 'flex', alignItems: 'center', gap: '4px' }}>
+                                      <select
+                                        value={minutesToHourMinute(dayData.workingHours.end).hour}
+                                        onChange={(e) => handleTimeDropdownChange(day, 'end', 'hour', e.target.value)}
+                                        style={{
+                                          padding: '4px 6px',
+                                          border: '1px solid #ddd',
+                                          borderRadius: '4px',
+                                          fontSize: '0.9rem',
+                                          fontWeight: 500,
+                                          backgroundColor: 'white',
+                                          width: '50px'
+                                        }}
+                                      >
+                                        {Array.from({ length: 24 }, (_, i) => i + 1).map(h => (
+                                          <option key={h} value={h}>{String(h).padStart(2, '0')}</option>
+                                        ))}
+                                      </select>
+                                      <span>:</span>
+                                      <select
+                                        value={minutesToHourMinute(dayData.workingHours.end).minute}
+                                        onChange={(e) => handleTimeDropdownChange(day, 'end', 'minute', e.target.value)}
+                                        style={{
+                                          padding: '4px 6px',
+                                          border: '1px solid #ddd',
+                                          borderRadius: '4px',
+                                          fontSize: '0.9rem',
+                                          fontWeight: 500,
+                                          backgroundColor: 'white',
+                                          width: '50px'
+                                        }}
+                                      >
+                                        <option value={0}>00</option>
+                                        <option value={30}>30</option>
+                                      </select>
+                                    </div>
+                                  </div>
+                                </div>
+                              </div>
+                              
+                              {/* 기본 휴게시간 */}
+                              <div>
+                                <div style={{ 
+                                  fontSize: '0.9rem',
+                                  fontWeight: 600,
+                                  marginBottom: '8px',
+                                  color: '#333',
+                                  display: 'flex',
+                                  justifyContent: 'space-between',
+                                  alignItems: 'center',
+                                  flexWrap: 'wrap',
+                                  gap: '12px'
+                                }}>
+                                  {dayData.lunchTime.name}
+                                  <div style={{ display: 'flex', alignItems: 'center', gap: '8px', flexWrap: 'wrap' }}>
+                                    <div style={{ display: 'flex', alignItems: 'center', gap: '4px' }}>
+                                      <select
+                                        value={minutesToHourMinute(dayData.lunchTime.start).hour}
+                                        onChange={(e) => handleLunchTimeDropdownChange(day, 'start', 'hour', e.target.value)}
+                                        style={{
+                                          padding: '4px 6px',
+                                          border: '1px solid #ddd',
+                                          borderRadius: '4px',
+                                          fontSize: '0.9rem',
+                                          fontWeight: 500,
+                                          backgroundColor: 'white',
+                                          width: '50px'
+                                        }}
+                                      >
+                                        {Array.from({ length: 24 }, (_, i) => i + 1).map(h => (
+                                          <option key={h} value={h}>{String(h).padStart(2, '0')}</option>
+                                        ))}
+                                      </select>
+                                      <span>:</span>
+                                      <select
+                                        value={minutesToHourMinute(dayData.lunchTime.start).minute}
+                                        onChange={(e) => handleLunchTimeDropdownChange(day, 'start', 'minute', e.target.value)}
+                                        style={{
+                                          padding: '4px 6px',
+                                          border: '1px solid #ddd',
+                                          borderRadius: '4px',
+                                          fontSize: '0.9rem',
+                                          fontWeight: 500,
+                                          backgroundColor: 'white',
+                                          width: '50px'
+                                        }}
+                                      >
+                                        <option value={0}>00</option>
+                                        <option value={30}>30</option>
+                                      </select>
+                                    </div>
+                                    <span style={{ color: '#666', fontSize: '0.9rem', fontWeight: 500 }}>~</span>
+                                    <div style={{ display: 'flex', alignItems: 'center', gap: '4px' }}>
+                                      <select
+                                        value={minutesToHourMinute(dayData.lunchTime.end).hour}
+                                        onChange={(e) => handleLunchTimeDropdownChange(day, 'end', 'hour', e.target.value)}
+                                        style={{
+                                          padding: '4px 6px',
+                                          border: '1px solid #ddd',
+                                          borderRadius: '4px',
+                                          fontSize: '0.9rem',
+                                          fontWeight: 500,
+                                          backgroundColor: 'white',
+                                          width: '50px'
+                                        }}
+                                      >
+                                        {Array.from({ length: 24 }, (_, i) => i + 1).map(h => (
+                                          <option key={h} value={h}>{String(h).padStart(2, '0')}</option>
+                                        ))}
+                                      </select>
+                                      <span>:</span>
+                                      <select
+                                        value={minutesToHourMinute(dayData.lunchTime.end).minute}
+                                        onChange={(e) => handleLunchTimeDropdownChange(day, 'end', 'minute', e.target.value)}
+                                        style={{
+                                          padding: '4px 6px',
+                                          border: '1px solid #ddd',
+                                          borderRadius: '4px',
+                                          fontSize: '0.9rem',
+                                          fontWeight: 500,
+                                          backgroundColor: 'white',
+                                          width: '50px'
+                                        }}
+                                      >
+                                        <option value={0}>00</option>
+                                        <option value={30}>30</option>
+                                      </select>
+                                    </div>
+                                  </div>
+                                </div>
+                              </div>
+                              
+                              {/* 휴게시간 (30분 단위 그리드) */}
+                              <div>
+                                <div style={{ 
+                                  fontSize: '0.9rem',
+                                  fontWeight: 600,
+                                  marginBottom: '8px',
+                                  color: '#333',
+                                  display: 'flex',
+                                  justifyContent: 'space-between',
+                                  alignItems: 'center'
+                                }}>
+                                  휴게 시간
+                                </div>
+                                <div style={{
+                                  display: 'grid',
+                                  gridTemplateColumns: 'repeat(auto-fill, minmax(70px, 1fr))',
+                                  gap: '6px',
+                                  marginTop: '8px',
+                                  padding: '8px',
+                                  backgroundColor: AppColors.background,
+                                  borderRadius: '6px',
+                                  border: `1px solid ${AppColors.borderLight}`
+                                }}>
+                                  {generateTimeSlots(dayData.workingHours.start, dayData.workingHours.end).map(slotMinutes => {
+                                    const { hour, minute } = minutesToHourMinute(slotMinutes);
+                                    const isActive = dayData.breakTimes.some(bt => bt.start === slotMinutes);
+                                    const isInLunchTime = slotMinutes >= dayData.lunchTime.start && slotMinutes < dayData.lunchTime.end;
+                                    
+                                    return (
+                                      <button
+                                        key={slotMinutes}
+                                        onClick={() => !isInLunchTime && handleBreakTimeSlotToggle(day, slotMinutes)}
+                                        disabled={isInLunchTime}
+                                        style={{
+                                          padding: '6px 4px',
+                                          borderRadius: '4px',
+                                          fontSize: '11px',
+                                          fontWeight: 500,
+                                          cursor: isInLunchTime ? 'not-allowed' : 'pointer',
+                                          border: `1px solid ${isInLunchTime ? AppColors.borderLight : isActive ? AppColors.error : AppColors.borderLight}`,
+                                          backgroundColor: isInLunchTime ? AppColors.surface + '50' : isActive ? AppColors.error + '20' : AppColors.surface,
+                                          color: isInLunchTime ? AppColors.onSurface + '40' : isActive ? AppColors.error : AppColors.onSurface,
+                                          transition: 'all 0.2s ease'
+                                        }}
+                                        onMouseEnter={(e) => {
+                                          if (!isInLunchTime) {
+                                            e.currentTarget.style.backgroundColor = isActive ? AppColors.error + '30' : AppColors.primary + '10';
+                                            e.currentTarget.style.borderColor = isActive ? AppColors.error : AppColors.primary;
+                                          }
+                                        }}
+                                        onMouseLeave={(e) => {
+                                          if (!isInLunchTime) {
+                                            e.currentTarget.style.backgroundColor = isActive ? AppColors.error + '20' : AppColors.surface;
+                                            e.currentTarget.style.borderColor = isActive ? AppColors.error : AppColors.borderLight;
+                                          }
+                                        }}
+                                      >
+                                        {String(hour).padStart(2, '0')}:{String(minute).padStart(2, '0')}
+                                      </button>
+                                    );
+                                  })}
+                                </div>
+                              </div>
+                            </div>
+                          )}
+                        </div>
+                      );
+                    })}
+                  </div>
+                </div>
+              </>
             )}
           </FormSection>
 

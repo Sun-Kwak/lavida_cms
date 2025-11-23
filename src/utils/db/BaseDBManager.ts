@@ -7,7 +7,7 @@
 
 export abstract class BaseDBManager {
   protected dbName: string = 'LavidaDB';
-  protected version: number = 17; // 추천 포인트 설정 테이블 추가로 버전 업데이트
+  protected version: number = 18; // dailyScheduleSettings 테이블 추가로 버전 업데이트
   protected db: IDBDatabase | null = null;
   protected isInitializing: boolean = false;
 
@@ -157,13 +157,22 @@ export abstract class BaseDBManager {
       holidayStore.createIndex('staffDate', ['staffId', 'date'], { unique: true });
     }
 
-    // 주별 휴일설정 테이블 생성
+    // 주별 휴일설정 테이블 생성 (@deprecated - dailyScheduleSettings로 대체)
     if (!db.objectStoreNames.contains('weeklyHolidaySettings')) {
       const weeklyHolidayStore = db.createObjectStore('weeklyHolidaySettings', { keyPath: 'id' });
       weeklyHolidayStore.createIndex('staffId', 'staffId', { unique: false });
       weeklyHolidayStore.createIndex('weekStartDate', 'weekStartDate', { unique: false });
       weeklyHolidayStore.createIndex('staffWeek', ['staffId', 'weekStartDate'], { unique: true });
       weeklyHolidayStore.createIndex('createdAt', 'createdAt', { unique: false });
+    }
+
+    // 일별 스케줄 설정 테이블 생성
+    if (!db.objectStoreNames.contains('dailyScheduleSettings')) {
+      const dailyScheduleStore = db.createObjectStore('dailyScheduleSettings', { keyPath: 'id' });
+      dailyScheduleStore.createIndex('staffId', 'staffId', { unique: false });
+      dailyScheduleStore.createIndex('date', 'date', { unique: false });
+      dailyScheduleStore.createIndex('staffDate', ['staffId', 'date'], { unique: true });
+      dailyScheduleStore.createIndex('createdAt', 'createdAt', { unique: false });
     }
 
     // 스케줄 이벤트 테이블 생성

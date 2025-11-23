@@ -6,7 +6,8 @@
 // 필요한 imports를 먼저 선언
 import { BranchService } from './BranchService';
 import { StaffService } from './StaffService';
-import { ProgramService, ProductService, WeeklyWorkScheduleService, WeeklyHolidayService, ScheduleEventService } from './ProgramService';
+import { ProgramService, ProductService, WeeklyWorkScheduleService, ScheduleEventService } from './ProgramService';
+import { DailyScheduleService } from './DailyScheduleService';
 import { MemberService } from './MemberService';
 import { PaymentService, OrderService } from './PaymentService';
 import { PointService } from './PointService';
@@ -26,7 +27,8 @@ export { BaseDBManager } from './BaseDBManager';
 // 개별 서비스 클래스들 export
 export { BranchService } from './BranchService';
 export { StaffService } from './StaffService';
-export { ProgramService, ProductService, WeeklyWorkScheduleService, WeeklyHolidayService, ScheduleEventService } from './ProgramService';
+export { ProgramService, ProductService, WeeklyWorkScheduleService, ScheduleEventService } from './ProgramService';
+export { DailyScheduleService } from './DailyScheduleService';
 export { MemberService } from './MemberService';
 export { PaymentService, OrderService } from './PaymentService';
 export { PointService } from './PointService';
@@ -46,7 +48,7 @@ export class IndexedDBManager extends BaseDBManager {
   public program: ProgramService;
   public product: ProductService;
   public weeklyWorkSchedule: WeeklyWorkScheduleService;
-  public weeklyHoliday: WeeklyHolidayService;
+  public dailySchedule: DailyScheduleService;
   public scheduleEvent: ScheduleEventService;
   public member: MemberService;
   public payment: PaymentService;
@@ -67,7 +69,7 @@ export class IndexedDBManager extends BaseDBManager {
     this.program = new ProgramService();
     this.product = new ProductService();
     this.weeklyWorkSchedule = new WeeklyWorkScheduleService();
-    this.weeklyHoliday = new WeeklyHolidayService();
+    this.dailySchedule = new DailyScheduleService();
     this.scheduleEvent = new ScheduleEventService();
     this.member = new MemberService();
     this.payment = new PaymentService();
@@ -600,42 +602,71 @@ export class IndexedDBManager extends BaseDBManager {
     return await this.weeklyWorkSchedule.deleteWeeklyWorkScheduleByStaff(staffId);
   }
 
-  // 주별 휴일설정 관련 메서드
-  async saveWeeklyHolidaySettings(settings: Omit<import('./types').WeeklyHolidaySettings, 'id' | 'createdAt' | 'updatedAt'>[]) {
-    return await this.weeklyHoliday.saveWeeklyHolidaySettings(settings);
+  // 일별 스케줄 설정 관련 메서드
+  async saveDailySchedules(settings: Omit<import('./types').DailyScheduleSettings, 'id' | 'createdAt' | 'updatedAt'>[]) {
+    return await this.dailySchedule.saveDailySchedules(settings);
   }
 
-  async getWeeklyHolidaySettingsByStaff(staffId: string) {
-    return await this.weeklyHoliday.getWeeklyHolidaySettingsByStaff(staffId);
+  async getDailyScheduleByStaffAndDate(staffId: string, date: string) {
+    return await this.dailySchedule.getDailyScheduleByStaffAndDate(staffId, date);
   }
 
-  async getWeeklyHolidaySettingsByStaffAndWeek(staffId: string, weekStartDate: string) {
-    return await this.weeklyHoliday.getWeeklyHolidaySettingsByStaffAndWeek(staffId, weekStartDate);
+  async getDailySchedulesByStaff(staffId: string) {
+    return await this.dailySchedule.getDailySchedulesByStaff(staffId);
   }
 
-  async getWeeklyHolidaySettingsByWeek(weekStartDate: string) {
-    return await this.weeklyHoliday.getWeeklyHolidaySettingsByWeek(weekStartDate);
+  async getDailySchedulesByDate(date: string) {
+    return await this.dailySchedule.getDailySchedulesByDate(date);
   }
 
-  async deleteWeeklyHolidaySettings(id: string) {
-    return await this.weeklyHoliday.deleteWeeklyHolidaySettings(id);
+  async getDailySchedulesByStaffAndDateRange(staffId: string, startDate: string, endDate: string) {
+    return await this.dailySchedule.getDailySchedulesByStaffAndDateRange(staffId, startDate, endDate);
   }
 
-  async deleteWeeklyHolidaySettingsByStaff(staffId: string) {
-    return await this.weeklyHoliday.deleteWeeklyHolidaySettingsByStaff(staffId);
+  async deleteDailySchedule(id: string) {
+    return await this.dailySchedule.deleteDailySchedule(id);
   }
 
-  async isHolidayByDate(staffId: string, date: string) {
-    return await this.weeklyHoliday.isHolidayByDate(staffId, date);
+  async deleteAllDailySchedulesByStaff(staffId: string) {
+    return await this.dailySchedule.deleteAllDailySchedulesByStaff(staffId);
   }
 
-  getNextMondayDate() {
-    return this.weeklyHoliday.getNextMondayDate();
-  }
+  // 주별 휴일설정 관련 메서드 (@deprecated - DailySchedule 사용)
+  // async saveWeeklyHolidaySettings(settings: Omit<import('./types').WeeklyHolidaySettings, 'id' | 'createdAt' | 'updatedAt'>[]) {
+  //   return await this.weeklyHoliday.saveWeeklyHolidaySettings(settings);
+  // }
 
-  getCurrentMondayDate() {
-    return this.weeklyHoliday.getCurrentMondayDate();
-  }
+  // async getWeeklyHolidaySettingsByStaff(staffId: string) {
+  //   return await this.weeklyHoliday.getWeeklyHolidaySettingsByStaff(staffId);
+  // }
+
+  // async getWeeklyHolidaySettingsByStaffAndWeek(staffId: string, weekStartDate: string) {
+  //   return await this.weeklyHoliday.getWeeklyHolidaySettingsByStaffAndWeek(staffId, weekStartDate);
+  // }
+
+  // async getWeeklyHolidaySettingsByWeek(weekStartDate: string) {
+  //   return await this.weeklyHoliday.getWeeklyHolidaySettingsByWeek(weekStartDate);
+  // }
+
+  // async deleteWeeklyHolidaySettings(id: string) {
+  //   return await this.weeklyHoliday.deleteWeeklyHolidaySettings(id);
+  // }
+
+  // async deleteWeeklyHolidaySettingsByStaff(staffId: string) {
+  //   return await this.weeklyHoliday.deleteWeeklyHolidaySettingsByStaff(staffId);
+  // }
+
+  // async isHolidayByDate(staffId: string, date: string) {
+  //   return await this.weeklyHoliday.isHolidayByDate(staffId, date);
+  // }
+
+  // getNextMondayDate() {
+  //   return this.weeklyHoliday.getNextMondayDate();
+  // }
+
+  // getCurrentMondayDate() {
+  //   return this.weeklyHoliday.getCurrentMondayDate();
+  // }
 
   // Staff migration 관련 호환성 메서드
   async migrateStaffActiveStatus() {
@@ -718,6 +749,10 @@ export class IndexedDBManager extends BaseDBManager {
 
   async deleteScheduleEvent(eventId: string) {
     return await this.scheduleEvent.deleteScheduleEvent(eventId);
+  }
+
+  async updateScheduleEvent(eventId: string, updates: Partial<import('./types').ScheduleEvent>) {
+    return await this.scheduleEvent.updateScheduleEvent(eventId, updates);
   }
 }
 

@@ -3,8 +3,9 @@ import styled from 'styled-components';
 import { AppColors } from '../../styles/colors';
 import { AppTextStyles } from '../../styles/textStyles';
 import { ScheduleEvent, StaffInfo } from './types';
-import { generateTimeSlots, formatTime, isEventOnDate, getHolidayStaffNames, formatHolidayInfo } from './utils';
-import type { WeeklyHolidaySettings } from '../../utils/db/types';
+import { generateTimeSlots, formatTime, isEventOnDate, getHolidayStaffNames, formatHolidayInfo, formatDateToLocal } from './utils';
+import type { DailyScheduleSettings } from '../../utils/db/types';
+import { dbManager } from '../../utils/indexedDB';
 
 interface DayViewProps {
   currentDate: Date;
@@ -13,7 +14,7 @@ interface DayViewProps {
   selectedStaffIds: string[];
   onEventClick?: (event: ScheduleEvent) => void;
   onEventCreate?: (startTime: Date, endTime: Date, staffId?: string, replaceEventId?: string) => void;
-  weeklyHolidaySettings?: WeeklyHolidaySettings[]; // 주별 휴일설정 추가
+  dailyScheduleSettings?: DailyScheduleSettings[]; // 일별 스케줄 설정
   allowEmptyStaff?: boolean; // 코치가 없어도 달력 표시 허용
   programDuration?: number; // 프로그램 소요시간 (분 단위)
   disablePastTime?: boolean; // 과거 시간 비활성화 여부
@@ -240,7 +241,7 @@ const DayView: React.FC<DayViewProps> = ({
   selectedStaffIds,
   onEventClick,
   onEventCreate,
-  weeklyHolidaySettings = [],
+  dailyScheduleSettings = [],
   allowEmptyStaff = false,
   programDuration,
   disablePastTime = false,
@@ -259,45 +260,41 @@ const DayView: React.FC<DayViewProps> = ({
   );
 
   // 특정 직원의 특정 시간대가 예약 가능한지 확인하는 함수
-  const isTimeSlotAvailable = (staffId: string, hour: number, minute: number) => {
-    const dayOfWeek = currentDate.getDay();
-    const weekStartDate = (() => {
-      const monday = new Date(currentDate);
-      monday.setDate(currentDate.getDate() - (dayOfWeek === 0 ? 6 : dayOfWeek - 1));
-      return monday.toISOString().split('T')[0];
-    })();
-
-    const weeklySettings = weeklyHolidaySettings.find(
-      s => s.staffId === staffId && s.weekStartDate === weekStartDate
+  const isTimeSlotAvailable = (staffId: string, hour: number, minute: number): boolean => {
+    const dateStr = formatDateToLocal(currentDate);
+    
+    // 해당 날짜의 스케줄 찾기
+    const daySchedule = dailyScheduleSettings.find(s => 
+      s.staffId === staffId && s.date === dateStr
     );
+    
+    if (!daySchedule) {
+      // 스케줄이 없으면 예약 가능
+      return true;
+    }
 
-    if (weeklySettings) {
-      const dayKeys = ['sunday', 'monday', 'tuesday', 'wednesday', 'thursday', 'friday', 'saturday'];
-      const dayKey = dayKeys[dayOfWeek] as keyof typeof weeklySettings.weekDays;
-      const daySettings = weeklySettings.weekDays[dayKey];
+    // 휴일이면 예약 불가
+    if (daySchedule.isHoliday) {
+      return false;
+    }
 
-      if (daySettings) {
-        // 휴일이면 근무시간 체크 안함 (항상 true 반환)
-        if (daySettings.isHoliday) return true;
+    // 근무시간 체크
+    if (daySchedule.workingHours) {
+      const { start, end } = daySchedule.workingHours;
+      const currentTimeInMinutes = hour * 60 + minute;
+      if (currentTimeInMinutes < start || currentTimeInMinutes >= end) {
+        return false;
+      }
+    }
 
-        // 근무시간 외면 예약 불가
-        if (daySettings.workingHours) {
-          const { start, end } = daySettings.workingHours;
-          const currentTimeInMinutes = hour * 60 + minute;
-          if (currentTimeInMinutes < start || currentTimeInMinutes >= end) return false;
-        }
-
-        // 휴게시간이면 예약 불가
-        if (daySettings.breakTimes) {
-          for (const breakTime of daySettings.breakTimes) {
-            const currentTimeInMinutes = hour * 60 + minute;
-            if (currentTimeInMinutes >= breakTime.start && currentTimeInMinutes < breakTime.end) return false;
-          }
+    // 휴게시간 체크
+    if (daySchedule.breakTimes) {
+      const currentTimeInMinutes = hour * 60 + minute;
+      for (const breakTime of daySchedule.breakTimes) {
+        if (currentTimeInMinutes >= breakTime.start && currentTimeInMinutes < breakTime.end) {
+          return false;
         }
       }
-    } else {
-      // 주별 설정이 없으면 기본값 (주말은 휴일)
-      if (dayOfWeek === 0 || dayOfWeek === 6) return false;
     }
 
     return true;
@@ -330,44 +327,16 @@ const DayView: React.FC<DayViewProps> = ({
     };
   };
 
-  // 특정 시간이 휴일인지 확인 (WeeklyHolidaySettings 기반)
+  // 특정 시간이 휴일인지 확인 (DailyScheduleSettings 기반)
   const isTimeInHoliday = (staffId: string, hour: number, minute: number) => {
-    if (!weeklyHolidaySettings || weeklyHolidaySettings.length === 0) {
-      console.log('weeklyHolidaySettings가 없음:', weeklyHolidaySettings);
-      return false;
-    }
+    const dateStr = formatDateToLocal(currentDate);
     
-    const dayOfWeek = currentDate.getDay(); // 0: 일요일, 1: 월요일, ..., 6: 토요일
-    const weekStartDate = (() => {
-      const monday = new Date(currentDate);
-      monday.setDate(currentDate.getDate() - (dayOfWeek === 0 ? 6 : dayOfWeek - 1));
-      return monday.toISOString().split('T')[0];
-    })();
-
-    console.log('휴일 체크:', { 
-      staffId, 
-      hour, 
-      minute, 
-      dayOfWeek, 
-      weekStartDate,
-      settingsCount: weeklyHolidaySettings.length 
-    });
-
-    const weeklySettings = weeklyHolidaySettings.find(
-      s => s.staffId === staffId && s.weekStartDate === weekStartDate
+    // 해당 날짜의 스케줄 찾기
+    const daySchedule = dailyScheduleSettings.find(s => 
+      s.staffId === staffId && s.date === dateStr
     );
-
-    if (weeklySettings) {
-      const dayKeys = ['sunday', 'monday', 'tuesday', 'wednesday', 'thursday', 'friday', 'saturday'];
-      const dayKey = dayKeys[dayOfWeek] as keyof typeof weeklySettings.weekDays;
-      const daySettings = weeklySettings.weekDays[dayKey];
-      
-      console.log('휴일 설정 찾음:', { dayKey, isHoliday: daySettings?.isHoliday });
-      return daySettings?.isHoliday || false;
-    }
-
-    console.log('해당 주차 휴일 설정 없음');
-    return false;
+    
+    return daySchedule?.isHoliday || false;
   };
 
   // 특정 시간이 휴게시간에 포함되는지 확인 (스케줄 이벤트 기반)
@@ -482,8 +451,15 @@ const DayView: React.FC<DayViewProps> = ({
   const currentDayName = dayNames[currentDate.getDay()];
   const currentDateString = `${currentDate.getMonth() + 1}월 ${currentDate.getDate()}일 (${currentDayName})`;
   
-  // 오늘 날짜의 휴일 정보 가져오기
-  const holidayStaffNames = getHolidayStaffNames(currentDate, weeklyHolidaySettings || [], staffList);
+  // 오늘 날짜의 휴일 정보 가져오기 (DailyScheduleSettings 기반)
+  const dateStr = formatDateToLocal(currentDate);
+  const holidayStaff = staffList.filter(staff => {
+    const daySchedule = dailyScheduleSettings.find(s => 
+      s.staffId === staff.id && s.date === dateStr
+    );
+    return daySchedule?.isHoliday;
+  });
+  const holidayStaffNames = holidayStaff.map(s => s.name);
   const holidayInfo = formatHolidayInfo(holidayStaffNames);
 
   if (!allowEmptyStaff && filteredStaff.length === 0) {
@@ -570,13 +546,14 @@ const DayView: React.FC<DayViewProps> = ({
                       $height={position.height}
                       onClick={() => onEventClick?.(event)}
                     >
-                      <EventTitle>{event.title}</EventTitle>
+                      <EventTitle>
+                        {event.type === 'holiday' ? '휴일' : 
+                         event.type === 'break' ? event.title :
+                         event.title || event.memberName || '예약자'}
+                      </EventTitle>
                       <EventTime>
                         {formatTime(event.startTime)} - {formatTime(event.endTime)}
                       </EventTime>
-                      {event.memberName && (
-                        <EventMember>{event.memberName}</EventMember>
-                      )}
                     </EventBlock>
                   );
                 })}
