@@ -5,6 +5,7 @@ import { AppColors } from '../styles/colors';
 import { AppTextStyles } from '../styles/textStyles';
 import { dbManager } from '../utils/indexedDB';
 import { ScheduleEvent } from './Calendar/types';
+import type { DailyScheduleSettings } from '../utils/db/types';
 import Modal from './Modal';
 
 // 스타일 컴포넌트들
@@ -109,6 +110,57 @@ const ReservationTypeTag = styled.span<{ $type: 'class' | 'consultation' | 'othe
   }};
 `;
 
+const TimeSlotGrid = styled.div`
+  display: grid;
+  grid-template-columns: repeat(6, 1fr);
+  gap: 6px;
+  padding: 12px;
+  background-color: ${AppColors.background};
+  border-radius: 8px;
+  border: 1px solid ${AppColors.borderLight};
+  max-height: 200px;
+  overflow-y: auto;
+`;
+
+const TimeSlotButton = styled.button<{ $isSelected: boolean; $isDisabled: boolean }>`
+  padding: 8px 4px;
+  border-radius: 4px;
+  font-size: 12px;
+  font-weight: 500;
+  cursor: ${props => props.$isDisabled ? 'not-allowed' : 'pointer'};
+  border: 1px solid ${props => {
+    if (props.$isDisabled) return AppColors.borderLight;
+    if (props.$isSelected) return AppColors.primary;
+    return AppColors.borderLight;
+  }};
+  background-color: ${props => {
+    if (props.$isDisabled) return AppColors.surface + '50';
+    if (props.$isSelected) return AppColors.primary;
+    return AppColors.surface;
+  }};
+  color: ${props => {
+    if (props.$isDisabled) return AppColors.onSurface + '40';
+    if (props.$isSelected) return AppColors.onPrimary;
+    return AppColors.onSurface;
+  }};
+  transition: all 0.2s ease;
+  white-space: nowrap;
+  
+  &:hover {
+    ${props => !props.$isDisabled && `
+      background-color: ${props.$isSelected ? AppColors.primary + 'dd' : AppColors.primary + '20'};
+      border-color: ${AppColors.primary};
+    `}
+  }
+`;
+
+const TimeSelectionLabel = styled.div`
+  ${AppTextStyles.body2}
+  font-weight: 600;
+  color: ${AppColors.onSurface};
+  margin-bottom: 8px;
+`;
+
 const MemoTextArea = styled.textarea<{ $readOnly?: boolean }>`
   width: 100%;
   min-height: 100px;
@@ -195,6 +247,7 @@ interface ReservationEditModalProps {
     role: 'master' | 'coach' | 'admin';
     name?: string;
   };
+  dailyScheduleSettings?: DailyScheduleSettings[]; // 일별 스케줄 설정 (근무시간, 휴게시간)
 }
 
 const ReservationEditModal: React.FC<ReservationEditModalProps> = ({
@@ -203,7 +256,8 @@ const ReservationEditModal: React.FC<ReservationEditModalProps> = ({
   event,
   onUpdate,
   onDelete,
-  currentUser
+  currentUser,
+  dailyScheduleSettings = []
 }) => {
   const [isEditMode, setIsEditMode] = useState(false);
   const [memo, setMemo] = useState(event.reservationMemo || '');
@@ -215,7 +269,7 @@ const ReservationEditModal: React.FC<ReservationEditModalProps> = ({
     event.type as 'class' | 'consultation' | 'other'
   );
   const [selectedDate, setSelectedDate] = useState('');
-  const [selectedTime, setSelectedTime] = useState('');
+  const [selectedTimeMinutes, setSelectedTimeMinutes] = useState<number>(0); // 분 단위로 변경
 
   // 현재 시간보다 지났는지 확인
   const now = new Date();
@@ -236,17 +290,87 @@ const ReservationEditModal: React.FC<ReservationEditModalProps> = ({
   };
 
   // 종료 시간 자동 계산
-  const calculateEndTime = (startDateStr: string, startTimeStr: string) => {
-    if (!startDateStr || !startTimeStr) return '';
+  const calculateEndTime = (startDateStr: string, startMinutes: number) => {
+    if (!startDateStr || startMinutes < 0) return null;
     
-    const [hours, minutes] = startTimeStr.split(':');
     const startDateTime = new Date(startDateStr);
-    startDateTime.setHours(parseInt(hours), parseInt(minutes), 0, 0);
+    const hours = Math.floor(startMinutes / 60);
+    const minutes = startMinutes % 60;
+    startDateTime.setHours(hours, minutes, 0, 0);
     
     const duration = getDuration();
     const endDateTime = new Date(startDateTime.getTime() + duration * 60 * 1000);
     
     return endDateTime;
+  };
+
+  // 30분 단위 타임슬롯 생성 함수
+  const generateTimeSlots = (startMinutes: number, endMinutes: number): number[] => {
+    const slots: number[] = [];
+    for (let time = startMinutes; time < endMinutes; time += 30) {
+      slots.push(time);
+    }
+    return slots;
+  };
+
+  // 분을 시간 문자열로 변환 (예: 540 -> "9:00")
+  const minutesToTimeString = (minutes: number): string => {
+    const hours = Math.floor(minutes / 60);
+    const mins = minutes % 60;
+    return `${hours}:${String(mins).padStart(2, '0')}`;
+  };
+
+  // 특정 타임슬롯이 휴게시간에 포함되는지 확인
+  const isTimeSlotInBreak = (slotStart: number): boolean => {
+    if (!selectedDate || !event.staffId) return false;
+    
+    const daySettings = dailyScheduleSettings.find(
+      s => s.staffId === event.staffId && s.date === selectedDate
+    );
+    
+    if (!daySettings) return false;
+    
+    const slotEnd = slotStart + 30;
+    
+    // 기본 휴게시간 확인
+    if (daySettings.lunchTime && daySettings.lunchTime.start > 0 && daySettings.lunchTime.end > 0) {
+      if (slotStart >= daySettings.lunchTime.start && slotEnd <= daySettings.lunchTime.end) {
+        return true;
+      }
+    }
+    
+    // 추가 휴게시간들 확인
+    if (daySettings.breakTimes && daySettings.breakTimes.length > 0) {
+      for (const breakTime of daySettings.breakTimes) {
+        if (breakTime.start > 0 && breakTime.end > 0) {
+          if (slotStart >= breakTime.start && slotEnd <= breakTime.end) {
+            return true;
+          }
+        }
+      }
+    }
+    
+    return false;
+  };
+
+  // 근무 가능한 시간 범위 가져오기
+  const getWorkingHours = (): { start: number; end: number } => {
+    if (!selectedDate || !event.staffId) {
+      return { start: 6 * 60, end: 22 * 60 }; // 기본값: 6:00 ~ 22:00
+    }
+    
+    const daySettings = dailyScheduleSettings.find(
+      s => s.staffId === event.staffId && s.date === selectedDate
+    );
+    
+    if (!daySettings || !daySettings.workingHours) {
+      return { start: 6 * 60, end: 22 * 60 }; // 기본값
+    }
+    
+    return {
+      start: daySettings.workingHours.start,
+      end: daySettings.workingHours.end
+    };
   };
 
   useEffect(() => {
@@ -257,11 +381,11 @@ const ReservationEditModal: React.FC<ReservationEditModalProps> = ({
     const year = startDate.getFullYear();
     const month = String(startDate.getMonth() + 1).padStart(2, '0');
     const day = String(startDate.getDate()).padStart(2, '0');
-    const hours = String(startDate.getHours()).padStart(2, '0');
-    const minutes = String(startDate.getMinutes()).padStart(2, '0');
+    const hours = startDate.getHours();
+    const minutes = startDate.getMinutes();
     
     setSelectedDate(`${year}-${month}-${day}`);
-    setSelectedTime(`${hours}:${minutes}`);
+    setSelectedTimeMinutes(hours * 60 + minutes); // 분 단위로 저장
   }, [event]);
 
   const formatDateTime = (date: Date) => {
@@ -283,24 +407,6 @@ const ReservationEditModal: React.FC<ReservationEditModalProps> = ({
         return '예약';
     }
   };
-
-  // 30분 단위 시간 옵션 생성 (6:00 ~ 22:00)
-  const generateTimeOptions = () => {
-    const options = [];
-    for (let hour = 6; hour <= 22; hour++) {
-      for (let minute = 0; minute < 60; minute += 30) {
-        const timeValue = `${String(hour).padStart(2, '0')}:${String(minute).padStart(2, '0')}`;
-        const displayTime = `${hour}:${String(minute).padStart(2, '0')}`;
-        options.push({ value: timeValue, label: displayTime });
-        
-        // 22시는 00분만 추가하고 30분은 제외
-        if (hour === 22) break;
-      }
-    }
-    return options;
-  };
-
-  const timeOptions = generateTimeOptions();
 
   // 메모 개별 저장
   const handleMemoSave = async () => {
@@ -342,12 +448,13 @@ const ReservationEditModal: React.FC<ReservationEditModalProps> = ({
     setLoading(true);
     try {
       // 시작 시간 생성
-      const [hours, minutes] = selectedTime.split(':');
+      const hours = Math.floor(selectedTimeMinutes / 60);
+      const minutes = selectedTimeMinutes % 60;
       const startTime = new Date(selectedDate);
-      startTime.setHours(parseInt(hours), parseInt(minutes), 0, 0);
+      startTime.setHours(hours, minutes, 0, 0);
       
       // 종료 시간 자동 계산
-      const endTime = calculateEndTime(selectedDate, selectedTime);
+      const endTime = calculateEndTime(selectedDate, selectedTimeMinutes);
 
       if (!endTime) {
         toast.error('시간 정보가 올바르지 않습니다.');
@@ -405,11 +512,11 @@ const ReservationEditModal: React.FC<ReservationEditModalProps> = ({
     const year = startDate.getFullYear();
     const month = String(startDate.getMonth() + 1).padStart(2, '0');
     const day = String(startDate.getDate()).padStart(2, '0');
-    const hours = String(startDate.getHours()).padStart(2, '0');
-    const minutes = String(startDate.getMinutes()).padStart(2, '0');
+    const hours = startDate.getHours();
+    const minutes = startDate.getMinutes();
     
     setSelectedDate(`${year}-${month}-${day}`);
-    setSelectedTime(`${hours}:${minutes}`);
+    setSelectedTimeMinutes(hours * 60 + minutes);
   };
 
   const handleDelete = async () => {
@@ -424,13 +531,21 @@ const ReservationEditModal: React.FC<ReservationEditModalProps> = ({
 
     setLoading(true);
     try {
-      await dbManager.deleteScheduleEvent(event.id);
-      toast.success('예약이 삭제되었습니다.');
+      // 이벤트 소싱 방식: 상태만 변경 (물리적 삭제 안함)
+      // status를 'cancelled'로 변경하여 히스토리 유지
+      await dbManager.updateScheduleEvent(event.id, {
+        status: 'cancelled',
+        updatedAt: new Date()
+      });
+      
+      console.log(`예약 취소 (이벤트 소싱): ${event.id}, status: active → cancelled`);
+      
+      toast.success('예약이 취소되었습니다.');
       onDelete(event.id);
       onClose();
     } catch (error) {
-      console.error('예약 삭제 실패:', error);
-      toast.error('예약 삭제에 실패했습니다.');
+      console.error('예약 취소 실패:', error);
+      toast.error('예약 취소에 실패했습니다.');
     } finally {
       setLoading(false);
     }
@@ -490,25 +605,39 @@ const ReservationEditModal: React.FC<ReservationEditModalProps> = ({
           <InfoRow>
             <InfoLabel>시작 시간:</InfoLabel>
             {isEditMode ? (
-              <div style={{ display: 'flex', gap: '8px', flex: 1 }}>
+              <div style={{ display: 'flex', flexDirection: 'column', gap: '8px', flex: 1 }}>
                 <EditInput
                   type="date"
                   value={selectedDate}
                   onChange={(e) => setSelectedDate(e.target.value)}
-                  style={{ flex: 1 }}
                 />
-                <EditSelect
-                  value={selectedTime}
-                  onChange={(e) => setSelectedTime(e.target.value)}
-                  style={{ flex: 1 }}
-                >
-                  <option value="">시간 선택</option>
-                  {timeOptions.map(option => (
-                    <option key={option.value} value={option.value}>
-                      {option.label}
-                    </option>
-                  ))}
-                </EditSelect>
+                <div>
+                  <TimeSelectionLabel>시간 선택 (30분 단위)</TimeSelectionLabel>
+                  <TimeSlotGrid>
+                    {(() => {
+                      const workingHours = getWorkingHours();
+                      const slots = generateTimeSlots(workingHours.start, workingHours.end);
+                      
+                      return slots.map(slotStart => {
+                        const isInBreak = isTimeSlotInBreak(slotStart);
+                        const isSelected = selectedTimeMinutes === slotStart;
+                        
+                        return (
+                          <TimeSlotButton
+                            key={slotStart}
+                            type="button"
+                            $isSelected={isSelected}
+                            $isDisabled={isInBreak}
+                            onClick={() => !isInBreak && setSelectedTimeMinutes(slotStart)}
+                            title={isInBreak ? '휴게시간' : undefined}
+                          >
+                            {minutesToTimeString(slotStart)}
+                          </TimeSlotButton>
+                        );
+                      });
+                    })()}
+                  </TimeSlotGrid>
+                </div>
               </div>
             ) : (
               <InfoValue>{formatDateTime(event.startTime)}</InfoValue>
@@ -518,8 +647,8 @@ const ReservationEditModal: React.FC<ReservationEditModalProps> = ({
           <InfoRow>
             <InfoLabel>종료 시간:</InfoLabel>
             <InfoValue>
-              {isEditMode && selectedDate && selectedTime
-                ? formatDateTime(calculateEndTime(selectedDate, selectedTime) || event.endTime)
+              {isEditMode && selectedDate && selectedTimeMinutes >= 0
+                ? formatDateTime(calculateEndTime(selectedDate, selectedTimeMinutes) || event.endTime)
                 : formatDateTime(event.endTime)}
             </InfoValue>
           </InfoRow>

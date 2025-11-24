@@ -202,10 +202,14 @@ const EventBlock = styled.div<{ $color: string; $top: number; $height: number }>
   background-color: ${props => props.$color}20;
   border: 1px solid ${props => props.$color};
   border-radius: 4px;
-  padding: 4px 6px;
+  padding: 2px 4px;
   overflow: hidden;
   cursor: pointer;
   z-index: 1;
+  box-sizing: border-box;
+  display: flex;
+  align-items: center;
+  justify-content: center;
 
   &:hover {
     background-color: ${props => props.$color}30;
@@ -217,21 +221,11 @@ const EventTitle = styled.div`
   font-size: ${AppTextStyles.label2.fontSize};
   font-weight: 500;
   color: ${AppColors.onSurface};
-  margin-bottom: 2px;
-  line-height: 1.2;
-`;
-
-const EventTime = styled.div`
-  font-size: ${AppTextStyles.label3.fontSize};
-  color: ${AppColors.onSurface}70;
-  line-height: 1.1;
-`;
-
-const EventMember = styled.div`
-  font-size: ${AppTextStyles.label3.fontSize};
-  color: ${AppColors.primary};
-  line-height: 1.1;
-  margin-top: 2px;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  text-align: center;
+  width: 100%;
 `;
 
 const DayView: React.FC<DayViewProps> = ({
@@ -322,8 +316,8 @@ const DayView: React.FC<DayViewProps> = ({
     const durationMinutes = (eventEnd.getTime() - eventStart.getTime()) / (1000 * 60);
 
     return {
-      top: Math.max(0, (startMinutes / 30) * 30), // 30분당 30px
-      height: Math.max(15, (durationMinutes / 30) * 30)
+      top: Math.max(0, (startMinutes / 30) * 32), // 30분당 32px (31px 높이 + 1px border)
+      height: Math.max(15, (durationMinutes / 30) * 32)
     };
   };
 
@@ -551,9 +545,6 @@ const DayView: React.FC<DayViewProps> = ({
                          event.type === 'break' ? event.title :
                          event.title || event.memberName || '예약자'}
                       </EventTitle>
-                      <EventTime>
-                        {formatTime(event.startTime)} - {formatTime(event.endTime)}
-                      </EventTime>
                     </EventBlock>
                   );
                 })}

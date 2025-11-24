@@ -3,7 +3,7 @@
     "activeCommit": 0,
     "commits": [
         {
-            "activePatchIndex": 16,
+            "activePatchIndex": 17,
             "patches": [
                 {
                     "date": 1760154018682,
@@ -72,6 +72,10 @@
                 {
                     "date": 1763872381219,
                     "content": "Index: \n===================================================================\n--- \n+++ \n@@ -2,9 +2,9 @@\n  * 달력 컴포넌트 관련 타입 정의\n  */\n \n // Calendar에서는 IndexedDB의 HolidaySettings를 그대로 사용\n-import type { HolidaySettings, WeeklyHolidaySettings } from '../../utils/db/types';\n+import type { HolidaySettings, WeeklyHolidaySettings, DailyScheduleSettings } from '../../utils/db/types';\n \n export type CalendarView = 'day' | 'week' | 'month';\n \n export interface ScheduleEvent {\n@@ -72,9 +72,9 @@\n   onStaffFilter: (staffIds: string[]) => void;\n   onEventClick?: (event: ScheduleEvent) => void;\n   onEventCreate?: (startTime: Date, endTime: Date, staffId?: string, replaceEventId?: string) => void;\n   onHolidaySettings?: (staffId?: string) => void; // 휴일설정 핸들러 추가\n-  weeklyHolidaySettings?: WeeklyHolidaySettings[]; // 주별 휴일설정 추가\n+  dailyScheduleSettings?: DailyScheduleSettings[]; // 일별 스케줄 설정\n   staffHolidays?: { staffId: string; holidays: string[] }[]; // 직원별 휴일 정보\n   allowEmptyStaff?: boolean; // 코치가 없어도 달력 표시 허용 (기간제용)\n   programDuration?: number; // 프로그램 소요시간 (분 단위)\n   hideViewOptions?: CalendarView[]; // 숨길 뷰 옵션들 (기간제용)\n"
+                },
+                {
+                    "date": 1763984635973,
+                    "content": "Index: \n===================================================================\n--- \n+++ \n@@ -26,8 +26,12 @@\n   recurrenceRule?: string; // RRULE for recurring events\n   sourceType: 'manual' | 'weekly_holiday' | 'booking' | 'period_enrollment'; // 이벤트 생성 출처\n   sourceId?: string; // 원본 데이터 ID (WeeklyHolidaySettings ID 등)\n   reservationMemo?: string; // 예약 전용 메모 (회원 remarks와 별도)\n+  \n+  // 이벤트 소싱용 필드\n+  enrollmentId?: string; // 횟수제 수강권 ID\n+  status: 'active' | 'cancelled' | 'completed' | 'noshow'; // 예약 상태\n   createdAt?: Date;\n   updatedAt?: Date;\n }\n \n"
                 }
             ],
             "date": 1760154018682,

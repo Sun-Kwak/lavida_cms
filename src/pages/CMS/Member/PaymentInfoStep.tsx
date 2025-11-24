@@ -65,6 +65,12 @@ const PaymentInfoStep: React.FC<StepProps> = ({ formData, onUpdate }) => {
     if (value) {
       const product = availableProducts.find(p => p.id === value);
       if (product) {
+        console.log('=== 상품 선택 디버깅 ===');
+        console.log('선택한 상품:', product);
+        console.log('programType:', product.programType);
+        console.log('validityMonths:', product.validityMonths);
+        console.log('sessions:', product.sessions);
+        
         // DBProduct를 Product 타입으로 변환
         const convertedProduct: Product = {
           id: product.id,
@@ -79,21 +85,20 @@ const PaymentInfoStep: React.FC<StepProps> = ({ formData, onUpdate }) => {
 
         // 기간제인 경우 상품의 개월수를 기준으로 설정
         if (product.programType === '기간제') {
-          const tomorrow = new Date();
-          tomorrow.setDate(tomorrow.getDate() + 1);
+          const today = new Date();
           
           // 상품에 등록된 개월수를 기준으로 설정 (기본값: 1개월)
           const productMonths = product.months || 1;
           const days = productMonths * 30; // 개월수를 일수로 변환 (1개월 = 30일)
           
-          const endDate = new Date(tomorrow);
+          const endDate = new Date(today);
           endDate.setDate(endDate.getDate() + days);
           
           convertedProduct.duration = days;
           convertedProduct.baseDuration = days;
           convertedProduct.months = productMonths; // 개월수 저장
           convertedProduct.baseMonths = productMonths; // 기준 개월수 저장
-          convertedProduct.startDate = tomorrow;
+          convertedProduct.startDate = today;
           convertedProduct.endDate = endDate;
           // 상품 가격은 해당 개월수에 대한 가격이므로 그대로 사용 (기간제는 가격 고정)
           convertedProduct.price = product.price || 0;
@@ -110,19 +115,22 @@ const PaymentInfoStep: React.FC<StepProps> = ({ formData, onUpdate }) => {
           // 적용금액도 초기에는 상품 가격과 동일
           convertedProduct.appliedPrice = convertedProduct.price;
           
-          // 유효기간 설정 (상품에 등록된 validityMonths 사용)
-          if (product.validityMonths) {
-            const tomorrow = new Date();
-            tomorrow.setDate(tomorrow.getDate() + 1);
-            
-            const endDate = new Date(tomorrow);
-            endDate.setMonth(endDate.getMonth() + product.validityMonths);
-            
-            convertedProduct.startDate = tomorrow;
-            convertedProduct.endDate = endDate;
-            convertedProduct.months = product.validityMonths;
-          }
+          // 유효기간 설정 - 오늘부터 시작
+          const today = new Date();
+          convertedProduct.startDate = today;
+          
+          // 유효기간(validityMonths 또는 months)으로 종료일 계산
+          const validityMonths = product.validityMonths || product.months || 1;
+          const endDate = new Date(today);
+          endDate.setMonth(endDate.getMonth() + validityMonths);
+          convertedProduct.endDate = endDate;
+          convertedProduct.months = validityMonths;
         }
+
+        console.log('=== convertedProduct 최종 ===');
+        console.log('startDate:', convertedProduct.startDate);
+        console.log('endDate:', convertedProduct.endDate);
+        console.log('전체:', convertedProduct);
 
         handleProductAdd(convertedProduct);
       }
@@ -182,17 +190,25 @@ const PaymentInfoStep: React.FC<StepProps> = ({ formData, onUpdate }) => {
     } else if (field === 'startDate') {
       product.startDate = value;
       if (product.programType === '기간제' && product.duration) {
-        // 시작일 변경 시 종료일 재계산
+        // 기간제: 시작일 변경 시 종료일 재계산
         const endDate = new Date(value);
         endDate.setDate(endDate.getDate() + product.duration);
         product.endDate = endDate;
+      } else if (product.programType === '횟수제' && product.endDate) {
+        // 횟수제: 시작일 변경 시 기간(months) 재계산
+        const days = Math.ceil((product.endDate.getTime() - value.getTime()) / (1000 * 3600 * 24));
+        product.months = Math.round(days / 30);
       }
     } else if (field === 'endDate') {
       product.endDate = value;
       if (product.programType === '기간제' && product.startDate) {
-        // 종료일 변경 시 기간 재계산 (가격은 변경하지 않음)
+        // 기간제: 종료일 변경 시 기간 재계산
         const days = Math.ceil((value.getTime() - product.startDate.getTime()) / (1000 * 3600 * 24));
         product.duration = days;
+        product.months = Math.round(days / 30);
+      } else if (product.programType === '횟수제' && product.startDate) {
+        // 횟수제: 종료일 변경 시 기간(months) 재계산
+        const days = Math.ceil((value.getTime() - product.startDate.getTime()) / (1000 * 3600 * 24));
         product.months = Math.round(days / 30);
       }
     } else if (field === 'appliedPrice') {

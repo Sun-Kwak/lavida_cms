@@ -4,6 +4,7 @@ import { toast } from 'react-toastify';
 import { AppColors } from '../../../styles/colors';
 import { AppTextStyles } from '../../../styles/textStyles';
 import { dbManager, type Member as DBMember } from '../../../utils/indexedDB';
+import { getCompletedSessions } from '../../../utils/db/ReservationHelper';
 import { openPreviewWindow } from './PreviewDocument';
 import { MemberFormData } from './types';
 import Modal from '../../../components/Modal';
@@ -247,6 +248,9 @@ const MemberSearch: React.FC = () => {
     totalUnpaidAmount: 0
   });
   
+  // 세션 정보 캐시 (enrollmentId -> progressInfo)
+  const [enrollmentSessions, setEnrollmentSessions] = useState<Map<string, string>>(new Map());
+  
   // 모달 관련 상태
   const [showEditModal, setShowEditModal] = useState<boolean>(false);
   const [editingMember, setEditingMember] = useState<DBMember | null>(null);
@@ -264,9 +268,12 @@ const MemberSearch: React.FC = () => {
   const [qrModalOpen, setQrModalOpen] = useState<boolean>(false);
   const [selectedMemberForQR, setSelectedMemberForQR] = useState<DBMember | null>(null);
 
-  const getProgressInfo = (enrollment: any) => {
+  // 진행상황 계산 함수
+  const getProgressInfo = useCallback(async (enrollment: any): Promise<string> => {
     if (enrollment.programType === '횟수제' && enrollment.sessionCount) {
-      const remaining = enrollment.sessionCount - (enrollment.completedSessions || 0);
+      // 이벤트 소싱: 실시간 완료 횟수 계산
+      const completedSessions = await getCompletedSessions(enrollment.id);
+      const remaining = enrollment.sessionCount - completedSessions;
       return `${remaining}/${enrollment.sessionCount}회 남음`;
     } else if (enrollment.programType === '기간제' && enrollment.endDate) {
       const today = new Date();
@@ -283,7 +290,7 @@ const MemberSearch: React.FC = () => {
       }
     }
     return '진행률 미설정';
-  };
+  }, []);
 
   // 미수 메타정보 로드
   const loadUnpaidMetaInfo = useCallback(async () => {
@@ -414,11 +421,13 @@ const MemberSearch: React.FC = () => {
               e.enrollmentStatus === 'unpaid'
             );
             
-            const currentCourses = activeEnrollments.map(enrollment => ({
-              productName: enrollment.productName,
-              programType: enrollment.programType,
-              progressInfo: getProgressInfo(enrollment)
-            }));
+            const currentCourses = await Promise.all(
+              activeEnrollments.map(async (enrollment) => ({
+                productName: enrollment.productName,
+                programType: enrollment.programType,
+                progressInfo: await getProgressInfo(enrollment)
+              }))
+            );
             
             return {
               ...member,
@@ -456,7 +465,7 @@ const MemberSearch: React.FC = () => {
     } finally {
       setLoading(false);
     }
-  }, [loadUnpaidMetaInfo, selectedPeriod, customStartDate, customEndDate]);
+  }, [loadUnpaidMetaInfo, selectedPeriod, customStartDate, customEndDate, getProgressInfo]);
 
   // 지점과 직원 데이터 로드
   const loadBranchesAndStaff = useCallback(async () => {
@@ -590,10 +599,11 @@ const MemberSearch: React.FC = () => {
           return true;
         }
         
-        // 횟수제: 남은 횟수가 있는 경우
-        if (enrollment.sessionCount && (enrollment.completedSessions || 0) < enrollment.sessionCount) {
-          const remainingSessions = enrollment.sessionCount - (enrollment.completedSessions || 0);
-          console.log(`- 횟수제 남은 횟수: ${remainingSessions}회 → 활성 수강 판정`);
+        // 횟수제: 남은 횟수가 있는 경우 (이벤트 소싱 필요)
+        if (enrollment.sessionCount) {
+          // TODO: 이벤트 소싱으로 실제 완료 횟수 계산 필요
+          // 현재는 임시로 활성으로 간주
+          console.log(`- 횟수제 수강권 존재 → 활성 수강 판정 (이벤트 소싱 필요)`);
           return true;
         }
         

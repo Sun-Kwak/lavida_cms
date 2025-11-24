@@ -383,9 +383,17 @@ const MemberRegister: React.FC = () => {
               orderProduct.duration = product.duration;
             }
 
-            // 횟수제 상품의 경우 횟수 정보 추가
-            if (product.programType === '횟수제' && product.sessions) {
-              orderProduct.sessions = product.sessions;
+            // 횟수제 상품의 경우 횟수 및 유효기간 정보 추가
+            if (product.programType === '횟수제') {
+              if (product.sessions) {
+                orderProduct.sessions = product.sessions;
+              }
+              if (product.startDate) {
+                orderProduct.startDate = product.startDate;
+              }
+              if (product.endDate) {
+                orderProduct.endDate = product.endDate;
+              }
             }
             
             orderProducts.push(orderProduct);

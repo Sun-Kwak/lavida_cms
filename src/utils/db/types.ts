@@ -412,7 +412,7 @@ export interface CourseEnrollment extends DBRecord {
   startDate?: Date | null; // 수강 시작일
   endDate?: Date | null; // 수강 종료일 (기간제인 경우)
   sessionCount?: number; // 총 수업 횟수 (횟수제인 경우)
-  completedSessions?: number; // 완료된 수업 횟수 (횟수제인 경우, 기본값 0)
+  // completedSessions 제거: ScheduleEvent와 JOIN하여 실시간 계산
   
   // 홀드 관련 필드 추가
   holdInfo?: {
@@ -523,7 +523,7 @@ export interface PointBalance extends DBRecord {
   lastUpdated: Date;          // 마지막 업데이트 시간
 }
 
-// 스케줄 이벤트 인터페이스
+// 스케줄 이벤트 인터페이스 (이벤트 소싱 방식)
 export interface ScheduleEvent extends DBRecord {
   title: string;
   startTime: Date;
@@ -543,6 +543,10 @@ export interface ScheduleEvent extends DBRecord {
   sourceType: 'manual' | 'weekly_holiday' | 'booking' | 'period_enrollment'; // 이벤트 생성 출처
   sourceId?: string; // 원본 데이터 ID (WeeklyHolidaySettings ID 등)
   reservationMemo?: string; // 예약 전용 메모 (회원 remarks와 별도)
+  
+  // 횟수제 수강권 연결 (이벤트 소싱용)
+  enrollmentId?: string; // 횟수제 수강권 ID (일반 예약만 해당)
+  status: 'active' | 'cancelled' | 'completed' | 'noshow'; // 예약 상태 (히스토리 추적용)
 }
 
 // 중복 체크 결과 타입

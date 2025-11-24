@@ -200,16 +200,9 @@ const ReservationPage: React.FC = () => {
     }
   }, [programId, selectedBranchId]);
 
-  // 직원 데이터 로드 (횟수제 프로그램용)
+  // 직원 데이터 로드 (횟수제/기간제 프로그램용)
   const loadStaffData = useCallback(async () => {
     try {
-      // 기간제 프로그램인 경우 직원 데이터 로드하지 않음
-      if (currentProgram?.type === '기간제') {
-        setStaffList([]);
-        setSelectedStaffIds([]);
-        return;
-      }
-
       const allStaff = await dbManager.getAllStaff();
       let activeCoaches = allStaff.filter(staff => 
         staff.isActive && staff.program // 담당 프로그램이 있는 활성 직원
@@ -269,197 +262,9 @@ const ReservationPage: React.FC = () => {
     }
   }, [selectedBranchId, currentProgram, currentUser]);
 
-  // 기간제 수강 정보 로드
-  const loadPeriodCourseEnrollments = useCallback(async () => {
-    try {
-      if (!selectedBranchId || !currentProgram) {
-        console.log('기간제 수강 정보 로드 조건 미충족:', { selectedBranchId, currentProgram: currentProgram?.name });
-        return [];
-      }
 
-      console.log('기간제 수강 정보 로드 시작:', { 
-        branchId: selectedBranchId, 
-        programId: currentProgram.id, 
-        programName: currentProgram.name,
-        programType: currentProgram.type 
-      });
 
-      // 해당 지점의 활성 수강 정보 조회
-      const allEnrollments = await dbManager.getAllCourseEnrollments();
-      console.log('전체 수강 정보 개수:', allEnrollments.length);
 
-      const branchEnrollments = allEnrollments.filter(enrollment => {
-        const branchMatch = enrollment.branchId === selectedBranchId;
-        const programMatch = enrollment.programId === currentProgram.id;
-        const typeMatch = enrollment.programType === '기간제';
-        const statusMatch = enrollment.enrollmentStatus === 'active';
-        const dateMatch = enrollment.startDate && enrollment.endDate;
-
-        console.log('수강 정보 체크:', {
-          enrollmentId: enrollment.id,
-          branchId: enrollment.branchId,
-          programId: enrollment.programId,
-          programType: enrollment.programType,
-          enrollmentStatus: enrollment.enrollmentStatus,
-          startDate: enrollment.startDate,
-          endDate: enrollment.endDate,
-          memberName: enrollment.memberName,
-          // 필터링 조건 체크 결과
-          branchMatch,
-          programMatch,
-          typeMatch,
-          statusMatch,
-          dateMatch,
-          // 현재 선택된 값들
-          selectedBranchId,
-          currentProgramId: currentProgram.id,
-          currentProgramName: currentProgram.name
-        });
-
-        return branchMatch && programMatch && typeMatch && statusMatch && dateMatch;
-      });
-
-      console.log('필터링된 기간제 수강 정보:', branchEnrollments.length, '건');
-      branchEnrollments.forEach(enrollment => {
-        console.log('- 회원:', enrollment.memberName, '기간:', enrollment.startDate, '~', enrollment.endDate);
-      });
-
-      return branchEnrollments;
-    } catch (error) {
-      console.error('기간제 수강 정보 로드 실패:', error);
-      return [];
-    }
-  }, [selectedBranchId, currentProgram]);
-
-  // 기간제 수강 정보를 달력 이벤트로 변환
-  const generatePeriodEvents = useCallback(async () => {
-    const isPeriodProgram = currentProgram?.type === '기간제';
-    
-    console.log('기간제 이벤트 생성 시작:', { 
-      isPeriodProgram, 
-      selectedBranchId, 
-      currentProgram: currentProgram?.name 
-    });
-    
-    if (!isPeriodProgram || !selectedBranchId || !currentProgram) {
-      console.log('기간제 이벤트 생성 조건 미충족');
-      return [];
-    }
-
-    try {
-      const periodEnrollments = await loadPeriodCourseEnrollments();
-      console.log('로드된 기간제 수강 정보:', periodEnrollments.length, '건');
-      
-      if (periodEnrollments.length === 0) {
-        console.log('기간제 수강 정보가 없습니다');
-        return [];
-      }
-
-      const periodEvents: ScheduleEvent[] = [];
-
-      // 프로그램별로 그룹화하여 수강생 수 계산
-      const programGroups: { [key: string]: { 
-        enrollments: any[], 
-        dates: { startDate: Date, endDate: Date }[] 
-      } } = {};
-
-      // 수강 정보를 프로그램별로 그룹화
-      for (const enrollment of periodEnrollments) {
-        const key = `${enrollment.programId}-${enrollment.programName}`;
-        if (!programGroups[key]) {
-          programGroups[key] = { enrollments: [], dates: [] };
-        }
-        programGroups[key].enrollments.push(enrollment);
-        
-        // 수강 기간 추가
-        if (enrollment.startDate && enrollment.endDate) {
-          const startDate = new Date(enrollment.startDate);
-          const endDate = new Date(enrollment.endDate);
-          
-          console.log('수강 기간 파싱:', {
-            memberName: enrollment.memberName,
-            startDateStr: enrollment.startDate,
-            endDateStr: enrollment.endDate,
-            startDate: startDate,
-            endDate: endDate
-          });
-          
-          programGroups[key].dates.push({ startDate, endDate });
-        }
-      }
-
-      console.log('프로그램 그룹:', Object.keys(programGroups));
-
-      // 각 프로그램별로 달력 이벤트 생성
-      for (const [programKey, group] of Object.entries(programGroups)) {
-        const programName = group.enrollments[0]?.programName || '알 수 없는 프로그램';
-        console.log('프로그램 처리:', programName, '수강생:', group.enrollments.length, '명');
-
-        // 모든 수강 기간을 고려해서 전체 기간 계산
-        if (group.dates.length > 0) {
-          const earliestStart = new Date(Math.min(...group.dates.map(d => d.startDate.getTime())));
-          const latestEnd = new Date(Math.max(...group.dates.map(d => d.endDate.getTime())));
-
-          console.log('전체 기간:', earliestStart, '~', latestEnd);
-
-          // 전체 기간에 대해 하루 종일 이벤트 생성
-          const currentDate = new Date(earliestStart);
-          let eventCount = 0;
-          
-          while (currentDate <= latestEnd) {
-            // 해당 날짜에 수강 중인 회원 수 계산
-            const activeCount = group.dates.filter(dateRange => 
-              currentDate >= dateRange.startDate && currentDate <= dateRange.endDate
-            ).length;
-
-            if (activeCount > 0) {
-              const eventStartTime = new Date(currentDate);
-              eventStartTime.setHours(0, 0, 0, 0);
-              const eventEndTime = new Date(currentDate);
-              eventEndTime.setHours(23, 59, 59, 999);
-
-              const event = {
-                id: `period-${programKey}-${currentDate.toISOString().split('T')[0]}`,
-                title: `${programName} ${activeCount}명`,
-                startTime: eventStartTime,
-                endTime: eventEndTime,
-                staffId: 'period-program', // 기간제는 특정 코치에 속하지 않음
-                staffName: '기간제 프로그램',
-                type: 'class' as const,
-                color: '#10b981', // 녹색 계열로 기간제 표시
-                description: `${programName} 기간제 수강생 ${activeCount}명`,
-                sourceType: 'period_enrollment' as const,
-                sourceId: programKey,
-                programId: group.enrollments[0]?.programId,
-                programName: programName
-              };
-
-              periodEvents.push(event);
-              eventCount++;
-              
-              if (eventCount <= 5) { // 처음 5개만 로그 출력
-                console.log('이벤트 생성:', {
-                  date: currentDate.toISOString().split('T')[0],
-                  title: event.title,
-                  activeCount
-                });
-              }
-            }
-
-            currentDate.setDate(currentDate.getDate() + 1);
-          }
-          
-          console.log(`${programName} - 총 ${eventCount}개 이벤트 생성`);
-        }
-      }
-
-      console.log('기간제 달력 이벤트 생성 완료:', periodEvents.length, '개');
-      return periodEvents;
-    } catch (error) {
-      console.error('기간제 달력 이벤트 생성 실패:', error);
-      return [];
-    }
-  }, [selectedBranchId, currentProgram, loadPeriodCourseEnrollments]);
 
   // 휴일설정 로드 (더 이상 사용 안함 - 스케줄 이벤트로 대체)
   // const loadHolidaySettings = useCallback(async () => {
@@ -631,7 +436,8 @@ const ReservationPage: React.FC = () => {
                   color: '#fbbf24',
                   description: `${staff.name} 코치 ${breakTime.name}`,
                   sourceType: 'weekly_holiday',
-                  sourceId: setting.staffId + '-' + setting.weekStartDate
+                  sourceId: setting.staffId + '-' + setting.weekStartDate,
+                  status: 'active' // 이벤트 소싱: 모든 이벤트는 status 필수
                 });
               }
             });
@@ -666,26 +472,18 @@ const ReservationPage: React.FC = () => {
       const endDate = new Date(currentDate);
       endDate.setDate(endDate.getDate() + 14); // 현재 날짜 2주 후까지
       
-      const isPeriodProgram = currentProgram?.type === '기간제';
       let allEvents: ScheduleEvent[] = [];
 
       console.log('스케줄 이벤트 로드 시작:', { 
-        isPeriodProgram, 
+        programType: currentProgram?.type,
         selectedBranchId, 
         programName: currentProgram?.name 
       });
 
-      if (isPeriodProgram) {
-        // 기간제 프로그램인 경우 기간제 이벤트 생성
-        const periodEvents = await generatePeriodEvents();
-        allEvents = [...periodEvents];
-        console.log('기간제 스케줄 이벤트 로드 완료:', periodEvents.length, '개');
-      } else {
-        // 횟수제 프로그램인 경우 저장된 스케줄 이벤트 로드 (코치 스케줄 등)
-        const savedEvents = await dbManager.getAllScheduleEvents(startDate, endDate);
-        allEvents = [...savedEvents];
-        console.log('횟수제 저장된 스케줄 이벤트 로드:', savedEvents.length, '개');
-      }
+      // 모든 프로그램 타입에서 저장된 스케줄 이벤트 로드 (코치 스케줄, 예약 등)
+      const savedEvents = await dbManager.getAllScheduleEvents(startDate, endDate);
+      allEvents = [...savedEvents];
+      console.log('저장된 스케줄 이벤트 로드:', savedEvents.length, '개');
       
       setEvents(allEvents);
       console.log('달력에 설정된 이벤트 수:', allEvents.length);
@@ -695,7 +493,7 @@ const ReservationPage: React.FC = () => {
     } catch (error) {
       console.error('스케줄 이벤트 로드 실패:', error);
     }
-  }, [currentDate, currentProgram, selectedBranchId, generatePeriodEvents]);
+  }, [currentDate, currentProgram, selectedBranchId]);
 
   // 프로그램 정보 로드
   useEffect(() => {
@@ -852,9 +650,9 @@ const ReservationPage: React.FC = () => {
   };
 
   const handleEventCreate = (startTime: Date, endTime: Date, staffId?: string, replaceEventId?: string) => {
-    // 횟수제 프로그램인지 확인
-    if (!currentProgram || currentProgram.type !== '횟수제') {
-      alert('횟수제 프로그램에서만 예약을 생성할 수 있습니다.');
+    // 프로그램이 선택되어 있는지 확인
+    if (!currentProgram) {
+      alert('프로그램을 선택해주세요.');
       return;
     }
 
@@ -1015,56 +813,30 @@ const ReservationPage: React.FC = () => {
             // 프로그램별 예약에서는 달력 컴포넌트 표시 (지점이 선택된 경우만)
             selectedBranchId ? (
               currentProgram ? (
-                currentProgram.type === '횟수제' ? (
-                  // 횟수제 프로그램인 경우 코치 스케줄 표시
-                  staffList.length > 0 ? (
-                    <ScheduleCalendar
-                      view={calendarView}
-                      currentDate={currentDate}
-                      events={events}
-                      staffList={staffList}
-                      selectedStaffIds={selectedStaffIds}
-                      onViewChange={setCalendarView}
-                      onDateChange={handleDateChange}
-                      onStaffFilter={setSelectedStaffIds}
-                      onEventClick={handleEventClick}
-                      onEventCreate={handleEventCreate}
-                      onHolidaySettings={handleHolidaySettings}
-                      dailyScheduleSettings={weeklyHolidaySettings}
-                      programDuration={programDuration}
-                      disablePastTime={true}
-                      currentUser={currentUser}
-                    />
-                  ) : (
-                    <PlaceholderContent>
-                      선택한 지점에 "{currentProgram.name}" 프로그램을 담당하는 코치가 없습니다.
-                      <br />
-                      직원 관리에서 코치의 담당 프로그램을 설정해주세요.
-                    </PlaceholderContent>
-                  )
-                ) : currentProgram.type === '기간제' ? (
-                  // 기간제 프로그램인 경우 월별 달력만 표시
+                // 모든 프로그램 타입에서 코치 스케줄 표시 (횟수제, 기간제 동일)
+                staffList.length > 0 ? (
                   <ScheduleCalendar
-                    view="month" // 월별 고정
+                    view={calendarView}
                     currentDate={currentDate}
                     events={events}
-                    staffList={[]} // 기간제는 코치별 필터링 없음
-                    selectedStaffIds={[]}
-                    onViewChange={() => {}} // 기간제는 뷰 변경 비활성화
+                    staffList={staffList}
+                    selectedStaffIds={selectedStaffIds}
+                    onViewChange={setCalendarView}
                     onDateChange={handleDateChange}
-                    onStaffFilter={() => {}} // 기간제는 코치 필터링 없음
+                    onStaffFilter={setSelectedStaffIds}
                     onEventClick={handleEventClick}
                     onEventCreate={handleEventCreate}
-                    onHolidaySettings={undefined} // 기간제는 휴일설정 없음
-                    dailyScheduleSettings={[]}
-                    allowEmptyStaff={true} // 기간제는 코치가 없어도 달력 표시
+                    onHolidaySettings={handleHolidaySettings}
+                    dailyScheduleSettings={weeklyHolidaySettings}
                     programDuration={programDuration}
-                    hideViewOptions={['day', 'week']} // 일별, 주별 뷰 숨김
                     disablePastTime={true}
+                    currentUser={currentUser}
                   />
                 ) : (
                   <PlaceholderContent>
-                    알 수 없는 프로그램 타입입니다: {currentProgram.type}
+                    선택한 지점에 "{currentProgram.name}" 프로그램을 담당하는 코치가 없습니다.
+                    <br />
+                    직원 관리에서 코치의 담당 프로그램을 설정해주세요.
                   </PlaceholderContent>
                 )
               ) : (
@@ -1134,6 +906,7 @@ const ReservationPage: React.FC = () => {
           onUpdate={handleEventUpdate}
           onDelete={handleEventDelete}
           currentUser={currentUser}
+          dailyScheduleSettings={weeklyHolidaySettings}
         />
       )}
     </>

@@ -3,7 +3,7 @@
     "activeCommit": 0,
     "commits": [
         {
-            "activePatchIndex": 31,
+            "activePatchIndex": 33,
             "patches": [
                 {
                     "date": 1760154018684,
@@ -132,6 +132,14 @@
                 {
                     "date": 1763876728171,
                     "content": "Index: \n===================================================================\n--- \n+++ \n@@ -2,9 +2,9 @@\n import styled from 'styled-components';\n import { AppColors } from '../../styles/colors';\n import { AppTextStyles } from '../../styles/textStyles';\n import { ScheduleEvent, StaffInfo } from './types';\n-import { getWeekDates, isEventOnDate, generateTimeSlots, getHolidayStaffNames, formatHolidayInfo } from './utils';\n+import { getWeekDates, isEventOnDate, generateTimeSlots, getHolidayStaffNames, formatHolidayInfo, formatDateToLocal } from './utils';\n import type { DailyScheduleSettings } from '../../utils/db/types';\n \n interface WeekViewProps {\n   currentDate: Date;\n@@ -389,9 +389,9 @@\n   };\n \n   // 특정 직원의 특정 시간대가 예약 가능한지 확인하는 함수 (휴일 제외, 근무시간과 휴게시간만 체크)\n   const isTimeSlotAvailable = (staffId: string, hour: number, minute: number, targetDate: Date): boolean => {\n-    const dateStr = targetDate.toISOString().split('T')[0];\n+    const dateStr = formatDateToLocal(targetDate);\n     \n     // 해당 날짜의 스케줄 찾기\n     const daySchedule = dailyScheduleSettings.find(s => \n       s.staffId === staffId && s.date === dateStr\n@@ -482,13 +482,13 @@\n       }\n     }\n \n     // staffId가 있는 경우에만 휴일/휴게시간/근무시간 체크 수행\n-    // (Master가 여러 코치 선택 시 staffId가 undefined이므로 체크 건너뜀)\n+    // (Master가 여러 코치 선택 시 staffId가 undefined이므로 체크 건너뛀)\n     if (staffId) {\n       // 해당 날짜가 휴일인지 확인 (날짜 레벨에서)\n       const staffName = staff?.name || '';\n-      const dateStr = dayDate.toISOString().split('T')[0];\n+      const dateStr = formatDateToLocal(dayDate);\n       const holidayStaff = staffList.filter(s => {\n         const daySchedule = dailyScheduleSettings.find(ds => \n           ds.staffId === s.id && ds.date === dateStr\n         );\n@@ -576,9 +576,9 @@\n       <Header>\n         <TimeHeader>시간</TimeHeader>\n         {weekDates.map(day => {\n           // 각 날짜의 휴일 정보 가져오기\n-          const dateStr = day.date.toISOString().split('T')[0];\n+          const dateStr = formatDateToLocal(day.date);\n           const holidayStaff = staffList.filter(s => {\n             const daySchedule = dailyScheduleSettings.find(ds => \n               ds.staffId === s.id && ds.date === dateStr\n             );\n"
+                },
+                {
+                    "date": 1763985717233,
+                    "content": "Index: \n===================================================================\n--- \n+++ \n@@ -333,10 +333,10 @@\n     const startMinutes = (eventStart.getTime() - dayStart.getTime()) / (1000 * 60);\n     const durationMinutes = (eventEnd.getTime() - eventStart.getTime()) / (1000 * 60);\n \n     return {\n-      top: Math.max(0, (startMinutes / 30) * 30), // 30분당 30px (30분 단위로 조정)\n-      height: Math.max(15, (durationMinutes / 30) * 30)\n+      top: Math.max(0, (startMinutes / 30) * 31), // 30분당 31px (타임슬롯 높이와 일치)\n+      height: Math.max(15, (durationMinutes / 30) * 31)\n     };\n   };\n \n   // 같은 시간대 이벤트들의 위치 조정\n"
+                },
+                {
+                    "date": 1763985782746,
+                    "content": "Index: \n===================================================================\n--- \n+++ \n@@ -333,10 +333,10 @@\n     const startMinutes = (eventStart.getTime() - dayStart.getTime()) / (1000 * 60);\n     const durationMinutes = (eventEnd.getTime() - eventStart.getTime()) / (1000 * 60);\n \n     return {\n-      top: Math.max(0, (startMinutes / 30) * 31), // 30분당 31px (타임슬롯 높이와 일치)\n-      height: Math.max(15, (durationMinutes / 30) * 31)\n+      top: Math.max(0, (startMinutes / 30) * 32), // 30분당 32px (31px 높이 + 1px border)\n+      height: Math.max(15, (durationMinutes / 30) * 32)\n     };\n   };\n \n   // 같은 시간대 이벤트들의 위치 조정\n"
                 }
             ],
             "date": 1760154018684,

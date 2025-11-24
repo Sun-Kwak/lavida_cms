@@ -3,7 +3,7 @@
     "activeCommit": 0,
     "commits": [
         {
-            "activePatchIndex": 28,
+            "activePatchIndex": 29,
             "patches": [
                 {
                     "date": 1761368450126,
@@ -120,6 +120,10 @@
                 {
                     "date": 1763871650919,
                     "content": "Index: \n===================================================================\n--- \n+++ \n@@ -89,9 +89,26 @@\n   description?: string; // 상품소개\n   isActive: boolean;\n }\n \n+// 일별 스케줄 설정 인터페이스 (간소화된 구조)\n+export interface DailyScheduleSettings extends DBRecord {\n+  staffId: string;\n+  date: string; // YYYY-MM-DD 형식\n+  isHoliday: boolean;\n+  workingHours?: {\n+    start: number; // 분 단위 (예: 540 = 9:00)\n+    end: number;   // 분 단위 (예: 1260 = 21:00)\n+  };\n+  breakTimes?: Array<{\n+    start: number;  // 분 단위\n+    end: number;    // 분 단위\n+    name?: string;  // 휴게시간 이름 (예: \"점심시간\")\n+  }>;\n+}\n+\n // 주별 근무 스케줄 인터페이스 (휴일은 Staff.holidays 사용, 근무시간/휴게시간만 관리)\n+// @deprecated - DailyScheduleSettings로 대체됨\n export interface WeeklyWorkSchedule extends DBRecord {\n   staffId: string;\n   weekStartDate: string; // 해당 주의 월요일 날짜 (YYYY-MM-DD 형식)\n   weekDays: {\n@@ -175,8 +192,9 @@\n   };\n }\n \n // 새로운 주별 휴일 설정 인터페이스\n+// @deprecated - DailyScheduleSettings로 대체됨\n export interface WeeklyHolidaySettings extends DBRecord {\n   staffId: string;\n   weekStartDate: string; // 해당 주의 월요일 날짜 (YYYY-MM-DD 형식)\n   weekDays: {\n"
+                },
+                {
+                    "date": 1763984635971,
+                    "content": "Index: \n===================================================================\n--- \n+++ \n@@ -411,9 +411,9 @@\n   unpaidAmount: number; // 미납 금액 (appliedPrice - paidAmount)\n   startDate?: Date | null; // 수강 시작일\n   endDate?: Date | null; // 수강 종료일 (기간제인 경우)\n   sessionCount?: number; // 총 수업 횟수 (횟수제인 경우)\n-  completedSessions?: number; // 완료된 수업 횟수 (횟수제인 경우, 기본값 0)\n+  // completedSessions 제거: ScheduleEvent와 JOIN하여 실시간 계산\n   \n   // 홀드 관련 필드 추가\n   holdInfo?: {\n     isHold: boolean; // 홀드 상태 여부\n@@ -522,9 +522,9 @@\n   \n   lastUpdated: Date;          // 마지막 업데이트 시간\n }\n \n-// 스케줄 이벤트 인터페이스\n+// 스케줄 이벤트 인터페이스 (이벤트 소싱 방식)\n export interface ScheduleEvent extends DBRecord {\n   title: string;\n   startTime: Date;\n   endTime: Date;\n@@ -542,8 +542,12 @@\n   recurrenceRule?: string; // RRULE for recurring events\n   sourceType: 'manual' | 'weekly_holiday' | 'booking' | 'period_enrollment'; // 이벤트 생성 출처\n   sourceId?: string; // 원본 데이터 ID (WeeklyHolidaySettings ID 등)\n   reservationMemo?: string; // 예약 전용 메모 (회원 remarks와 별도)\n+  \n+  // 횟수제 수강권 연결 (이벤트 소싱용)\n+  enrollmentId?: string; // 횟수제 수강권 ID (일반 예약만 해당)\n+  status: 'active' | 'cancelled' | 'completed' | 'noshow'; // 예약 상태 (히스토리 추적용)\n }\n \n // 중복 체크 결과 타입\n export interface DuplicateCheckResult {\n"
                 }
             ],
             "date": 1761368450126,

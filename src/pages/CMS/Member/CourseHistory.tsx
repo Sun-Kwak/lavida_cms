@@ -4,6 +4,7 @@ import { toast } from 'react-toastify';
 import { AppColors } from '../../../styles/colors';
 import { AppTextStyles } from '../../../styles/textStyles';
 import { dbManager, type CourseEnrollment } from '../../../utils/indexedDB';
+import { getCompletedSessions } from '../../../utils/db/ReservationHelper';
 import { SearchArea, type PeriodOption } from '../../../components/SearchArea';
 import UnpaidFilter from '../../../components/SearchArea/UnpaidFilterButton';
 import Modal from '../../../components/Modal';
@@ -178,6 +179,9 @@ const CourseHistory: React.FC = () => {
   // 완료 처리 모달 관련 상태
   const [showCompleteModal, setShowCompleteModal] = useState<boolean>(false);
   const [selectedEnrollment, setSelectedEnrollment] = useState<CourseEnrollment | null>(null);
+  
+  // 세션 정보 캐시 (enrollmentId -> progressInfo)
+  const [enrollmentSessions, setEnrollmentSessions] = useState<Map<string, string>>(new Map());
   const [isProcessing, setIsProcessing] = useState<boolean>(false);
   const [selectedPaymentMethod, setSelectedPaymentMethod] = useState<string>('card');
 
@@ -242,6 +246,30 @@ const CourseHistory: React.FC = () => {
     } catch (error) {
       console.error('미수 메타정보 로드 실패:', error);
     }
+  }, []);
+
+  // 진행상황 계산 함수
+  const getProgressInfo = useCallback(async (enrollment: CourseEnrollment): Promise<string> => {
+    if (enrollment.programType === '횟수제' && enrollment.sessionCount) {
+      // 이벤트 소싱: 실시간 완료 횟수 계산
+      const completedSessions = await getCompletedSessions(enrollment.id);
+      const remaining = enrollment.sessionCount - completedSessions;
+      return `${remaining}/${enrollment.sessionCount}회 남음`;
+    } else if (enrollment.programType === '기간제' && enrollment.endDate) {
+      const today = new Date();
+      const endDate = new Date(enrollment.endDate);
+      const timeDiff = endDate.getTime() - today.getTime();
+      const daysDiff = Math.ceil(timeDiff / (1000 * 3600 * 24));
+      
+      if (daysDiff > 0) {
+        return `${daysDiff}일 남음`;
+      } else if (daysDiff === 0) {
+        return '오늘 종료';
+      } else {
+        return `${Math.abs(daysDiff)}일 경과`;
+      }
+    }
+    return '진행률 미설정';
   }, []);
 
   // 기간별 검색 범위 계산
@@ -354,10 +382,28 @@ const CourseHistory: React.FC = () => {
       console.log('sortedEnrollments 개수:', sortedEnrollments.length);
       if (sortedEnrollments.length > 0) {
         console.log('첫 번째 수강 이력:', sortedEnrollments[0]);
+        console.log('=== IndexedDB 수강 이력 상세 분석 (최근 5개) ===');
+        sortedEnrollments.slice(0, 5).forEach((enrollment, index) => {
+          console.log(`\n[${index + 1}] ${enrollment.memberName} - ${enrollment.productName}`);
+          console.log('  - programType:', enrollment.programType);
+          console.log('  - startDate:', enrollment.startDate);
+          console.log('  - endDate:', enrollment.endDate);
+          console.log('  - createdAt:', enrollment.createdAt);
+          console.log('  - sessionCount:', enrollment.sessionCount);
+          console.log('  - 전체 객체:', enrollment);
+        });
       }
       
       setCourseEnrollments(sortedEnrollments);
       setFilteredEnrollments(sortedEnrollments);
+      
+      // 세션 정보 미리 계산
+      const sessionsMap = new Map<string, string>();
+      for (const enrollment of sortedEnrollments) {
+        const progressInfo = await getProgressInfo(enrollment);
+        sessionsMap.set(enrollment.id!, progressInfo);
+      }
+      setEnrollmentSessions(sessionsMap);
       
       console.log('수강 이력 상태 업데이트 완료');
     } catch (error) {
@@ -365,7 +411,7 @@ const CourseHistory: React.FC = () => {
     } finally {
       setLoading(false);
     }
-  }, [loadUnpaidMetaInfo, selectedPeriod, customStartDate, customEndDate]);
+  }, [loadUnpaidMetaInfo, selectedPeriod, customStartDate, customEndDate, getProgressInfo]);
 
   // 컴포넌트 마운트 시 초기 데이터 로드 (1개월 기준)
   useEffect(() => {
@@ -539,27 +585,6 @@ const CourseHistory: React.FC = () => {
     return null;
   };
 
-  const getProgressInfo = (enrollment: CourseEnrollment) => {
-    if (enrollment.programType === '횟수제' && enrollment.sessionCount) {
-      const remaining = enrollment.sessionCount - (enrollment.completedSessions || 0);
-      return `${remaining}/${enrollment.sessionCount}회 남음`;
-    } else if (enrollment.programType === '기간제' && enrollment.endDate) {
-      const today = new Date();
-      const endDate = new Date(enrollment.endDate);
-      const timeDiff = endDate.getTime() - today.getTime();
-      const daysDiff = Math.ceil(timeDiff / (1000 * 3600 * 24));
-      
-      if (daysDiff > 0) {
-        return `${daysDiff}일 남음`;
-      } else if (daysDiff === 0) {
-        return '오늘 종료';
-      } else {
-        return `${Math.abs(daysDiff)}일 경과`;
-      }
-    }
-    return '진행률 미설정';
-  };
-
   // 결제 방법 옵션
   const paymentMethodOptions = [
     { value: 'card', label: '카드' },
@@ -654,9 +679,11 @@ const CourseHistory: React.FC = () => {
           );
         }
         
+        // 캐시된 세션 정보 사용
+        const progressInfo = enrollmentSessions.get(record.id!) || '-';
         return (
           <ProgressInfo>
-            {getProgressInfo(record)}
+            {progressInfo}
           </ProgressInfo>
         );
       }

@@ -27,6 +27,10 @@ export interface ScheduleEvent {
   sourceType: 'manual' | 'weekly_holiday' | 'booking' | 'period_enrollment'; // 이벤트 생성 출처
   sourceId?: string; // 원본 데이터 ID (WeeklyHolidaySettings ID 등)
   reservationMemo?: string; // 예약 전용 메모 (회원 remarks와 별도)
+  
+  // 이벤트 소싱용 필드
+  enrollmentId?: string; // 횟수제 수강권 ID
+  status: 'active' | 'cancelled' | 'completed' | 'noshow'; // 예약 상태
   createdAt?: Date;
   updatedAt?: Date;
 }

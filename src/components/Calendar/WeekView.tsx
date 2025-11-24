@@ -334,8 +334,8 @@ const WeekView: React.FC<WeekViewProps> = ({
     const durationMinutes = (eventEnd.getTime() - eventStart.getTime()) / (1000 * 60);
 
     return {
-      top: Math.max(0, (startMinutes / 30) * 30), // 30분당 30px (30분 단위로 조정)
-      height: Math.max(15, (durationMinutes / 30) * 30)
+      top: Math.max(0, (startMinutes / 30) * 32), // 30분당 32px (31px 높이 + 1px border)
+      height: Math.max(15, (durationMinutes / 30) * 32)
     };
   };
 

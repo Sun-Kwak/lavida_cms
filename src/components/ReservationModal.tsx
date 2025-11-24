@@ -7,6 +7,7 @@ import { dbManager, Member, CourseEnrollment, Program } from '../utils/indexedDB
 import { ScheduleEvent } from './Calendar/types';
 import Modal from './Modal';
 import CustomDropdown from './CustomDropdown';
+import { getCompletedSessions, getRemainingSessionsCount } from '../utils/db/ReservationHelper';
 
 // 스타일 컴포넌트들
 const ModalContainer = styled.div`
@@ -344,6 +345,35 @@ const InfoText = styled.div`
   line-height: 1.5;
 `;
 
+const PeriodInfoBox = styled.div`
+  padding: 16px;
+  background: ${AppColors.surface};
+  border: 1px solid ${AppColors.borderLight};
+  border-radius: 8px;
+  margin-top: 8px;
+`;
+
+const PeriodInfoRow = styled.div`
+  display: flex;
+  justify-content: space-between;
+  margin-bottom: 8px;
+  font-size: ${AppTextStyles.body2.fontSize};
+  
+  &:last-child {
+    margin-bottom: 0;
+  }
+`;
+
+const PeriodLabel = styled.span`
+  color: ${AppColors.onSurface};
+  font-weight: 500;
+`;
+
+const PeriodValue = styled.span`
+  color: ${AppColors.onSurface};
+  font-weight: 600;
+`;
+
 // 인터페이스 정의
 interface ReservationModalProps {
   isOpen: boolean;
@@ -475,23 +505,29 @@ const ReservationModal: React.FC<ReservationModalProps> = ({
       const membersWithCourse: MemberWithCourse[] = [];
 
       for (const member of branchMembers) {
-        // 해당 회원의 모든 횟수제 수강권 찾기 (프로그램 일치만 체크)
+        // 프로그램 타입에 따라 수강권 찾기
         const memberEnrollments = allEnrollments.filter(enrollment => {
           return (
             enrollment.memberId === member.id &&
             enrollment.programId === programId &&
-            enrollment.programType === '횟수제'
+            enrollment.programType === program.type // 프로그램 타입에 맞는 수강권
           );
         });
 
         // 수강권에 상품의 duration 정보 추가
-        const enrollmentsWithDuration: CourseEnrollmentWithDuration[] = memberEnrollments.map(enrollment => {
-          const product = allProducts.find(p => p.id === enrollment.productId);
-          return {
-            ...enrollment,
-            duration: product?.duration || 30 // 기본값 30분
-          };
-        });
+        const enrollmentsWithDuration: CourseEnrollmentWithDuration[] = await Promise.all(
+          memberEnrollments.map(async (enrollment) => {
+            const product = allProducts.find(p => p.id === enrollment.productId);
+            // 이벤트 소싱: 실시간 완료 횟수 계산
+            const completedSessions = await getCompletedSessions(enrollment.id);
+            
+            return {
+              ...enrollment,
+              duration: product?.duration || 30, // 기본값 30분
+              completedSessions // 동적 계산된 값
+            };
+          })
+        );
 
         if (enrollmentsWithDuration.length > 0) {
           // 첫 번째 수강권 정보를 기본으로 저장 (표시용)
@@ -572,14 +608,49 @@ const ReservationModal: React.FC<ReservationModalProps> = ({
       return;
     }
 
-    // 일반 예약인 경우 상품 선택 필수
-    if (reservationType === 'normal' && !selectedEnrollment) {
+    // 일반 예약인 경우 상품 선택 필수 (횟수제만)
+    if (reservationType === 'normal' && program.type === '횟수제' && !selectedEnrollment) {
       toast.error('수강 상품을 선택해주세요.');
       return;
     }
 
-    // 일반 예약인 경우 수강권 유효성 검증
-    if (reservationType === 'normal' && selectedEnrollment) {
+    // 기간제인 경우 첫 번째 수강권 자동 선택 및 기간 체크
+    if (reservationType === 'normal' && program.type === '기간제') {
+      if (selectedMember.allEnrollments && selectedMember.allEnrollments.length > 0) {
+        // selectedEnrollment가 없으면 첫 번째 수강권 사용
+        const enrollmentToUse = selectedEnrollment || selectedMember.allEnrollments[0];
+        if (!selectedEnrollment) {
+          setSelectedEnrollment(enrollmentToUse);
+        }
+
+        // 기간제 상품의 유효기간 체크
+        if (enrollmentToUse.startDate && enrollmentToUse.endDate) {
+          const periodStart = new Date(enrollmentToUse.startDate);
+          const periodEnd = new Date(enrollmentToUse.endDate);
+          const reservationDate = new Date(startTime);
+          
+          // 시간 부분 제거하고 날짜만 비교
+          periodStart.setHours(0, 0, 0, 0);
+          periodEnd.setHours(23, 59, 59, 999);
+          reservationDate.setHours(0, 0, 0, 0);
+          
+          if (reservationDate < periodStart || reservationDate > periodEnd) {
+            toast.error(
+              `예약 날짜가 상품 기간을 벗어났습니다.\n` +
+              `상품 기간: ${periodStart.toLocaleDateString('ko-KR')} ~ ${periodEnd.toLocaleDateString('ko-KR')}\n` +
+              `예약 날짜: ${reservationDate.toLocaleDateString('ko-KR')}`
+            );
+            return;
+          }
+        }
+      } else {
+        toast.error('사용 중인 기간제 상품이 없습니다.');
+        return;
+      }
+    }
+
+    // 일반 예약인 경우 수강권 유효성 검증 (횟수제만)
+    if (reservationType === 'normal' && program.type === '횟수제' && selectedEnrollment) {
       // 1. 수강권 상태 체크
       if (selectedEnrollment.enrollmentStatus !== 'active' && selectedEnrollment.enrollmentStatus !== 'unpaid') {
         toast.error(`수강권 상태가 '${selectedEnrollment.enrollmentStatus}'입니다. 활성 상태의 수강권만 사용 가능합니다.`);
@@ -600,12 +671,22 @@ const ReservationModal: React.FC<ReservationModalProps> = ({
       }
 
       // 4. 유효기간 체크
-      if (selectedEnrollment.endDate) {
-        const endDate = new Date(selectedEnrollment.endDate);
-        const today = new Date();
-        today.setHours(0, 0, 0, 0);
-        if (endDate < today) {
-          toast.error(`수강권이 만료되었습니다. (만료일: ${endDate.toLocaleDateString('ko-KR')})`);
+      if (selectedEnrollment.startDate && selectedEnrollment.endDate) {
+        const periodStart = new Date(selectedEnrollment.startDate);
+        const periodEnd = new Date(selectedEnrollment.endDate);
+        const reservationDate = new Date(startTime);
+        
+        // 시간 부분 제거하고 날짜만 비교
+        periodStart.setHours(0, 0, 0, 0);
+        periodEnd.setHours(23, 59, 59, 999);
+        reservationDate.setHours(0, 0, 0, 0);
+        
+        if (reservationDate < periodStart || reservationDate > periodEnd) {
+          toast.error(
+            `예약 날짜가 상품 기간을 벗어났습니다.\n` +
+            `상품 기간: ${periodStart.toLocaleDateString('ko-KR')} ~ ${periodEnd.toLocaleDateString('ko-KR')}\n` +
+            `예약 날짜: ${reservationDate.toLocaleDateString('ko-KR')}`
+          );
           return;
         }
       }
@@ -683,7 +764,10 @@ const ReservationModal: React.FC<ReservationModalProps> = ({
         branchName,
         sourceType: 'booking',
         sourceId: selectedMember.id,
-        reservationMemo: reservationMemo || undefined
+        reservationMemo: reservationMemo || undefined,
+        // 이벤트 소싱: 횟수제 일반 예약인 경우 수강권 ID 기록
+        enrollmentId: (reservationType === 'normal' && selectedEnrollment) ? selectedEnrollment.id : undefined,
+        status: 'active' // 예약 생성 시 기본 상태
       };
 
       // 예약 저장
@@ -714,16 +798,8 @@ const ReservationModal: React.FC<ReservationModalProps> = ({
         updatedAt: savedDBEvent.updatedAt
       };
 
-      // 일반 예약인 경우에만 선택된 상품의 수강권 세션 수 업데이트
-      if (reservationType === 'normal' && selectedEnrollment) {
-        const updatedEnrollment = {
-          ...selectedEnrollment,
-          completedSessions: (selectedEnrollment.completedSessions || 0) + 1,
-          updatedAt: new Date()
-        };
-
-        await dbManager.updateCourseEnrollment(updatedEnrollment.id, updatedEnrollment);
-      }
+      // 이벤트 소싱 방식: 예약 이벤트만 기록, 횟수는 JOIN으로 계산
+      // completedSessions 업데이트 제거 - ScheduleEvent 기록만으로 충분
 
       // 회원 예약 메모 업데이트 (메모가 있고 변경된 경우)
       if (reservationMemo.trim() && reservationMemo !== selectedMember.reservationMemo) {
@@ -919,61 +995,104 @@ const ReservationModal: React.FC<ReservationModalProps> = ({
                   )}
                 </ReservationTypeSection>
 
-                {/* 일반 예약인 경우에만 상품 선택 표시 */}
+                {/* 일반 예약인 경우에만 상품 선택 또는 기간제 정보 표시 */}
                 {reservationType === 'normal' && (
                 <FormGroup>
-                  <FormLabel>수강 상품 선택</FormLabel>
-                  <CustomDropdown
-                    value={selectedEnrollment?.id || ''}
-                    onChange={(value) => {
-                      const enrollment = selectedMember.allEnrollments?.find(e => e.id === value);
-                      setSelectedEnrollment(enrollment || null);
-                    }}
-                    options={selectedMember.allEnrollments?.map(enrollment => {
-                      const availableSessions = (enrollment.sessionCount || 0) - (enrollment.completedSessions || 0);
-                      const durationText = enrollment.duration ? `${enrollment.duration}분` : '시간미정';
-                      
-                      // 수강권 상태 체크
-                      let statusTag = '';
-                      if (enrollment.enrollmentStatus !== 'active' && enrollment.enrollmentStatus !== 'unpaid') {
-                        statusTag = ` [${enrollment.enrollmentStatus}]`;
-                      } else if (enrollment.holdInfo?.isHold) {
-                        statusTag = ' [홀드중]';
-                      } else if (availableSessions <= 0) {
-                        statusTag = ' [횟수소진]';
-                      } else if (enrollment.endDate) {
-                        const endDate = new Date(enrollment.endDate);
-                        const today = new Date();
-                        today.setHours(0, 0, 0, 0);
-                        if (endDate < today) {
-                          statusTag = ' [만료]';
-                        }
-                      }
-                      
-                      return {
-                        value: enrollment.id,
-                        label: `${enrollment.productName} (잔여 ${availableSessions}회 • ${durationText})${statusTag}`
-                      };
-                    }).sort((a, b) => a.label.localeCompare(b.label, 'ko-KR')) || []}
-                    placeholder="상품을 선택하세요"
-                    inModal={true}
-                  />
-                  <TimeDisplay>
-                    {selectedEnrollment ? (
-                      <>
-                        {formatTime(startTime)} - {formatTime(actualEndTime)} • {selectedEnrollment.duration ? `${selectedEnrollment.duration}분` : '30분'} 수업
-                        {selectedEnrollment.duration === 50 && (
-                          <div style={{ fontSize: '12px', color: AppColors.onInput1, marginTop: '4px' }}>
-                            * 50분 수업은 쉬는시간 포함하여 1시간 예약됩니다
+                  {program.type === '횟수제' ? (
+                    // 횟수제: 수강 상품 선택 드롭다운
+                    <>
+                      <FormLabel>수강 상품 선택</FormLabel>
+                      <CustomDropdown
+                        value={selectedEnrollment?.id || ''}
+                        onChange={(value) => {
+                          const enrollment = selectedMember.allEnrollments?.find(e => e.id === value);
+                          setSelectedEnrollment(enrollment || null);
+                        }}
+                        options={selectedMember.allEnrollments?.map(enrollment => {
+                          const availableSessions = (enrollment.sessionCount || 0) - (enrollment.completedSessions || 0);
+                          const durationText = enrollment.duration ? `${enrollment.duration}분` : '시간미정';
+                          
+                          // 수강권 상태 체크
+                          let statusTag = '';
+                          if (enrollment.enrollmentStatus !== 'active' && enrollment.enrollmentStatus !== 'unpaid') {
+                            statusTag = ` [${enrollment.enrollmentStatus}]`;
+                          } else if (enrollment.holdInfo?.isHold) {
+                            statusTag = ' [홀드중]';
+                          } else if (availableSessions <= 0) {
+                            statusTag = ' [횟수소진]';
+                          } else if (enrollment.endDate) {
+                            const endDate = new Date(enrollment.endDate);
+                            const today = new Date();
+                            today.setHours(0, 0, 0, 0);
+                            if (endDate < today) {
+                              statusTag = ' [만료]';
+                            }
+                          }
+                          
+                          return {
+                            value: enrollment.id,
+                            label: `${enrollment.productName} (잔여 ${availableSessions}회 • ${durationText})${statusTag}`
+                          };
+                        }).sort((a, b) => a.label.localeCompare(b.label, 'ko-KR')) || []}
+                        placeholder="상품을 선택하세요"
+                        inModal={true}
+                      />
+                      <TimeDisplay>
+                        {selectedEnrollment ? (
+                          <>
+                            {formatTime(startTime)} - {formatTime(actualEndTime)} • {selectedEnrollment.duration ? `${selectedEnrollment.duration}분` : '30분'} 수업
+                            {selectedEnrollment.duration === 50 && (
+                              <div style={{ fontSize: '12px', color: AppColors.onInput1, marginTop: '4px' }}>
+                                * 50분 수업은 쉬는시간 포함하여 1시간 예약됩니다
+                              </div>
+                            )}
+                          </>
+                        ) : (
+                          <div style={{ color: AppColors.onInput1, fontSize: '14px' }}>
+                            상품을 선택하면 예약 시간이 표시됩니다
                           </div>
                         )}
-                      </>
-                    ) : (
-                      <div style={{ color: AppColors.onInput1, fontSize: '14px' }}>
-                        상품을 선택하면 예약 시간이 표시됩니다
-                      </div>
-                    )}
-                  </TimeDisplay>
+                      </TimeDisplay>
+                    </>
+                  ) : (
+                    // 기간제: 현재 사용 중인 상품 정보 표시
+                    <>
+                      <FormLabel>사용 중인 기간제 상품</FormLabel>
+                      {selectedMember.allEnrollments && selectedMember.allEnrollments.length > 0 ? (
+                        <PeriodInfoBox>
+                          <PeriodInfoRow>
+                            <PeriodLabel>상품명:</PeriodLabel>
+                            <PeriodValue>{selectedEnrollment?.productName || selectedMember.allEnrollments[0]?.productName}</PeriodValue>
+                          </PeriodInfoRow>
+                          <PeriodInfoRow>
+                            <PeriodLabel>시작일:</PeriodLabel>
+                            <PeriodValue>
+                              {selectedEnrollment?.startDate || selectedMember.allEnrollments[0]?.startDate 
+                                ? new Date(selectedEnrollment?.startDate || selectedMember.allEnrollments[0]?.startDate!).toLocaleDateString('ko-KR')
+                                : '-'
+                              }
+                            </PeriodValue>
+                          </PeriodInfoRow>
+                          <PeriodInfoRow>
+                            <PeriodLabel>종료일:</PeriodLabel>
+                            <PeriodValue>
+                              {selectedEnrollment?.endDate || selectedMember.allEnrollments[0]?.endDate
+                                ? new Date(selectedEnrollment?.endDate || selectedMember.allEnrollments[0]?.endDate!).toLocaleDateString('ko-KR')
+                                : '-'
+                              }
+                            </PeriodValue>
+                          </PeriodInfoRow>
+                        </PeriodInfoBox>
+                      ) : (
+                        <InfoText style={{ background: '#fff3cd', borderColor: '#ffeaa7', color: '#856404' }}>
+                          ⚠️ 이 회원은 현재 사용 중인 기간제 상품이 없습니다.
+                        </InfoText>
+                      )}
+                      <TimeDisplay>
+                        {formatTime(startTime)} - {formatTime(endTime)}
+                      </TimeDisplay>
+                    </>
+                  )}
                 </FormGroup>
                 )}
 
@@ -1022,8 +1141,9 @@ const ReservationModal: React.FC<ReservationModalProps> = ({
             onClick={handleCreateReservation}
             disabled={
               !selectedMember || 
-              (reservationType === 'normal' && !selectedEnrollment) || 
-              loading
+              loading ||
+              (reservationType === 'normal' && program.type === '횟수제' && !selectedEnrollment) ||
+              (reservationType === 'normal' && program.type === '기간제' && (!selectedMember.allEnrollments || selectedMember.allEnrollments.length === 0))
             }
           >
             {loading ? '등록 중...' : 

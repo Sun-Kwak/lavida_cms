@@ -421,29 +421,33 @@ export class OrderService extends BaseDBManager {
         const productDetails = await dependencies.productService.getProductById(product.id);
         console.log('- 상품 상세 정보:', productDetails);
         
-        // 시작일과 종료일 설정
+        // 시작일과 종료일 설정 - 사용자가 입력한 값을 그대로 사용
         let startDate: Date;
         let endDate: Date | undefined;
         
-        if (product.programType === '기간제') {
-          // 기간제 상품의 경우 사용자가 선택한 시작일/종료일 사용
-          if (product.startDate && product.endDate) {
-            startDate = new Date(product.startDate);
-            endDate = new Date(product.endDate);
-            console.log(`- 기간제 사용자 선택 기간: ${startDate.toLocaleDateString()} ~ ${endDate.toLocaleDateString()}`);
-          } else {
-            // 기본값으로 내일부터 30일
-            startDate = new Date();
-            startDate.setDate(startDate.getDate() + 1);
-            endDate = new Date(startDate);
-            endDate.setDate(endDate.getDate() + (product.duration || 30));
-            console.log(`- 기간제 기본 기간: ${startDate.toLocaleDateString()} ~ ${endDate.toLocaleDateString()}`);
-          }
+        console.log('=== 날짜 설정 디버깅 ===');
+        console.log('product.startDate:', product.startDate);
+        console.log('product.endDate:', product.endDate);
+        console.log('product.programType:', product.programType);
+        
+        if (product.startDate) {
+          // 이미 Date 객체면 그대로 사용, 아니면 변환
+          startDate = product.startDate instanceof Date ? product.startDate : new Date(product.startDate);
+          console.log(`- 시작일: ${startDate.toLocaleDateString()}`);
         } else {
-          // 횟수제나 기타 상품의 경우 당일 시작
+          // 시작일이 없으면 오늘 날짜 사용
           startDate = new Date();
-          console.log(`- 횟수제/기타 시작일: ${startDate.toLocaleDateString()}`);
+          console.log(`- 시작일 (기본값): ${startDate.toLocaleDateString()}`);
         }
+        
+        if (product.endDate) {
+          // 이미 Date 객체면 그대로 사용, 아니면 변환
+          endDate = product.endDate instanceof Date ? product.endDate : new Date(product.endDate);
+          console.log(`- 종료일: ${endDate.toLocaleDateString()}`);
+        } else {
+          console.log('- 종료일 없음 (undefined)');
+        }
+        // endDate가 없으면 undefined로 남겨둠 (유효기간 없는 상품)
 
         const courseData = {
           orderId,
@@ -470,7 +474,10 @@ export class OrderService extends BaseDBManager {
           notes: `${orderData.orderType}을 통한 등록`
         };
 
-        console.log('- 수강 등록 데이터:', courseData);
+        console.log('=== 최종 courseData ===');
+        console.log('startDate:', courseData.startDate);
+        console.log('endDate:', courseData.endDate);
+        console.log('전체 courseData:', courseData);
 
         try {
           const courseId = await dependencies.courseService.addCourseEnrollment(courseData);
