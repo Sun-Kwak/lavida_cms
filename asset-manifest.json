@@ -1,15 +1,15 @@
 {
   "files": {
-    "main.css": "/lavida_cms/static/css/main.9154f5aa.css",
-    "main.js": "/lavida_cms/static/js/main.138c2025.js",
+    "main.css": "/lavida_cms/static/css/main.2e03b3bf.css",
+    "main.js": "/lavida_cms/static/js/main.06630aa4.js",
     "static/js/453.3d5f69d0.chunk.js": "/lavida_cms/static/js/453.3d5f69d0.chunk.js",
     "index.html": "/lavida_cms/index.html",
-    "main.9154f5aa.css.map": "/lavida_cms/static/css/main.9154f5aa.css.map",
-    "main.138c2025.js.map": "/lavida_cms/static/js/main.138c2025.js.map",
+    "main.2e03b3bf.css.map": "/lavida_cms/static/css/main.2e03b3bf.css.map",
+    "main.06630aa4.js.map": "/lavida_cms/static/js/main.06630aa4.js.map",
     "453.3d5f69d0.chunk.js.map": "/lavida_cms/static/js/453.3d5f69d0.chunk.js.map"
   },
   "entrypoints": [
-    "static/css/main.9154f5aa.css",
-    "static/js/main.138c2025.js"
+    "static/css/main.2e03b3bf.css",
+    "static/js/main.06630aa4.js"
   ]
 }
