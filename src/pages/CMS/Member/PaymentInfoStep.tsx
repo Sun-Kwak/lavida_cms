@@ -274,6 +274,39 @@ const PaymentInfoStep: React.FC<StepProps> = ({ formData, onUpdate }) => {
           inModal={false}
         />
       </FormField>
+
+      <FormField style={{ marginTop: '24px' }}>
+        <Label>상품 추가</Label>
+        {!formData.joinInfo.branchId ? (
+          <div style={{ 
+            padding: '12px', 
+            backgroundColor: '#fff3cd', 
+            border: '1px solid #ffeaa7', 
+            borderRadius: '4px',
+            color: '#856404',
+            fontSize: '14px'
+          }}>
+            먼저 가입정보에서 지점을 선택해주세요.
+          </div>
+        ) : (
+          <CustomDropdown
+            value=""
+            onChange={handleProductSelect}
+            options={getProductOptions()}
+            disabled={loading || availableProducts.length === 0}
+            inModal={false}
+          />
+        )}
+        {formData.joinInfo.branchId && availableProducts.length === 0 && !loading && (
+          <div style={{ 
+            marginTop: '8px',
+            color: '#6c757d',
+            fontSize: '12px'
+          }}>
+            선택한 지점에 등록된 상품이 없습니다.
+          </div>
+        )}
+      </FormField>
       
       {formData.paymentInfo.selectedProducts.length === 0 ? (
         <SkipMessage>
@@ -500,7 +533,27 @@ const PaymentInfoStep: React.FC<StepProps> = ({ formData, onUpdate }) => {
             </div>
             
             <FormField>
-              <Label>받은금액</Label>
+              <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+                <Label>받은금액</Label>
+                {formData.paymentInfo.receivedAmount !== undefined && formData.paymentInfo.receivedAmount >= 1000000 && formData.paymentInfo.receivedAmount > totalAmount && (
+                  <label style={{ display: 'flex', alignItems: 'center', gap: '4px', fontSize: '12px', cursor: 'pointer' }}>
+                    <input
+                      type="checkbox"
+                      checked={formData.paymentInfo.bonusPointsEnabled || false}
+                      onChange={(e) => {
+                        onUpdate({
+                          paymentInfo: {
+                            ...formData.paymentInfo,
+                            bonusPointsEnabled: e.target.checked
+                          }
+                        });
+                      }}
+                      style={{ margin: 0 }}
+                    />
+                    보너스 포인트 (100만원당 10만원)
+                  </label>
+                )}
+              </div>
               <div style={{ display: 'flex', gap: '8px', alignItems: 'center' }}>
                 <NumberTextField
                   value={formData.paymentInfo.receivedAmount !== undefined ? formData.paymentInfo.receivedAmount : totalAmount}
@@ -557,11 +610,11 @@ const PaymentInfoStep: React.FC<StepProps> = ({ formData, onUpdate }) => {
                 }}>
                   {formData.paymentInfo.receivedAmount > totalAmount 
                     ? (() => {
-                        const excessAmount = formData.paymentInfo.receivedAmount - totalAmount;
-                        let message = `초과금액: ${excessAmount.toLocaleString()}원 (포인트로 적립 예정)`;
+                        let message = `받은금액 전체(${formData.paymentInfo.receivedAmount.toLocaleString()}원)를 포인트로 적립 후, 상품비용(${totalAmount.toLocaleString()}원) 차감 예정`;
                         
-                        if (excessAmount >= 1000000) {
-                          const millionUnits = Math.floor(excessAmount / 1000000);
+                        // 보너스 포인트는 체크박스가 활성화되고 받은금액이 100만원 이상일 때만 적용
+                        if (formData.paymentInfo.bonusPointsEnabled && formData.paymentInfo.receivedAmount >= 1000000) {
+                          const millionUnits = Math.floor(formData.paymentInfo.receivedAmount / 1000000);
                           const bonusPoints = millionUnits * 100000;
                           message += ` + 보너스 ${bonusPoints.toLocaleString()}원`;
                         }
@@ -576,39 +629,6 @@ const PaymentInfoStep: React.FC<StepProps> = ({ formData, onUpdate }) => {
           </div>
         </div>
       )}
-
-      <FormField style={{ marginTop: '24px' }}>
-        <Label>상품 추가</Label>
-        {!formData.joinInfo.branchId ? (
-          <div style={{ 
-            padding: '12px', 
-            backgroundColor: '#fff3cd', 
-            border: '1px solid #ffeaa7', 
-            borderRadius: '4px',
-            color: '#856404',
-            fontSize: '14px'
-          }}>
-            먼저 가입정보에서 지점을 선택해주세요.
-          </div>
-        ) : (
-          <CustomDropdown
-            value=""
-            onChange={handleProductSelect}
-            options={getProductOptions()}
-            disabled={loading || availableProducts.length === 0}
-            inModal={false}
-          />
-        )}
-        {formData.joinInfo.branchId && availableProducts.length === 0 && !loading && (
-          <div style={{ 
-            marginTop: '8px',
-            color: '#6c757d',
-            fontSize: '12px'
-          }}>
-            선택한 지점에 등록된 상품이 없습니다.
-          </div>
-        )}
-      </FormField>
     </StepContent>
   );
 };

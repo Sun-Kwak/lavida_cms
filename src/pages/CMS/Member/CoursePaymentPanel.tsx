@@ -34,6 +34,7 @@ const Label = styled.label`
   color: ${AppColors.onBackground};
   margin-bottom: 8px;
   font-size: ${AppTextStyles.body2.fontSize};
+  text-align: left;
 `;
 
 const ProductItem = styled.div`
@@ -94,11 +95,15 @@ const PointUseButton = styled.button`
   background: ${AppColors.primary};
   color: ${AppColors.onPrimary};
   border: none;
-  border-radius: 4px;
-  padding: 6px 12px;
+  border-radius: 12px;
+  padding: 14px 16px;
   font-size: ${AppTextStyles.body3.fontSize};
   cursor: pointer;
   white-space: nowrap;
+  min-height: 48px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
   
   &:hover {
     opacity: 0.9;
@@ -149,6 +154,7 @@ interface PaymentInfo {
   paymentMethod: string;
   receivedAmount?: number;
   pointPayment?: number;
+  bonusPointsEnabled?: boolean;
 }
 
 interface CoursePaymentPanelProps {
@@ -227,21 +233,20 @@ const CoursePaymentPanel: React.FC<CoursePaymentPanelProps> = ({
 
         // 기간제인 경우 상품의 개월수를 기준으로 기간 설정 (가격은 고정)
         if (product.programType === '기간제') {
-          const tomorrow = new Date();
-          tomorrow.setDate(tomorrow.getDate() + 1);
+          const today = new Date();
           
           // 상품에 등록된 개월수를 기준으로 설정 (기본값: 1개월)
           const productMonths = product.months || 1;
           const days = productMonths * 30; // 개월수를 일수로 변환 (1개월 = 30일)
           
-          const endDate = new Date(tomorrow);
+          const endDate = new Date(today);
           endDate.setDate(endDate.getDate() + days);
           
           convertedProduct.duration = days;
           convertedProduct.baseDuration = days;
           convertedProduct.months = productMonths; // 개월수 저장
           convertedProduct.baseMonths = productMonths; // 기준 개월수 저장
-          convertedProduct.startDate = tomorrow;
+          convertedProduct.startDate = today;
           convertedProduct.endDate = endDate;
           // 기간제는 가격 고정 (기간 변경해도 가격 변동 없음)
           convertedProduct.price = product.price || 0;
@@ -257,18 +262,16 @@ const CoursePaymentPanel: React.FC<CoursePaymentPanelProps> = ({
           // 적용금액도 초기에는 상품 가격과 동일
           convertedProduct.appliedPrice = convertedProduct.price;
           
-          // 유효기간 설정 (상품에 등록된 validityMonths 사용)
-          if (product.validityMonths) {
-            const tomorrow = new Date();
-            tomorrow.setDate(tomorrow.getDate() + 1);
-            
-            const endDate = new Date(tomorrow);
-            endDate.setMonth(endDate.getMonth() + product.validityMonths);
-            
-            convertedProduct.startDate = tomorrow;
-            convertedProduct.endDate = endDate;
-            convertedProduct.months = product.validityMonths;
-          }
+          // 유효기간 설정 - 오늘부터 시작
+          const today = new Date();
+          convertedProduct.startDate = today;
+          
+          // 유효기간(validityMonths 또는 months)으로 종료일 계산
+          const validityMonths = product.validityMonths || product.months || 1;
+          const endDate = new Date(today);
+          endDate.setMonth(endDate.getMonth() + validityMonths);
+          convertedProduct.endDate = endDate;
+          convertedProduct.months = validityMonths;
         }
 
         handleProductAdd(convertedProduct);
@@ -334,17 +337,25 @@ const CoursePaymentPanel: React.FC<CoursePaymentPanelProps> = ({
     } else if (field === 'startDate') {
       product.startDate = value;
       if (product.programType === '기간제' && product.duration) {
-        // 시작일 변경 시 종료일 재계산
+        // 기간제: 시작일 변경 시 종료일 재계산
         const endDate = new Date(value);
         endDate.setDate(endDate.getDate() + product.duration);
         product.endDate = endDate;
+      } else if (product.programType === '횟수제' && product.endDate) {
+        // 횟수제: 시작일 변경 시 기간(months) 재계산
+        const days = Math.ceil((product.endDate.getTime() - value.getTime()) / (1000 * 3600 * 24));
+        product.months = Math.round(days / 30);
       }
     } else if (field === 'endDate') {
       product.endDate = value;
       if (product.programType === '기간제' && product.startDate) {
-        // 종료일 변경 시 기간 재계산 (가격은 변경하지 않음)
+        // 기간제: 종료일 변경 시 기간 재계산
         const days = Math.ceil((value.getTime() - product.startDate.getTime()) / (1000 * 3600 * 24));
         product.duration = days;
+        product.months = Math.round(days / 30);
+      } else if (product.programType === '횟수제' && product.startDate) {
+        // 횟수제: 종료일 변경 시 기간(months) 재계산
+        const days = Math.ceil((value.getTime() - product.startDate.getTime()) / (1000 * 3600 * 24));
         product.months = Math.round(days / 30);
       }
     } else if (field === 'appliedPrice') {
@@ -465,11 +476,18 @@ const CoursePaymentPanel: React.FC<CoursePaymentPanelProps> = ({
 
       {paymentInfo.selectedProducts.length > 0 && (
         <FormField>
-          <Label>선택된 상품</Label>
+          <Label>선택 상품</Label>
           {paymentInfo.selectedProducts.map((product, index) => (
             <ProductItem key={`${product.id}-${index}`} style={{ marginBottom: '16px' }}>
               <ProductInfo style={{ flex: 1 }}>
-                <ProductName>{product.name}</ProductName>
+                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '8px' }}>
+                  <ProductName>{product.name}</ProductName>
+                  <RemoveButton
+                    onClick={() => handleProductRemove(product.id)}
+                  >
+                    ✕
+                  </RemoveButton>
+                </div>
                 
                 {/* 기간제 상품 편집 */}
                 {product.programType === '기간제' && (
@@ -480,14 +498,15 @@ const CoursePaymentPanel: React.FC<CoursePaymentPanelProps> = ({
                     borderRadius: '6px',
                     border: '1px solid #e9ecef'
                   }}>
-                    <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '16px', marginBottom: '8px' }}>
+                    <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '8px', marginBottom: '8px' }}>
                       <div>
                         <label style={{ 
-                          fontSize: '12px', 
+                          fontSize: '11px', 
                           color: '#666', 
                           display: 'block', 
-                          marginBottom: '8px',
-                          fontWeight: '600'
+                          marginBottom: '4px',
+                          fontWeight: '500',
+                          textAlign: 'left'
                         }}>
                           시작일
                         </label>
@@ -499,11 +518,12 @@ const CoursePaymentPanel: React.FC<CoursePaymentPanelProps> = ({
                       </div>
                       <div>
                         <label style={{ 
-                          fontSize: '12px', 
+                          fontSize: '11px', 
                           color: '#666', 
                           display: 'block', 
-                          marginBottom: '8px',
-                          fontWeight: '600'
+                          marginBottom: '4px',
+                          fontWeight: '500',
+                          textAlign: 'left'
                         }}>
                           종료일
                         </label>
@@ -518,18 +538,10 @@ const CoursePaymentPanel: React.FC<CoursePaymentPanelProps> = ({
                     <div style={{ 
                       fontSize: '11px', 
                       color: '#666',
-                      marginTop: '4px',
-                      padding: '4px 8px',
-                      backgroundColor: '#fff',
-                      borderRadius: '3px',
-                      border: '1px solid #e9ecef'
+                      marginTop: '8px',
+                      textAlign: 'left'
                     }}>
-                      💡 기간제는 가격이 고정되어 있습니다. 기간을 조정해도 가격은 변경되지 않습니다.
-                      {product.startDate && product.endDate && (
-                        <>
-                          <br />기간: {Math.ceil((product.endDate.getTime() - product.startDate.getTime()) / (1000 * 3600 * 24))}일
-                        </>
-                      )}
+                      💡 기간제 상품은 가격 고정
                     </div>
                   </div>
                 )}
@@ -543,24 +555,73 @@ const CoursePaymentPanel: React.FC<CoursePaymentPanelProps> = ({
                     borderRadius: '6px',
                     border: '1px solid #e9ecef'
                   }}>
+                    {/* 수업 횟수 (첫 번째 row) */}
+                    <div style={{ marginBottom: '12px', display: 'flex', alignItems: 'center', gap: '8px' }}>
+                      <NumberTextField
+                        value={product.sessions || (product.baseSessions || 10)}
+                        onChange={(value) => handleProductEdit(index, 'sessions', value || 1)}
+                        width="120px"
+                        placeholder="수업 횟수"
+                      />
+                      <span style={{ fontSize: '13px', color: '#666', fontWeight: '500' }}>회</span>
+                      <span style={{ fontSize: '11px', color: '#666', marginLeft: '8px' }}>
+                        💡 횟수 변경 시 가격 자동 재계산
+                      </span>
+                    </div>
+                    
+                    {/* 유효기간 (두 번째 row) */}
                     <div>
                       <label style={{ 
                         fontSize: '12px', 
                         color: '#666', 
                         display: 'block', 
                         marginBottom: '8px',
-                        fontWeight: '600'
+                        fontWeight: '600',
+                        textAlign: 'left'
                       }}>
-                        수업 횟수
+                        유효기간
+                        {product.startDate && product.endDate && (
+                          <span style={{ fontSize: '11px', color: '#999', fontWeight: 'normal', marginLeft: '8px' }}>
+                            ({Math.ceil((product.endDate.getTime() - product.startDate.getTime()) / (1000 * 3600 * 24))}일)
+                          </span>
+                        )}
                       </label>
-                      <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
-                        <NumberTextField
-                          value={product.sessions || (product.baseSessions || 10)}
-                          onChange={(value) => handleProductEdit(index, 'sessions', value || 1)}
-                          width="100px"
-                          placeholder="횟수"
-                        />
-                        <span style={{ fontSize: '13px', color: '#666', fontWeight: '500' }}>회</span>
+                      <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '8px' }}>
+                        <div>
+                          <label style={{ 
+                            fontSize: '11px', 
+                            color: '#666', 
+                            display: 'block', 
+                            marginBottom: '4px',
+                            fontWeight: '500',
+                            textAlign: 'left'
+                          }}>
+                            시작일
+                          </label>
+                          <CustomDateInput
+                            value={product.startDate ? product.startDate.toISOString().split('T')[0] : ''}
+                            onChange={(value) => handleProductEdit(index, 'startDate', new Date(value))}
+                            placeholder="시작일"
+                          />
+                        </div>
+                        <div>
+                          <label style={{ 
+                            fontSize: '11px', 
+                            color: '#666', 
+                            display: 'block', 
+                            marginBottom: '4px',
+                            fontWeight: '500',
+                            textAlign: 'left'
+                          }}>
+                            종료일
+                          </label>
+                          <CustomDateInput
+                            value={product.endDate ? product.endDate.toISOString().split('T')[0] : ''}
+                            onChange={(value) => handleProductEdit(index, 'endDate', new Date(value))}
+                            placeholder="종료일"
+                            min={product.startDate ? product.startDate.toISOString().split('T')[0] : undefined}
+                          />
+                        </div>
                       </div>
                     </div>
                   </div>
@@ -574,23 +635,6 @@ const CoursePaymentPanel: React.FC<CoursePaymentPanelProps> = ({
                   borderRadius: '6px',
                   border: '1px solid #ddd'
                 }}>
-                  <div style={{ marginBottom: '10px' }}>
-                    <span style={{ fontSize: '12px', color: '#666', fontWeight: '500' }}>상품금액: </span>
-                    <span style={{ fontSize: '14px', fontWeight: 'bold', color: '#333' }}>
-                      {product.price.toLocaleString()}원
-                    </span>
-                    {product.price !== (product.originalPrice || 0) && (
-                      <span style={{ 
-                        fontSize: '11px', 
-                        color: '#999', 
-                        textDecoration: 'line-through',
-                        marginLeft: '8px'
-                      }}>
-                        (원가: {(product.originalPrice || 0).toLocaleString()}원)
-                      </span>
-                    )}
-                  </div>
-                  
                   <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
                     <label style={{ 
                       fontSize: '12px', 
@@ -612,29 +656,16 @@ const CoursePaymentPanel: React.FC<CoursePaymentPanelProps> = ({
                       }}
                     />
                     <span style={{ fontSize: '14px', fontWeight: 'bold', color: '#0066cc' }}>원</span>
-                    
-                    {/* 상품금액 대비 적용금액 차이 표시 */}
-                    {(product.appliedPrice || product.price) !== product.price && (
-                      <span style={{ 
-                        fontSize: '11px', 
-                        color: (product.appliedPrice || product.price) > product.price ? '#dc3545' : '#28a745',
-                        fontWeight: 'bold',
-                        marginLeft: '4px'
-                      }}>
-                        ({(product.appliedPrice || product.price) > product.price ? '+' : ''}
-                        {((product.appliedPrice || product.price) - product.price).toLocaleString()}원)
-                      </span>
-                    )}
+                    <span style={{ 
+                      fontSize: '12px', 
+                      color: '#666', 
+                      marginLeft: '12px'
+                    }}>
+                      (상품금액: {product.price.toLocaleString()}원)
+                    </span>
                   </div>
                 </div>
               </ProductInfo>
-              
-              <RemoveButton
-                onClick={() => handleProductRemove(product.id)}
-                style={{ alignSelf: 'flex-start', marginTop: '8px' }}
-              >
-                ✕
-              </RemoveButton>
             </ProductItem>
           ))}
         </FormField>
@@ -656,11 +687,25 @@ const CoursePaymentPanel: React.FC<CoursePaymentPanelProps> = ({
             총 결제금액: {totalAmount.toLocaleString()}원
           </div>
           
-          <PointPaymentSection>
-            <Label>포인트 결제</Label>
-            <InfoText>
-              사용 가능한 포인트: {memberPointBalance.toLocaleString()}원
-            </InfoText>
+          <FormField>
+            <div style={{ 
+              display: 'flex', 
+              alignItems: 'center', 
+              gap: '8px', 
+              marginBottom: '4px',
+              height: 'auto'
+            }}>
+              <Label style={{ lineHeight: '1', margin: 0 }}>포인트 결제</Label>
+              <span style={{ 
+                fontSize: '12px', 
+                color: '#666',
+                lineHeight: '1',
+                display: 'flex',
+                alignItems: 'center'
+              }}>
+                (가용 포인트: {memberPointBalance.toLocaleString()}원)
+              </span>
+            </div>
             <PointInputRow>
               <NumberTextField
                 value={pointPayment || 0}
@@ -678,11 +723,28 @@ const CoursePaymentPanel: React.FC<CoursePaymentPanelProps> = ({
                 포인트 잔액을 초과할 수 없습니다.
               </InfoText>
             )}
-          </PointPaymentSection>
+          </FormField>
 
           <FormField>
-            <Label>받은금액 (현금/카드)</Label>
-            <div style={{ display: 'flex', gap: '8px', alignItems: 'center' }}>
+            <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+              <Label>받은금액 (현금/카드)</Label>
+              {paymentInfo.receivedAmount !== undefined && paymentInfo.receivedAmount >= 1000000 && paymentInfo.receivedAmount > (totalAmount - pointPayment) && (
+                <label style={{ display: 'flex', alignItems: 'center', gap: '4px', fontSize: '12px', cursor: 'pointer' }}>
+                  <input
+                    type="checkbox"
+                    checked={paymentInfo.bonusPointsEnabled || false}
+                    onChange={(e) => {
+                      onPaymentUpdate({
+                        bonusPointsEnabled: e.target.checked
+                      });
+                    }}
+                    style={{ margin: 0 }}
+                  />
+                  보너스 포인트 (100만원당 10만원)
+                </label>
+              )}
+            </div>
+            <div style={{ display: 'flex', gap: '12px', alignItems: 'center' }}>
               <NumberTextField
                 value={paymentInfo.receivedAmount !== undefined ? paymentInfo.receivedAmount : Math.max(0, totalAmount - pointPayment)}
                 onChange={(value) => handleReceivedAmountChange(value || 0)}
@@ -705,7 +767,10 @@ const CoursePaymentPanel: React.FC<CoursePaymentPanelProps> = ({
                   cursor: 'pointer',
                   fontSize: '12px',
                   whiteSpace: 'nowrap',
-                  transition: 'all 0.2s ease'
+                  transition: 'all 0.2s ease',
+                  display: 'flex',
+                  alignItems: 'center',
+                  justifyContent: 'center'
                 }}
                 onMouseEnter={(e) => {
                   e.currentTarget.style.borderColor = '#37bbd6';
@@ -716,18 +781,18 @@ const CoursePaymentPanel: React.FC<CoursePaymentPanelProps> = ({
                   e.currentTarget.style.boxShadow = 'none';
                 }}
               >
-                필요 금액으로 설정
+                필요 금액
               </button>
             </div>
             {cashPayment !== totalAmount - pointPayment && (
               <InfoText>
                 {cashPayment > totalAmount - pointPayment
                   ? (() => {
-                      const excessAmount = cashPayment - (totalAmount - pointPayment);
-                      let message = `초과금액: ${excessAmount.toLocaleString()}원 (포인트로 적립 예정)`;
+                      let message = `받은금액 전체(${cashPayment.toLocaleString()}원)를 포인트로 적립 후, 상품비용(${(totalAmount - pointPayment).toLocaleString()}원) 차감 예정`;
                       
-                      if (excessAmount >= 1000000) {
-                        const millionUnits = Math.floor(excessAmount / 1000000);
+                      // 보너스 포인트는 체크박스가 활성화되고 받은금액이 100만원 이상일 때만 적용
+                      if (paymentInfo.bonusPointsEnabled && cashPayment >= 1000000) {
+                        const millionUnits = Math.floor(cashPayment / 1000000);
                         const bonusPoints = millionUnits * 100000;
                         message += ` + 보너스 ${bonusPoints.toLocaleString()}원`;
                       }

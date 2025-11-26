@@ -97,6 +97,7 @@ export interface PaymentInfo {
   paymentMethod: string;
   receivedAmount?: number; // 받은금액 (총 결제금액과 다를 수 있음)
   pointPayment?: number; // 포인트 결제 금액
+  bonusPointsEnabled?: boolean; // 보너스 포인트 적용 여부
 }
 
 export interface Agreement {

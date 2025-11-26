@@ -273,8 +273,8 @@ export class OrderService extends BaseDBManager {
         totalAmount,
         paidAmount: totalPaid,
         unpaidAmount,
-        pointsUsed: orderData.payments.points,
-        pointsEarned: excessAmount,
+        pointsUsed: excessAmount > 0 ? 0 : orderData.payments.points, // 초과금액이 있으면 포인트 사용은 0 (새로운 로직에서는 모두 적립 후 차감)
+        pointsEarned: excessAmount > 0 ? totalPaid : 0, // 초과금액이 있으면 받은금액 전체를 적립, 없으면 0
         orderStatus: unpaidAmount > 0 ? 'partially_paid' : 'completed',
         orderType: orderData.orderType
       });
@@ -318,19 +318,12 @@ export class OrderService extends BaseDBManager {
         }
       }
 
-      // 3. 포인트 사용 처리
-      if (orderData.payments.points > 0) {
-        await dependencies.pointService.usePointsFIFO(
-          orderData.memberInfo.id,
-          orderData.payments.points,
-          orderId,
-          `${orderData.orderType} 포인트 결제`
-        );
-      }
-
-      // 4. 초과금 포인트 적립
+      // 3. 포인트 처리 로직 (초과금액 발생 여부에 따라 다르게 처리)
       if (excessAmount > 0) {
-        console.log(`=== 초과금 포인트 적립 시작: ${excessAmount.toLocaleString()}원 ===`);
+        // 4-A. 초과금액 발생 시 새로운 로직: 받은금액 전체를 포인트로 적립 후 상품비용 차감
+        console.log(`=== 초과금액 발생 - 새로운 결제 처리 로직 시작 ===`);
+        console.log(`받은금액 전체: ${totalPaid.toLocaleString()}원을 포인트로 적립`);
+        console.log(`상품비용: ${totalAmount.toLocaleString()}원을 포인트에서 차감`);
 
         // 상품 정보 준비
         const products = orderData.products.map(product => ({
@@ -341,11 +334,11 @@ export class OrderService extends BaseDBManager {
         }));
 
         try {
-          // 1. 기본 초과금 포인트 적립
+          // 1. 받은금액 전체를 포인트로 적립
           await dependencies.pointService.addPointTransaction({
             memberId: orderData.memberInfo.id,
             memberName: orderData.memberInfo.name,
-            amount: excessAmount,
+            amount: totalPaid,
             transactionType: 'earn',
             relatedOrderId: orderId,
             products: products,
@@ -355,18 +348,27 @@ export class OrderService extends BaseDBManager {
             staffName: orderData.memberInfo.coachName,  // coachName이 담당 직원명
             earnedDate: new Date(),
             isExpired: false,
-            source: `${orderData.orderType} 초과금액`,
-            description: `${orderData.orderType} 초과금액 포인트 적립 - 구매 상품: ${orderData.products.map(p => p.name).join(', ')}`
+            source: `${orderData.orderType} 결제금액`,
+            description: `${orderData.orderType} 결제금액 포인트 적립 - 구매 상품: ${orderData.products.map(p => p.name).join(', ')}`
           });
-          console.log(`기본 포인트 적립 완료: ${excessAmount.toLocaleString()}원`);
+          console.log(`결제금액 포인트 적립 완료: ${totalPaid.toLocaleString()}원`);
 
-          // 2. 보너스 포인트 계산 및 적립 (100만원 단위로 10%씩 추가)
-          if (excessAmount >= 1000000) {
-            const millionUnits = Math.floor(excessAmount / 1000000);
+          // 2. 상품비용만큼 포인트에서 차감 (결제 처리)
+          await dependencies.pointService.usePointsFIFO(
+            orderData.memberInfo.id,
+            totalAmount,
+            orderId,
+            `${orderData.orderType} 상품 구매 - ${orderData.products.map(p => p.name).join(', ')}`
+          );
+          console.log(`상품비용 포인트 차감 완료: ${totalAmount.toLocaleString()}원`);
+
+          // 3. 보너스 포인트 계산 및 적립 (보너스 포인트가 활성화되고 100만원 이상일 때)
+          if (orderData.payments.bonusPointsEnabled && totalPaid >= 1000000) {
+            const millionUnits = Math.floor(totalPaid / 1000000);
             const bonusPoints = millionUnits * 100000; // 100만원당 10만원(10%) 보너스
             
             console.log(`=== 보너스 포인트 계산 ===`);
-            console.log(`초과금액: ${excessAmount.toLocaleString()}원`);
+            console.log(`결제금액: ${totalPaid.toLocaleString()}원`);
             console.log(`100만원 단위: ${millionUnits}개`);
             console.log(`보너스 포인트: ${bonusPoints.toLocaleString()}원`);
 
@@ -384,13 +386,25 @@ export class OrderService extends BaseDBManager {
               earnedDate: new Date(),
               isExpired: false,
               source: '보너스포인트',
-              description: `${orderData.orderType} 초과금액 보너스 포인트 (${excessAmount.toLocaleString()}원 → ${millionUnits}개 100만원 단위)`
+              description: `${orderData.orderType} 결제금액 보너스 포인트 (${totalPaid.toLocaleString()}원 → ${millionUnits}개 100만원 단위)`
             });
             console.log(`보너스 포인트 적립 완료: ${bonusPoints.toLocaleString()}원`);
           }
         } catch (pointError) {
-          console.error('포인트 적립 실패:', pointError);
+          console.error('포인트 처리 실패:', pointError);
           throw pointError;
+        }
+      } else {
+        // 4-B. 초과금액이 없는 경우: 기존 로직 (포인트 사용이 있다면 차감 처리)
+        if (orderData.payments.points > 0) {
+          console.log(`=== 기존 포인트 사용 처리: ${orderData.payments.points.toLocaleString()}원 ===`);
+          await dependencies.pointService.usePointsFIFO(
+            orderData.memberInfo.id,
+            orderData.payments.points,
+            orderId,
+            `${orderData.orderType} 포인트 결제`
+          );
+          console.log(`포인트 사용 완료: ${orderData.payments.points.toLocaleString()}원`);
         }
       }
 

@@ -3,7 +3,7 @@
     "activeCommit": 0,
     "commits": [
         {
-            "activePatchIndex": 32,
+            "activePatchIndex": 33,
             "patches": [
                 {
                     "date": 1759904013901,
@@ -136,6 +136,10 @@
                 {
                     "date": 1763464456944,
                     "content": "Index: \n===================================================================\n--- \n+++ \n@@ -444,8 +444,15 @@\n       }\n     }\n \n     setErrors(newErrors);\n+    \n+    // validation 에러가 있으면 토스트 메시지로 표시\n+    if (Object.keys(newErrors).length > 0) {\n+      const firstError = Object.values(newErrors)[0];\n+      toast.error(firstError);\n+    }\n+    \n     return Object.keys(newErrors).length === 0;\n   };\n \n   const handleInputChange = (\n@@ -455,8 +462,17 @@\n     // 전화번호 필드인 경우 자동 포맷팅 적용\n     if (field === 'phone' && typeof value === 'string') {\n       value = formatPhoneNumber(value);\n     }\n+    \n+    // 이메일 필드인 경우 한글 입력 방지\n+    if (field === 'email' && typeof value === 'string') {\n+      const koreanPattern = /[ㄱ-ㅎ|ㅏ-ㅣ|가-힣]/;\n+      if (koreanPattern.test(value)) {\n+        toast.error('이메일에는 한글을 입력할 수 없습니다.');\n+        return;\n+      }\n+    }\n \n     // 파일 업로드 필드인 경우 검증 수행\n     if (field === 'contractFile' && value instanceof File) {\n       // 파일 타입 검증 (이미지 또는 PDF만 허용)\n"
+                },
+                {
+                    "date": 1764154454075,
+                    "content": "Index: \n===================================================================\n--- \n+++ \n@@ -8,8 +8,9 @@\n import { AppColors } from '../../../styles/colors';\n import { AppTextStyles } from '../../../styles/textStyles';\n import { dbManager, type Staff, type Branch } from '../../../utils/indexedDB';\n import { POSITIONS, ROLES, EMPLOYMENT_TYPES, PERMISSIONS, SYSTEM_ADMIN_CONFIG, WORK_SHIFTS } from '../../../constants/staffConstants';\n+import { toast } from 'react-toastify';\n \n const FormContainer = styled.div`\n   width: 100%;\n   height: 100%;\n"
                 }
             ],
             "date": 1759904013901,

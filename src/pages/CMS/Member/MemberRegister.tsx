@@ -414,7 +414,8 @@ const MemberRegister: React.FC = () => {
               cash: formData.paymentInfo.paymentMethod === 'cash' ? cashPayment : 0,
               card: formData.paymentInfo.paymentMethod === 'card' ? cashPayment : 0,
               transfer: formData.paymentInfo.paymentMethod === 'transfer' ? cashPayment : 0,
-              points: pointPayment
+              points: pointPayment,
+              bonusPointsEnabled: formData.paymentInfo.bonusPointsEnabled
             },
             orderType: 'registration'
           });

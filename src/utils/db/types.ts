@@ -610,6 +610,7 @@ export interface OrderProcessingData {
     card: number;
     transfer: number;
     points: number;
+    bonusPointsEnabled?: boolean; // 보너스 포인트 활성화 여부
   };
   orderType: 'registration' | 'course_enrollment' | 'asset_assignment';
 }

@@ -1589,18 +1589,20 @@ const LockerManagement: React.FC = () => {
                     </AmountDisplay>
 
                     {/* 포인트 결제 섹션 */}
-                    <div style={{
-                      background: `${AppColors.primary}10`,
-                      border: `1px solid ${AppColors.primary}30`,
-                      borderRadius: '8px',
-                      padding: '16px',
-                      margin: '16px 0'
-                    }}>
-                      <FormLabel>포인트 결제</FormLabel>
-                      <InfoText>
-                        사용 가능한 포인트: {memberPointBalance.toLocaleString()}원
-                      </InfoText>
-                      <div style={{ display: 'flex', alignItems: 'center', gap: '12px', marginTop: '8px' }}>
+                    <FormGroup>
+                      <div style={{ display: 'flex', alignItems: 'center', gap: '8px', marginBottom: '4px' }}>
+                        <FormLabel style={{ lineHeight: '1', margin: 0 }}>포인트 결제</FormLabel>
+                        <span style={{ 
+                          fontSize: '12px', 
+                          color: '#666',
+                          lineHeight: '1',
+                          display: 'flex',
+                          alignItems: 'center'
+                        }}>
+                          (가용 포인트: {memberPointBalance.toLocaleString()}원)
+                        </span>
+                      </div>
+                      <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
                         <NumberTextField
                           value={pointPayment || 0}
                           onChange={(value) => handlePointPaymentChange(value || 0)}
@@ -1614,11 +1616,15 @@ const LockerManagement: React.FC = () => {
                             background: AppColors.primary,
                             color: AppColors.onPrimary,
                             border: 'none',
-                            borderRadius: '4px',
-                            padding: '6px 12px',
+                            borderRadius: '12px',
+                            padding: '14px 16px',
                             fontSize: AppTextStyles.body3.fontSize,
                             cursor: 'pointer',
-                            whiteSpace: 'nowrap'
+                            whiteSpace: 'nowrap',
+                            minHeight: '48px',
+                            display: 'flex',
+                            alignItems: 'center',
+                            justifyContent: 'center'
                           }}
                         >
                           전액 사용
@@ -1629,12 +1635,12 @@ const LockerManagement: React.FC = () => {
                           포인트 잔액을 초과할 수 없습니다.
                         </InfoText>
                       )}
-                    </div>
+                    </FormGroup>
 
                     {/* 받은 금액 */}
                     <FormGroup>
                       <FormLabel>받은금액 (현금/카드)</FormLabel>
-                      <div style={{ display: 'flex', gap: '8px', alignItems: 'center' }}>
+                      <div style={{ display: 'flex', gap: '12px', alignItems: 'center' }}>
                         <NumberTextField
                           value={receivedAmount !== undefined ? receivedAmount : Math.max(0, getTotalAmount() - pointPayment)}
                           onChange={(value) => setReceivedAmount(value || 0)}
@@ -1657,7 +1663,10 @@ const LockerManagement: React.FC = () => {
                             cursor: 'pointer',
                             fontSize: '12px',
                             whiteSpace: 'nowrap',
-                            transition: 'all 0.2s ease'
+                            transition: 'all 0.2s ease',
+                            display: 'flex',
+                            alignItems: 'center',
+                            justifyContent: 'center'
                           }}
                           onMouseEnter={(e) => {
                             e.currentTarget.style.borderColor = '#37bbd6';
@@ -1668,7 +1677,7 @@ const LockerManagement: React.FC = () => {
                             e.currentTarget.style.boxShadow = 'none';
                           }}
                         >
-                          필요 금액으로 설정
+                          필요 금액
                         </button>
                       </div>
                       {receivedAmount !== getTotalAmount() - pointPayment && (

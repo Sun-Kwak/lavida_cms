@@ -109,6 +109,7 @@ interface PaymentInfo {
   paymentMethod: string;
   receivedAmount?: number;
   pointPayment?: number; // 포인트로 결제할 금액
+  bonusPointsEnabled?: boolean;
 }
 
 interface CourseRegistrationModalProps {
@@ -189,11 +190,11 @@ const CourseRegistrationModal: React.FC<CourseRegistrationModalProps> = ({
       if (totalReceived > totalAmount) {
         const excessAmount = totalReceived - totalAmount;
         
-        // 보너스 포인트 계산
-        let confirmMessage = `총 받은 금액이 결제 금액보다 ${excessAmount.toLocaleString()}원 많습니다.\n초과 금액은 포인트로 적립됩니다.`;
+        // 새로운 결제 로직 안내
+        let confirmMessage = `받은금액 전체(${totalReceived.toLocaleString()}원)를 포인트로 적립 후, 상품비용(${totalAmount.toLocaleString()}원)을 차감하여 처리됩니다.`;
         
-        if (excessAmount >= 1000000) {
-          const millionUnits = Math.floor(excessAmount / 1000000);
+        if (paymentInfo.bonusPointsEnabled && totalReceived >= 1000000) {
+          const millionUnits = Math.floor(totalReceived / 1000000);
           const bonusPoints = millionUnits * 100000;
           confirmMessage += `\n\n🎁 보너스 혜택: 추가 ${bonusPoints.toLocaleString()}원 더 적립됩니다!`;
           confirmMessage += `\n(${millionUnits}개 100만원 단위 × 10만원 보너스)`;
@@ -238,7 +239,8 @@ const CourseRegistrationModal: React.FC<CourseRegistrationModalProps> = ({
           cash: paymentInfo.paymentMethod === 'cash' ? cashPayment : 0,
           card: paymentInfo.paymentMethod === 'card' ? cashPayment : 0,
           transfer: paymentInfo.paymentMethod === 'transfer' ? cashPayment : 0,
-          points: pointPayment
+          points: pointPayment,
+          bonusPointsEnabled: paymentInfo.bonusPointsEnabled
         },
         orderType: 'course_enrollment'
       });
@@ -269,7 +271,8 @@ const CourseRegistrationModal: React.FC<CourseRegistrationModalProps> = ({
       selectedProducts: [],
       paymentMethod: 'card',
       receivedAmount: 0,
-      pointPayment: 0
+      pointPayment: 0,
+      bonusPointsEnabled: false
     });
     onClose();
   };
