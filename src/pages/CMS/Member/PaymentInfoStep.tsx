@@ -550,7 +550,7 @@ const PaymentInfoStep: React.FC<StepProps> = ({ formData, onUpdate }) => {
                       }}
                       style={{ margin: 0 }}
                     />
-                    보너스 포인트 (100만원당 10만원)
+                    정액제 (100만원당 10만원)
                   </label>
                 )}
               </div>

@@ -3,7 +3,7 @@
     "activeCommit": 0,
     "commits": [
         {
-            "activePatchIndex": 30,
+            "activePatchIndex": 31,
             "patches": [
                 {
                     "date": 1760248001088,
@@ -128,6 +128,10 @@
                 {
                     "date": 1764156901712,
                     "content": "Index: \n===================================================================\n--- \n+++ \n@@ -534,9 +534,9 @@\n             \n             <FormField>\n               <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>\n                 <Label>받은금액</Label>\n-                {formData.paymentInfo.receivedAmount !== undefined && formData.paymentInfo.receivedAmount >= 1000000 && (\n+                {formData.paymentInfo.receivedAmount !== undefined && formData.paymentInfo.receivedAmount >= 1000000 && formData.paymentInfo.receivedAmount > totalAmount && (\n                   <label style={{ display: 'flex', alignItems: 'center', gap: '4px', fontSize: '12px', cursor: 'pointer' }}>\n                     <input\n                       type=\"checkbox\"\n                       checked={formData.paymentInfo.bonusPointsEnabled || false}\n@@ -549,9 +549,9 @@\n                         });\n                       }}\n                       style={{ margin: 0 }}\n                     />\n-                    보너스 포인트\n+                    보너스 포인트 (100만원당 10만원)\n                   </label>\n                 )}\n               </div>\n               <div style={{ display: 'flex', gap: '8px', alignItems: 'center' }}>\n@@ -609,10 +609,9 @@\n                   color: formData.paymentInfo.receivedAmount > totalAmount ? '#28a745' : '#dc3545'\n                 }}>\n                   {formData.paymentInfo.receivedAmount > totalAmount \n                     ? (() => {\n-                        const excessAmount = formData.paymentInfo.receivedAmount - totalAmount;\n-                        let message = `초과금액: ${excessAmount.toLocaleString()}원 (포인트로 적립 예정)`;\n+                        let message = `받은금액 전체(${formData.paymentInfo.receivedAmount.toLocaleString()}원)를 포인트로 적립 후, 상품비용(${totalAmount.toLocaleString()}원) 차감 예정`;\n                         \n                         // 보너스 포인트는 체크박스가 활성화되고 받은금액이 100만원 이상일 때만 적용\n                         if (formData.paymentInfo.bonusPointsEnabled && formData.paymentInfo.receivedAmount >= 1000000) {\n                           const millionUnits = Math.floor(formData.paymentInfo.receivedAmount / 1000000);\n"
+                },
+                {
+                    "date": 1764158888325,
+                    "content": "Index: \n===================================================================\n--- \n+++ \n@@ -549,9 +549,9 @@\n                         });\n                       }}\n                       style={{ margin: 0 }}\n                     />\n-                    보너스 포인트 (100만원당 10만원)\n+                    정액제 (100만원당 10만원)\n                   </label>\n                 )}\n               </div>\n               <div style={{ display: 'flex', gap: '8px', alignItems: 'center' }}>\n"
                 }
             ],
             "date": 1760248001088,
