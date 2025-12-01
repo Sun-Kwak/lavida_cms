@@ -1,15 +1,19 @@
 {
   "files": {
     "main.css": "/lavida_cms/static/css/main.2e03b3bf.css",
-    "main.js": "/lavida_cms/static/js/main.aa3f3f14.js",
-    "static/js/453.3d5f69d0.chunk.js": "/lavida_cms/static/js/453.3d5f69d0.chunk.js",
+    "main.js": "/lavida_cms/static/js/main.80cdd2c6.js",
+    "static/js/977.f4e413fe.chunk.js": "/lavida_cms/static/js/977.f4e413fe.chunk.js",
+    "static/js/455.b5b4a4de.chunk.js": "/lavida_cms/static/js/455.b5b4a4de.chunk.js",
+    "static/js/453.eb075324.chunk.js": "/lavida_cms/static/js/453.eb075324.chunk.js",
     "index.html": "/lavida_cms/index.html",
     "main.2e03b3bf.css.map": "/lavida_cms/static/css/main.2e03b3bf.css.map",
-    "main.aa3f3f14.js.map": "/lavida_cms/static/js/main.aa3f3f14.js.map",
-    "453.3d5f69d0.chunk.js.map": "/lavida_cms/static/js/453.3d5f69d0.chunk.js.map"
+    "main.80cdd2c6.js.map": "/lavida_cms/static/js/main.80cdd2c6.js.map",
+    "977.f4e413fe.chunk.js.map": "/lavida_cms/static/js/977.f4e413fe.chunk.js.map",
+    "455.b5b4a4de.chunk.js.map": "/lavida_cms/static/js/455.b5b4a4de.chunk.js.map",
+    "453.eb075324.chunk.js.map": "/lavida_cms/static/js/453.eb075324.chunk.js.map"
   },
   "entrypoints": [
     "static/css/main.2e03b3bf.css",
-    "static/js/main.aa3f3f14.js"
+    "static/js/main.80cdd2c6.js"
   ]
 }
