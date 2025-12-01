@@ -126,9 +126,10 @@ const TimeSlot = styled.div`
   min-height: 31px;
   max-height: 31px;
   padding: 0;
-  border-bottom: 1px solid ${AppColors.borderLight};
+  border-bottom: 1px solid #000000;
   font-size: ${AppTextStyles.label2.fontSize};
-  color: ${AppColors.onSurface}60;
+  color: ${AppColors.onSurface};
+  font-weight: 600;
   display: flex;
   align-items: center;
   justify-content: center;
@@ -160,7 +161,7 @@ const DayTimeSlot = styled.div<{
   height: 31px;
   min-height: 31px;
   max-height: 31px;
-  border-bottom: 1px solid ${AppColors.borderLight};
+  border-bottom: 1px solid #000000;
   box-sizing: content-box;
   position: relative;
   cursor: ${props => props.$isPastTime ? 'not-allowed' : 'pointer'};

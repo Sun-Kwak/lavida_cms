@@ -208,6 +208,7 @@ const PaymentRegistrationModal: React.FC<PaymentRegistrationModalProps> = ({
   const [paymentMethod, setPaymentMethod] = useState<'cash' | 'card' | 'transfer'>('cash');
   const [amount, setAmount] = useState<string>('');
   const [memo, setMemo] = useState('');
+  const [bonusPointsEnabled, setBonusPointsEnabled] = useState(false);
   const [isProcessing, setIsProcessing] = useState(false);
 
   // 미리 선택된 회원이 있으면 설정하고 포인트 잔액 로드
@@ -228,6 +229,7 @@ const PaymentRegistrationModal: React.FC<PaymentRegistrationModalProps> = ({
       setPaymentMethod('cash');
       setAmount('');
       setMemo('');
+      setBonusPointsEnabled(false);
       setIsProcessing(false);
     }
   }, [isOpen, preselectedMember]);
@@ -258,7 +260,7 @@ const PaymentRegistrationModal: React.FC<PaymentRegistrationModalProps> = ({
 
   // 보너스 포인트 계산
   const calculateBonus = (baseAmount: number) => {
-    if (baseAmount >= 1000000) {
+    if (bonusPointsEnabled && baseAmount >= 1000000) {
       const millionUnits = Math.floor(baseAmount / 1000000);
       return millionUnits * 100000; // 100만원당 10만원(10%) 보너스
     }
@@ -322,8 +324,8 @@ const PaymentRegistrationModal: React.FC<PaymentRegistrationModalProps> = ({
         description: `현장 결제 등록 - ${paymentMethod} ${baseAmount.toLocaleString()}원${memo ? ` (${memo})` : ''}`
       });
 
-      // 3. 보너스 포인트 적립 (100만원 이상인 경우)
-      if (bonusAmount > 0) {
+      // 3. 보너스 포인트 적립 (체크박스 활성화 및 100만원 이상인 경우)
+      if (bonusPointsEnabled && bonusAmount > 0) {
         await dbManager.point.addPointTransaction({
           memberId: selectedMember.id,
           memberName: selectedMember.name,
@@ -419,9 +421,22 @@ const PaymentRegistrationModal: React.FC<PaymentRegistrationModalProps> = ({
 
                 {/* 금액 */}
                 <FormGroup>
-                  <Label>
-                    금액<RequiredMark>*</RequiredMark>
-                  </Label>
+                  <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+                    <Label>
+                      금액<RequiredMark>*</RequiredMark>
+                    </Label>
+                    {baseAmount >= 1000000 && (
+                      <label style={{ display: 'flex', alignItems: 'center', gap: '4px', fontSize: '12px', cursor: 'pointer' }}>
+                        <input
+                          type="checkbox"
+                          checked={bonusPointsEnabled}
+                          onChange={(e) => setBonusPointsEnabled(e.target.checked)}
+                          style={{ margin: 0 }}
+                        />
+                        정액제 (100만원당 10만원)
+                      </label>
+                    )}
+                  </div>
                   <AmountInput
                     type="text"
                     value={formatAmount(amount)}
@@ -440,8 +455,8 @@ const PaymentRegistrationModal: React.FC<PaymentRegistrationModalProps> = ({
                   />
                 </FormGroup>
 
-                {/* 100만원 이상일 때 보너스 정보 표시 */}
-                {bonusAmount > 0 && (
+                {/* 체크박스 활성화 시 보너스 정보 표시 */}
+                {bonusPointsEnabled && bonusAmount > 0 && (
                   <BonusInfo>
                     <div className="bonus-title">🎉 보너스 포인트 적용!</div>
                     <div>100만원 단위마다 10% 추가 적립됩니다.</div>
@@ -460,7 +475,7 @@ const PaymentRegistrationModal: React.FC<PaymentRegistrationModalProps> = ({
                       <span>기본 포인트 적립</span>
                       <span>{baseAmount.toLocaleString()}원</span>
                     </div>
-                    {bonusAmount > 0 && (
+                    {bonusPointsEnabled && bonusAmount > 0 && (
                       <div className="summary-item">
                         <span>보너스 포인트 ({Math.floor(baseAmount / 1000000)}개 100만원 단위)</span>
                         <span>{bonusAmount.toLocaleString()}원</span>
