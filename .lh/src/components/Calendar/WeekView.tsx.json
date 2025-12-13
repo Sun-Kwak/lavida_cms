@@ -3,7 +3,7 @@
     "activeCommit": 0,
     "commits": [
         {
-            "activePatchIndex": 33,
+            "activePatchIndex": 36,
             "patches": [
                 {
                     "date": 1760154018684,
@@ -140,6 +140,18 @@
                 {
                     "date": 1763985782746,
                     "content": "Index: \n===================================================================\n--- \n+++ \n@@ -333,10 +333,10 @@\n     const startMinutes = (eventStart.getTime() - dayStart.getTime()) / (1000 * 60);\n     const durationMinutes = (eventEnd.getTime() - eventStart.getTime()) / (1000 * 60);\n \n     return {\n-      top: Math.max(0, (startMinutes / 30) * 31), // 30분당 31px (타임슬롯 높이와 일치)\n-      height: Math.max(15, (durationMinutes / 30) * 31)\n+      top: Math.max(0, (startMinutes / 30) * 32), // 30분당 32px (31px 높이 + 1px border)\n+      height: Math.max(15, (durationMinutes / 30) * 32)\n     };\n   };\n \n   // 같은 시간대 이벤트들의 위치 조정\n"
+                },
+                {
+                    "date": 1764589142251,
+                    "content": "Index: \n===================================================================\n--- \n+++ \n@@ -125,11 +125,12 @@\n   height: 31px;\n   min-height: 31px;\n   max-height: 31px;\n   padding: 0;\n-  border-bottom: 1px solid ${AppColors.borderLight};\n+  border-bottom: 2px solid #000000;\n   font-size: ${AppTextStyles.label2.fontSize};\n-  color: ${AppColors.onSurface}60;\n+  color: ${AppColors.onSurface};\n+  font-weight: 600;\n   display: flex;\n   align-items: center;\n   justify-content: center;\n   box-sizing: content-box;\n@@ -159,9 +160,9 @@\n }>`\n   height: 31px;\n   min-height: 31px;\n   max-height: 31px;\n-  border-bottom: 1px solid ${AppColors.borderLight};\n+  border-bottom: 2px solid #000000;\n   box-sizing: content-box;\n   position: relative;\n   cursor: ${props => props.$isPastTime ? 'not-allowed' : 'pointer'};\n   transition: background-color 0.2s ease;\n"
+                },
+                {
+                    "date": 1764589180448,
+                    "content": "Index: \n===================================================================\n--- \n+++ \n@@ -125,9 +125,9 @@\n   height: 31px;\n   min-height: 31px;\n   max-height: 31px;\n   padding: 0;\n-  border-bottom: 2px solid #000000;\n+  border-bottom: 1.5px solid #000000;\n   font-size: ${AppTextStyles.label2.fontSize};\n   color: ${AppColors.onSurface};\n   font-weight: 600;\n   display: flex;\n@@ -160,9 +160,9 @@\n }>`\n   height: 31px;\n   min-height: 31px;\n   max-height: 31px;\n-  border-bottom: 2px solid #000000;\n+  border-bottom: 1.5px solid #000000;\n   box-sizing: content-box;\n   position: relative;\n   cursor: ${props => props.$isPastTime ? 'not-allowed' : 'pointer'};\n   transition: background-color 0.2s ease;\n"
+                },
+                {
+                    "date": 1764589264283,
+                    "content": "Index: \n===================================================================\n--- \n+++ \n@@ -125,9 +125,9 @@\n   height: 31px;\n   min-height: 31px;\n   max-height: 31px;\n   padding: 0;\n-  border-bottom: 1.5px solid #000000;\n+  border-bottom: 1px solid #000000;\n   font-size: ${AppTextStyles.label2.fontSize};\n   color: ${AppColors.onSurface};\n   font-weight: 600;\n   display: flex;\n@@ -160,9 +160,9 @@\n }>`\n   height: 31px;\n   min-height: 31px;\n   max-height: 31px;\n-  border-bottom: 1.5px solid #000000;\n+  border-bottom: 1px solid #000000;\n   box-sizing: content-box;\n   position: relative;\n   cursor: ${props => props.$isPastTime ? 'not-allowed' : 'pointer'};\n   transition: background-color 0.2s ease;\n"
                 }
             ],
             "date": 1760154018684,

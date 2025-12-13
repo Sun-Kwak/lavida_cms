@@ -65,7 +65,7 @@ const PointMemo = styled.div<{ $x: number; $y: number }>`
   padding: 1px 4px;
   border-radius: 2px;
   font-size: 8px;
-  font-weight: 500;
+  font-weight: 600;
   white-space: nowrap;
   transform: translate(-50%, calc(-100% - 6px));
   z-index: 15;
@@ -91,6 +91,33 @@ const ImageTitle = styled.div`
   font-weight: 600;
   color: ${AppColors.onBackground};
   margin-bottom: 8px;
+`;
+
+const CoordinateDisplay = styled.div<{ $x: number; $y: number }>`
+  position: absolute;
+  left: ${props => props.$x}%;
+  top: ${props => props.$y}%;
+  background: rgba(0, 0, 0, 0.8);
+  color: white;
+  padding: 4px 8px;
+  border-radius: 4px;
+  font-size: 12px;
+  font-weight: 600;
+  white-space: nowrap;
+  transform: translate(-50%, calc(-100% - 10px));
+  z-index: 20;
+  pointer-events: none;
+  box-shadow: 0 2px 6px rgba(0, 0, 0, 0.3);
+  
+  &::after {
+    content: '';
+    position: absolute;
+    top: 100%;
+    left: 50%;
+    transform: translateX(-50%);
+    border: 4px solid transparent;
+    border-top-color: rgba(0, 0, 0, 0.8);
+  }
 `;
 
 const PointEditModal = styled.div`
@@ -152,7 +179,7 @@ const ModalButton = styled.button<{ $variant?: 'primary' | 'secondary' | 'danger
   border: none;
   border-radius: 4px;
   cursor: pointer;
-  font-weight: 500;
+  font-weight: 600;
   
   background: ${props => {
     switch (props.$variant) {
@@ -197,6 +224,30 @@ const BodyImageCanvas: React.FC<BodyImageCanvasProps> = ({
   const [editingPoint, setEditingPoint] = useState<BodyImagePoint | null>(null);
   const [pointMemo, setPointMemo] = useState('');
   const [pointColor, setPointColor] = useState('#ff0000');
+  const [currentCoords, setCurrentCoords] = useState<{ x: number; y: number } | null>(null);
+  const [showCoords, setShowCoords] = useState(false);
+
+  const handleMouseMove = useCallback((event: React.MouseEvent) => {
+    if (readonly) return;
+    
+    const canvas = canvasRef.current;
+    if (!canvas) return;
+
+    const rect = canvas.getBoundingClientRect();
+    const x = ((event.clientX - rect.left) / rect.width) * 100;
+    const y = ((event.clientY - rect.top) / rect.height) * 100;
+
+    setCurrentCoords({
+      x: Math.round(x * 100) / 100,
+      y: Math.round(y * 100) / 100
+    });
+    setShowCoords(true);
+  }, [readonly]);
+
+  const handleMouseLeave = useCallback(() => {
+    setShowCoords(false);
+    setCurrentCoords(null);
+  }, []);
 
   const handleCanvasClick = useCallback((event: React.MouseEvent) => {
     if (readonly) return;
@@ -275,6 +326,8 @@ const BodyImageCanvas: React.FC<BodyImageCanvasProps> = ({
         <CanvasContainer
           ref={canvasRef}
           onClick={handleCanvasClick}
+          onMouseMove={handleMouseMove}
+          onMouseLeave={handleMouseLeave}
           className={readonly ? 'readonly' : ''}
         >
           {imageUrl ? (
@@ -309,6 +362,13 @@ const BodyImageCanvas: React.FC<BodyImageCanvasProps> = ({
               )}
             </React.Fragment>
           ))}
+          
+          {/* 현재 마우스 좌표 표시 */}
+          {showCoords && currentCoords && !readonly && (
+            <CoordinateDisplay $x={currentCoords.x} $y={currentCoords.y}>
+              x: {currentCoords.x.toFixed(1)}%, y: {currentCoords.y.toFixed(1)}%
+            </CoordinateDisplay>
+          )}
         </CanvasContainer>
       </div>
 

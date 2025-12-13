@@ -3,7 +3,7 @@
     "activeCommit": 0,
     "commits": [
         {
-            "activePatchIndex": 30,
+            "activePatchIndex": 33,
             "patches": [
                 {
                     "date": 1760154018684,
@@ -128,6 +128,18 @@
                 {
                     "date": 1763985905484,
                     "content": "Index: \n===================================================================\n--- \n+++ \n@@ -201,12 +201,16 @@\n   height: ${props => props.$height}px;\n   background-color: ${props => props.$color}20;\n   border: 1px solid ${props => props.$color};\n   border-radius: 4px;\n-  padding: 4px 6px;\n+  padding: 2px 4px;\n   overflow: hidden;\n   cursor: pointer;\n   z-index: 1;\n+  box-sizing: border-box;\n+  display: flex;\n+  align-items: center;\n+  justify-content: center;\n \n   &:hover {\n     background-color: ${props => props.$color}30;\n     box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);\n@@ -216,25 +220,15 @@\n const EventTitle = styled.div`\n   font-size: ${AppTextStyles.label2.fontSize};\n   font-weight: 500;\n   color: ${AppColors.onSurface};\n-  margin-bottom: 2px;\n-  line-height: 1.2;\n+  white-space: nowrap;\n+  overflow: hidden;\n+  text-overflow: ellipsis;\n+  text-align: center;\n+  width: 100%;\n `;\n \n-const EventTime = styled.div`\n-  font-size: ${AppTextStyles.label3.fontSize};\n-  color: ${AppColors.onSurface}70;\n-  line-height: 1.1;\n-`;\n-\n-const EventMember = styled.div`\n-  font-size: ${AppTextStyles.label3.fontSize};\n-  color: ${AppColors.primary};\n-  line-height: 1.1;\n-  margin-top: 2px;\n-`;\n-\n const DayView: React.FC<DayViewProps> = ({\n   currentDate,\n   events,\n   staffList,\n@@ -550,11 +544,8 @@\n                         {event.type === 'holiday' ? '휴일' : \n                          event.type === 'break' ? event.title :\n                          event.title || event.memberName || '예약자'}\n                       </EventTitle>\n-                      <EventTime>\n-                        {formatTime(event.startTime)} - {formatTime(event.endTime)}\n-                      </EventTime>\n                     </EventBlock>\n                   );\n                 })}\n             </StaffColumn>\n"
+                },
+                {
+                    "date": 1764589142261,
+                    "content": "Index: \n===================================================================\n--- \n+++ \n@@ -133,11 +133,12 @@\n   height: 31px;\n   min-height: 31px;\n   max-height: 31px;\n   padding: 0;\n-  border-bottom: 1px solid ${AppColors.borderLight};\n+  border-bottom: 2px solid #000000;\n   font-size: ${AppTextStyles.label2.fontSize};\n-  color: ${AppColors.onSurface}60;\n+  color: ${AppColors.onSurface};\n+  font-weight: 600;\n   display: flex;\n   align-items: center;\n   justify-content: center;\n   box-sizing: content-box;\n@@ -158,9 +159,9 @@\n const StaffTimeSlot = styled.div<{ $isAvailable: boolean; $isBreakTime: boolean; $isPastTime: boolean }>`\n   height: 31px;\n   min-height: 31px;\n   max-height: 31px;\n-  border-bottom: 1px solid ${AppColors.borderLight};\n+  border-bottom: 2px solid #000000;\n   box-sizing: content-box;\n   position: relative;\n   cursor: pointer;\n   transition: background-color 0.2s ease;\n"
+                },
+                {
+                    "date": 1764589180453,
+                    "content": "Index: \n===================================================================\n--- \n+++ \n@@ -133,9 +133,9 @@\n   height: 31px;\n   min-height: 31px;\n   max-height: 31px;\n   padding: 0;\n-  border-bottom: 2px solid #000000;\n+  border-bottom: 1.5px solid #000000;\n   font-size: ${AppTextStyles.label2.fontSize};\n   color: ${AppColors.onSurface};\n   font-weight: 600;\n   display: flex;\n@@ -159,9 +159,9 @@\n const StaffTimeSlot = styled.div<{ $isAvailable: boolean; $isBreakTime: boolean; $isPastTime: boolean }>`\n   height: 31px;\n   min-height: 31px;\n   max-height: 31px;\n-  border-bottom: 2px solid #000000;\n+  border-bottom: 1.5px solid #000000;\n   box-sizing: content-box;\n   position: relative;\n   cursor: pointer;\n   transition: background-color 0.2s ease;\n"
+                },
+                {
+                    "date": 1764589264291,
+                    "content": "Index: \n===================================================================\n--- \n+++ \n@@ -133,9 +133,9 @@\n   height: 31px;\n   min-height: 31px;\n   max-height: 31px;\n   padding: 0;\n-  border-bottom: 1.5px solid #000000;\n+  border-bottom: 1px solid #000000;\n   font-size: ${AppTextStyles.label2.fontSize};\n   color: ${AppColors.onSurface};\n   font-weight: 600;\n   display: flex;\n@@ -159,9 +159,9 @@\n const StaffTimeSlot = styled.div<{ $isAvailable: boolean; $isBreakTime: boolean; $isPastTime: boolean }>`\n   height: 31px;\n   min-height: 31px;\n   max-height: 31px;\n-  border-bottom: 1.5px solid #000000;\n+  border-bottom: 1px solid #000000;\n   box-sizing: content-box;\n   position: relative;\n   cursor: pointer;\n   transition: background-color 0.2s ease;\n"
                 }
             ],
             "date": 1760154018684,
