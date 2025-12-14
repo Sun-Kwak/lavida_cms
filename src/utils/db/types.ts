@@ -412,7 +412,7 @@ export interface CourseEnrollment extends DBRecord {
   startDate?: Date | null; // 수강 시작일
   endDate?: Date | null; // 수강 종료일 (기간제인 경우)
   sessionCount?: number; // 총 수업 횟수 (횟수제인 경우)
-  // completedSessions 제거: ScheduleEvent와 JOIN하여 실시간 계산
+  completedSessions?: number; // 완료된 세션 수 (횟수제인 경우)
   
   // 홀드 관련 필드 추가
   holdInfo?: {

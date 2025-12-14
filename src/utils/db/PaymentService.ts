@@ -478,7 +478,22 @@ export class OrderService extends BaseDBManager {
           branchName: orderData.memberInfo.branchName,
           coach: orderData.memberInfo.coach,
           coachName: orderData.memberInfo.coachName,
-          enrollmentStatus: (productUnpaidAmount > 0 ? 'unpaid' : 'active') as 'unpaid' | 'active',
+          enrollmentStatus: (() => {
+            if (productUnpaidAmount > 0) {
+              return 'unpaid';
+            }
+            
+            // 미수가 아닌 경우 수강 완료 조건 체크
+            if (product.programType === '기간제' && endDate) {
+              const today = new Date();
+              if (new Date(endDate) <= today) {
+                return 'completed'; // 이미 종료된 기간제
+              }
+            }
+            // 횟수제의 경우 등록 시점에는 항상 active (완료는 세션 진행 후 판단)
+            
+            return 'active'; // 기본적으로 활성 상태
+          })() as 'unpaid' | 'active' | 'completed',
           paidAmount: productPaidAmount,
           unpaidAmount: productUnpaidAmount,
           startDate: startDate,

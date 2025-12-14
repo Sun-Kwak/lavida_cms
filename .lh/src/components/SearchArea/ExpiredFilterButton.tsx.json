@@ -1,0 +1,18 @@
+{
+    "sourceFile": "src/components/SearchArea/ExpiredFilterButton.tsx",
+    "activeCommit": 0,
+    "commits": [
+        {
+            "activePatchIndex": 0,
+            "patches": [
+                {
+                    "date": 1765690250969,
+                    "content": "Index: \n===================================================================\n--- \n+++ \n"
+                }
+            ],
+            "date": 1765690250969,
+            "name": "Commit-0",
+            "content": "import React from 'react';\nimport styled from 'styled-components';\nimport { AppColors } from '../../styles/colors';\nimport { AppTextStyles } from '../../styles/textStyles';\n\ninterface ExpiredFilterButtonProps {\n  expiredCount: number;\n  onClick: () => void;\n}\n\nconst FilterButton = styled.button<{ $hasExpired: boolean }>`\n  padding: 12px 18px;\n  border: 1px solid ${props => props.$hasExpired ? '#f59e0b' : AppColors.borderLight};\n  border-radius: 8px;\n  background: ${props => props.$hasExpired ? '#fef3c7' : AppColors.surface};\n  color: ${props => props.$hasExpired ? '#d97706' : AppColors.onInput1};\n  font-size: ${AppTextStyles.body1.fontSize};\n  font-weight: 600;\n  cursor: ${props => props.$hasExpired ? 'pointer' : 'not-allowed'};\n  opacity: ${props => props.$hasExpired ? 1 : 0.5};\n  transition: all 0.2s;\n  \n  &:hover {\n    ${props => props.$hasExpired && `\n      opacity: 0.9;\n      transform: translateY(-1px);\n    `}\n  }\n  \n  &:disabled {\n    opacity: 0.5;\n    cursor: not-allowed;\n    transform: none;\n  }\n`;\n\nconst ExpiredFilterButton: React.FC<ExpiredFilterButtonProps> = ({\n  expiredCount,\n  onClick\n}) => {\n  const hasExpired = expiredCount > 0;\n\n  return (\n    <FilterButton\n      $hasExpired={hasExpired}\n      onClick={() => {\n        if (hasExpired) {\n          onClick();\n        }\n      }}\n      title={expiredCount === 0 ? '만료된 수강권이 없습니다' : '클릭하여 만료 수강권 처리'}\n    >\n      만료 {expiredCount}건\n    </FilterButton>\n  );\n};\n\nexport default ExpiredFilterButton;"
+        }
+    ]
+}

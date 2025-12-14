@@ -19,6 +19,7 @@ import DataTable, { type TableColumn } from '../../../components/DataTable';
 import CourseRegistrationModal from './CourseRegistrationModal';
 import PaymentRegistrationModal from './PaymentRegistrationModal';
 import QRCodeModal from '../../../components/QRCodeModal';
+import CourseHistory from './CourseHistory';
 
 // 회원 검색 결과에서 사용할 확장된 회원 정보 타입
 interface MemberWithStats extends DBMember {
@@ -96,10 +97,18 @@ const PointInfo = styled.div`
   font-weight: 600;
 `;
 
-const UnpaidInfo = styled.div<{ $hasUnpaid: boolean }>`
+const UnpaidInfo = styled.div<{ $hasUnpaid: boolean; $clickable?: boolean }>`
   color: ${props => props.$hasUnpaid ? '#d32f2f' : AppColors.onInput1};
   font-size: 12px;
   margin-top: 2px;
+  cursor: ${props => props.$clickable ? 'pointer' : 'default'};
+  padding: ${props => props.$clickable ? '4px 8px' : '0'};
+  border-radius: ${props => props.$clickable ? '4px' : '0'};
+  transition: all 0.2s;
+  
+  &:hover {
+    background-color: ${props => props.$clickable ? 'rgba(211, 47, 47, 0.1)' : 'transparent'};
+  }
 `;
 
 const CourseItem = styled.div`
@@ -268,13 +277,31 @@ const MemberSearch: React.FC = () => {
   const [qrModalOpen, setQrModalOpen] = useState<boolean>(false);
   const [selectedMemberForQR, setSelectedMemberForQR] = useState<DBMember | null>(null);
 
+  // 미수 처리 모달 관련 상태
+  const [showUnpaidModal, setShowUnpaidModal] = useState<boolean>(false);
+  const [selectedMemberForUnpaid, setSelectedMemberForUnpaid] = useState<MemberWithStats | null>(null);
+
   // 진행상황 계산 함수
   const getProgressInfo = useCallback(async (enrollment: any): Promise<string> => {
+    let progressText = '';
+    let isExpired = false;
+    
     if (enrollment.programType === '횟수제' && enrollment.sessionCount) {
       // 이벤트 소싱: 실시간 완료 횟수 계산
       const completedSessions = await getCompletedSessions(enrollment.id);
       const remaining = enrollment.sessionCount - completedSessions;
-      return `${remaining}/${enrollment.sessionCount}회 남음`;
+      progressText = `${remaining}/${enrollment.sessionCount}회 남음`;
+      
+      // 횟수제도 유효기간 체크
+      if (enrollment.endDate) {
+        const today = new Date();
+        const endDate = new Date(enrollment.endDate);
+        today.setHours(0, 0, 0, 0);
+        endDate.setHours(0, 0, 0, 0);
+        if (endDate < today) {
+          isExpired = true;
+        }
+      }
     } else if (enrollment.programType === '기간제' && enrollment.endDate) {
       const today = new Date();
       const endDate = new Date(enrollment.endDate);
@@ -282,14 +309,24 @@ const MemberSearch: React.FC = () => {
       const daysDiff = Math.ceil(timeDiff / (1000 * 3600 * 24));
       
       if (daysDiff > 0) {
-        return `${daysDiff}일 남음`;
+        progressText = `${daysDiff}일 남음`;
       } else if (daysDiff === 0) {
-        return '오늘 종료';
+        progressText = '오늘 종료';
+        isExpired = true;
       } else {
-        return `${Math.abs(daysDiff)}일 경과`;
+        progressText = `${Math.abs(daysDiff)}일 경과`;
+        isExpired = true;
       }
+    } else {
+      progressText = '진행률 미설정';
     }
-    return '진행률 미설정';
+    
+    // 기간만료 시 추가 표시
+    if (isExpired) {
+      progressText += ' [기간만료]';
+    }
+    
+    return progressText;
   }, []);
 
   // 미수 메타정보 로드
@@ -417,8 +454,8 @@ const MemberSearch: React.FC = () => {
             const allEnrollments = await dbManager.getCourseEnrollmentsByMember(member.id);
             const activeEnrollments = allEnrollments.filter(e => 
               e.enrollmentStatus === 'active' || 
-              e.enrollmentStatus === 'completed' || 
-              e.enrollmentStatus === 'unpaid'
+              e.enrollmentStatus === 'unpaid' ||
+              e.enrollmentStatus === 'hold'
             );
             
             const currentCourses = await Promise.all(
@@ -694,7 +731,15 @@ const MemberSearch: React.FC = () => {
       width: '100px',
       align: 'right' as const,
       render: (value, record) => (
-        <UnpaidInfo $hasUnpaid={record.unpaidTotal > 0}>
+        <UnpaidInfo 
+          $hasUnpaid={record.unpaidTotal > 0}
+          $clickable={record.unpaidTotal > 0}
+          onClick={(e) => {
+            e.stopPropagation(); // row 클릭 이벤트 차단
+            handleUnpaidClick(record);
+          }}
+          title={record.unpaidTotal > 0 ? '클릭하여 미수 처리' : ''}
+        >
           {record.unpaidTotal > 0 
             ? `${record.unpaidTotal.toLocaleString()}원` 
             : '-'
@@ -1047,6 +1092,25 @@ const MemberSearch: React.FC = () => {
     setSelectedMemberForQR(null);
   };
 
+  // 미수 처리 관련 핸들러
+  const handleUnpaidClick = (member: MemberWithStats) => {
+    if (member.unpaidTotal > 0) {
+      setSelectedMemberForUnpaid(member);
+      setShowUnpaidModal(true);
+    }
+  };
+
+  const handleUnpaidModalClose = () => {
+    setShowUnpaidModal(false);
+    setSelectedMemberForUnpaid(null);
+  };
+
+  const handleUnpaidComplete = () => {
+    // 미수 완료 후 데이터 새로고침
+    loadMembers();
+    handleUnpaidModalClose();
+  };
+
   if (loading) {
     return (
       <PageContainer>
@@ -1069,7 +1133,13 @@ const MemberSearch: React.FC = () => {
             active={showUnpaidOnly}
             unpaidCount={unpaidMetaInfo.unpaidMemberCount}
             totalAmount={unpaidMetaInfo.totalUnpaidAmount}
-            onClick={() => setShowUnpaidOnly(!showUnpaidOnly)}
+            onClick={() => {
+              setShowUnpaidOnly(!showUnpaidOnly);
+              // 상태 변경 후 자동으로 검색 실행
+              setTimeout(() => {
+                handleSearch();
+              }, 100);
+            }}
           />
         }
         selectedPeriod={selectedPeriod}
@@ -1437,6 +1507,27 @@ const MemberSearch: React.FC = () => {
           onClose={handleQRModalClose}
           memberName={selectedMemberForQR.name}
           memberId={selectedMemberForQR.id}
+        />
+      )}
+
+      {/* 미수 처리 모달 */}
+      {showUnpaidModal && selectedMemberForUnpaid && (
+        <Modal
+          isOpen={showUnpaidModal}
+          onClose={handleUnpaidModalClose}
+          width="min(90vw, 1200px)"
+          header={`${selectedMemberForUnpaid.name}님의 미수 처리`}
+          disableOutsideClick={true}
+          body={
+            <div style={{ height: '70vh', overflow: 'hidden' }}>
+              <CourseHistory
+                preselectedMemberId={selectedMemberForUnpaid.id}
+                showUnpaidOnly={true}
+                onUnpaidComplete={handleUnpaidComplete}
+                isModal={true}
+              />
+            </div>
+          }
         />
       )}
     </PageContainer>

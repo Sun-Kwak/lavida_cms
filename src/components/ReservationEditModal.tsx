@@ -1,11 +1,12 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useCallback } from 'react';
 import styled from 'styled-components';
 import { toast } from 'react-toastify';
 import { AppColors } from '../styles/colors';
 import { AppTextStyles } from '../styles/textStyles';
 import { dbManager } from '../utils/indexedDB';
 import { ScheduleEvent } from './Calendar/types';
-import type { DailyScheduleSettings } from '../utils/db/types';
+import type { DailyScheduleSettings, CourseEnrollment } from '../utils/db/types';
+import { getRemainingSessionsCount, getCompletedSessions } from '../utils/db/ReservationHelper';
 import Modal from './Modal';
 
 // 스타일 컴포넌트들
@@ -191,6 +192,52 @@ const ButtonGroup = styled.div`
   margin-top: 8px;
 `;
 
+const MembershipInfoCard = styled.div`
+  background-color: ${AppColors.background};
+  border: 1px solid ${AppColors.borderLight};
+  border-radius: 8px;
+  padding: 16px;
+  margin-bottom: 8px;
+`;
+
+const MembershipTitle = styled.div`
+  ${AppTextStyles.body1}
+  font-weight: 600;
+  color: ${AppColors.onBackground};
+  margin-bottom: 12px;
+`;
+
+const MembershipDetail = styled.div`
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 8px;
+  
+  &:last-child {
+    margin-bottom: 0;
+  }
+`;
+
+const MembershipLabel = styled.span`
+  ${AppTextStyles.body2}
+  color: ${AppColors.onSurface};
+`;
+
+const MembershipValue = styled.span<{ $type?: 'primary' | 'warning' | 'success' }>`
+  ${AppTextStyles.body2}
+  font-weight: 600;
+  color: ${props => {
+    switch (props.$type) {
+      case 'warning':
+        return '#f59e0b';
+      case 'success':
+        return '#10b981';
+      default:
+        return AppColors.primary;
+    }
+  }};
+`;
+
 const Button = styled.button<{ $variant?: 'primary' | 'secondary' | 'danger' }>`
   padding: 10px 20px;
   border-radius: 8px;
@@ -264,6 +311,14 @@ const ReservationEditModal: React.FC<ReservationEditModalProps> = ({
   const [loading, setLoading] = useState(false);
   const [memoSaving, setMemoSaving] = useState(false);
   
+  // 회원권 정보 상태
+  const [membershipInfo, setMembershipInfo] = useState<{
+    enrollment: CourseEnrollment;
+    completedSessions: number;
+    remainingSessions: number;
+  } | null>(null);
+  const [membershipLoading, setMembershipLoading] = useState(false);
+  
   // 수정 가능한 필드들
   const [editedType, setEditedType] = useState<'class' | 'consultation' | 'other'>(
     event.type as 'class' | 'consultation' | 'other'
@@ -332,14 +387,7 @@ const ReservationEditModal: React.FC<ReservationEditModalProps> = ({
     
     const slotEnd = slotStart + 30;
     
-    // 기본 휴게시간 확인
-    if (daySettings.lunchTime && daySettings.lunchTime.start > 0 && daySettings.lunchTime.end > 0) {
-      if (slotStart >= daySettings.lunchTime.start && slotEnd <= daySettings.lunchTime.end) {
-        return true;
-      }
-    }
-    
-    // 추가 휴게시간들 확인
+    // 모든 휴게시간 확인
     if (daySettings.breakTimes && daySettings.breakTimes.length > 0) {
       for (const breakTime of daySettings.breakTimes) {
         if (breakTime.start > 0 && breakTime.end > 0) {
@@ -373,6 +421,62 @@ const ReservationEditModal: React.FC<ReservationEditModalProps> = ({
     };
   };
 
+  // 회원권 정보 로딩 함수
+  const loadMembershipInfo = useCallback(async () => {
+    if (!event.memberId) {
+      setMembershipInfo(null);
+      return;
+    }
+
+    setMembershipLoading(true);
+    try {
+      let enrollment: CourseEnrollment | null = null;
+
+      // 1. enrollmentId가 있는 경우 직접 조회
+      if (event.enrollmentId) {
+        enrollment = await dbManager.getCourseEnrollmentById(event.enrollmentId);
+      } 
+      // 2. enrollmentId가 없는 경우 회원의 활성 횟수제 수강권 중에서 찾기
+      else if (event.programId) {
+        const memberEnrollments = await dbManager.getCourseEnrollmentsByMember(event.memberId);
+        // 활성 상태이고, 같은 프로그램의 횟수제 수강권 찾기
+        const activeEnrollments = memberEnrollments.filter(e => 
+          e.enrollmentStatus === 'active' && 
+          e.programType === '횟수제' &&
+          e.programId === event.programId
+        );
+        
+        if (activeEnrollments.length > 0) {
+          // 가장 최근에 등록된 수강권 선택
+          enrollment = activeEnrollments.sort((a, b) => 
+            new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime()
+          )[0];
+        }
+      }
+
+      if (!enrollment || enrollment.programType !== '횟수제') {
+        setMembershipInfo(null);
+        return;
+      }
+
+      // 완료된 세션 수와 남은 세션 수 계산
+      const enrollmentId = enrollment.id;
+      const completedSessions = await getCompletedSessions(enrollmentId);
+      const remainingSessions = await getRemainingSessionsCount(enrollment);
+
+      setMembershipInfo({
+        enrollment,
+        completedSessions,
+        remainingSessions
+      });
+    } catch (error) {
+      console.error('회원권 정보 로딩 실패:', error);
+      setMembershipInfo(null);
+    } finally {
+      setMembershipLoading(false);
+    }
+  }, [event.enrollmentId, event.memberId, event.programId]);
+
   useEffect(() => {
     setMemo(event.reservationMemo || '');
     setEditedType(event.type as 'class' | 'consultation' | 'other');
@@ -386,7 +490,10 @@ const ReservationEditModal: React.FC<ReservationEditModalProps> = ({
     
     setSelectedDate(`${year}-${month}-${day}`);
     setSelectedTimeMinutes(hours * 60 + minutes); // 분 단위로 저장
-  }, [event]);
+    
+    // 회원권 정보 로딩
+    loadMembershipInfo();
+  }, [event, loadMembershipInfo]);
 
   const formatDateTime = (date: Date) => {
     const year = date.getFullYear();
@@ -653,6 +760,70 @@ const ReservationEditModal: React.FC<ReservationEditModalProps> = ({
             </InfoValue>
           </InfoRow>
         </Section>
+
+        {/* 회원권 정보 섹션 - 회원 ID가 있는 경우 시도 */}
+        {event.memberId && (
+          <Section>
+            <SectionTitle>사용한 회원권 정보</SectionTitle>
+            {membershipLoading ? (
+              <InfoValue style={{ textAlign: 'center', padding: '20px' }}>로딩 중...</InfoValue>
+            ) : membershipInfo ? (
+              <MembershipInfoCard>
+                <MembershipTitle>{membershipInfo.enrollment.productName}</MembershipTitle>
+                <MembershipDetail>
+                  <MembershipLabel>상품 유형:</MembershipLabel>
+                  <MembershipValue>{membershipInfo.enrollment.programType}</MembershipValue>
+                </MembershipDetail>
+                <MembershipDetail>
+                  <MembershipLabel>총 수업 횟수:</MembershipLabel>
+                  <MembershipValue>{membershipInfo.enrollment.sessionCount}회</MembershipValue>
+                </MembershipDetail>
+                <MembershipDetail>
+                  <MembershipLabel>완료된 수업:</MembershipLabel>
+                  <MembershipValue $type="success">{membershipInfo.completedSessions}회</MembershipValue>
+                </MembershipDetail>
+                <MembershipDetail>
+                  <MembershipLabel>남은 수업 횟수:</MembershipLabel>
+                  <MembershipValue 
+                    $type={membershipInfo.remainingSessions <= 3 ? 'warning' : 'primary'}
+                  >
+                    {membershipInfo.remainingSessions}회
+                  </MembershipValue>
+                </MembershipDetail>
+                <MembershipDetail>
+                  <MembershipLabel>수강권 상태:</MembershipLabel>
+                  <MembershipValue 
+                    $type={membershipInfo.enrollment.enrollmentStatus === 'active' ? 'success' : 'warning'}
+                  >
+                    {membershipInfo.enrollment.enrollmentStatus === 'active' ? '활성' : 
+                     membershipInfo.enrollment.enrollmentStatus === 'completed' ? '완료' :
+                     membershipInfo.enrollment.enrollmentStatus === 'cancelled' ? '취소' : '기타'}
+                  </MembershipValue>
+                </MembershipDetail>
+                {membershipInfo.enrollment.endDate && (
+                  <MembershipDetail>
+                    <MembershipLabel>유효 기간:</MembershipLabel>
+                    <MembershipValue>
+                      {new Date(membershipInfo.enrollment.endDate).toLocaleDateString()}
+                    </MembershipValue>
+                  </MembershipDetail>
+                )}
+                {membershipInfo.enrollment.unpaidAmount > 0 && (
+                  <MembershipDetail>
+                    <MembershipLabel>잔여 미수금:</MembershipLabel>
+                    <MembershipValue $type="warning">
+                      {membershipInfo.enrollment.unpaidAmount.toLocaleString()}원
+                    </MembershipValue>
+                  </MembershipDetail>
+                )}
+              </MembershipInfoCard>
+            ) : (
+              <InfoValue style={{ color: AppColors.onInput1, textAlign: 'center', padding: '20px' }}>
+                회원권 정보를 불러올 수 없습니다.
+              </InfoValue>
+            )}
+          </Section>
+        )}
 
         <Section>
           <SectionTitle>메모</SectionTitle>

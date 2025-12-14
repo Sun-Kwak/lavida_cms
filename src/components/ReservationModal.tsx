@@ -794,6 +794,8 @@ const ReservationModal: React.FC<ReservationModalProps> = ({
         sourceType: savedDBEvent.sourceType,
         sourceId: savedDBEvent.sourceId,
         reservationMemo: savedDBEvent.reservationMemo,
+        enrollmentId: savedDBEvent.enrollmentId, // 📝 누락된 필드 추가
+        status: savedDBEvent.status, // 📝 누락된 필드 추가
         createdAt: savedDBEvent.createdAt,
         updatedAt: savedDBEvent.updatedAt
       };

@@ -140,7 +140,43 @@ const MemberRegister: React.FC = () => {
         
         return isValidStep2;
       case 3:
-        return true; // 결제정보는 선택사항
+        // 결제정보 검증: 상품이 있으면 필수 필드들이 채워져야 함
+        const hasProducts = formData.paymentInfo.selectedProducts.length > 0;
+        
+        if (!hasProducts) {
+          return true; // 상품이 없으면 건너뛰기 가능
+        }
+        
+        // 상품이 있을 때의 검증
+        const isProductsValid = formData.paymentInfo.selectedProducts.every(product => {
+          // 횟수제 상품의 경우 횟수가 있어야 함
+          if (product.programType === '횟수제') {
+            return product.sessions !== undefined && product.sessions !== null && product.sessions > 0;
+          }
+          // 기간제 상품의 경우 시작일과 종료일이 있어야 함
+          if (product.programType === '기간제') {
+            return product.startDate && product.endDate;
+          }
+          return true;
+        });
+        
+        // 적용금액이 모두 설정되어 있어야 함
+        const hasValidPrices = formData.paymentInfo.selectedProducts.every(product => 
+          product.appliedPrice !== undefined && product.appliedPrice !== null && product.appliedPrice >= 0
+        );
+        
+        // 받은금액이 설정되어 있어야 함
+        const hasReceivedAmount = formData.paymentInfo.receivedAmount !== undefined && 
+          formData.paymentInfo.receivedAmount !== null && formData.paymentInfo.receivedAmount >= 0;
+        
+        console.log('=== 3단계 검증 ===');
+        console.log('상품 수:', formData.paymentInfo.selectedProducts.length);
+        console.log('상품 유효성:', isProductsValid);
+        console.log('가격 유효성:', hasValidPrices);
+        console.log('받은금액 유효성:', hasReceivedAmount);
+        console.log('최종 검증 결과:', isProductsValid && hasValidPrices && hasReceivedAmount);
+        
+        return isProductsValid && hasValidPrices && hasReceivedAmount;
       case 4:
         const requiredAgreements = formData.agreementInfo.agreements.filter(a => a.required);
         const allRequiredAgreed = requiredAgreements.every(a => a.agreed);
@@ -161,8 +197,61 @@ const MemberRegister: React.FC = () => {
   };
 
   const handleNext = () => {
-    if (validateCurrentStep() && currentStep < 4) {
+    // validation 체크
+    if (!validateCurrentStep()) {
+      // 단계별 validation 실패 메시지
+      switch (currentStep) {
+        case 3:
+          const hasProducts = formData.paymentInfo.selectedProducts.length > 0;
+          if (hasProducts) {
+            // 상품별 검증
+            const invalidProducts = formData.paymentInfo.selectedProducts.filter(product => {
+              if (product.programType === '횟수제') {
+                return !product.sessions || product.sessions <= 0;
+              }
+              if (product.programType === '기간제') {
+                return !product.startDate || !product.endDate;
+              }
+              return false;
+            });
+            
+            if (invalidProducts.length > 0) {
+              toast.error('모든 상품의 필수 정보(횟수, 기간)를 입력해주세요.');
+              return;
+            }
+            
+            // 적용금액 검증
+            const invalidPrices = formData.paymentInfo.selectedProducts.filter(product => 
+              product.appliedPrice === undefined || product.appliedPrice === null
+            );
+            
+            if (invalidPrices.length > 0) {
+              toast.error('모든 상품의 적용금액을 입력해주세요.');
+              return;
+            }
+            
+            // 받은금액 검증
+            if (formData.paymentInfo.receivedAmount === undefined || formData.paymentInfo.receivedAmount === null) {
+              toast.error('받은금액을 입력해주세요.');
+              return;
+            }
+          }
+          break;
+        default:
+          toast.error('필수 정보를 모두 입력해주세요.');
+          break;
+      }
+      return;
+    }
+    
+    if (currentStep < 4) {
       setCurrentStep(currentStep + 1);
+    }
+  };
+
+  const handlePrev = () => {
+    if (currentStep > 1) {
+      setCurrentStep(currentStep - 1);
     }
   };
 
@@ -215,12 +304,6 @@ const MemberRegister: React.FC = () => {
       toast.error('중복 체크 중 오류가 발생했습니다. 다시 시도해주세요.');
     } finally {
       setIsValidating(false);
-    }
-  };
-
-  const handlePrev = () => {
-    if (currentStep > 1) {
-      setCurrentStep(currentStep - 1);
     }
   };
 

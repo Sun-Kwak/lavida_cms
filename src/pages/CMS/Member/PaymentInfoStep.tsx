@@ -181,11 +181,17 @@ const PaymentInfoStep: React.FC<StepProps> = ({ formData, onUpdate }) => {
     } else if (field === 'sessions') {
       product.sessions = value;
       if (product.programType === '횟수제') {
-        // 횟수제: 상품의 기본 횟수와 가격을 기준으로 비례 계산
-        const basePrice = product.basePrice || product.originalPrice || 0;
-        const baseSessions = product.baseSessions || 1; // 상품의 기본 횟수
-        product.price = calculateSessionPrice(basePrice, value, baseSessions);
-        product.appliedPrice = product.price; // 적용금액도 함께 업데이트
+        if (value !== undefined && value !== null && value > 0) {
+          // 횟수제: 상품의 기본 횟수와 가격을 기준으로 비례 계산
+          const basePrice = product.basePrice || product.originalPrice || 0;
+          const baseSessions = product.baseSessions || 1; // 상품의 기본 횟수
+          product.price = calculateSessionPrice(basePrice, value, baseSessions);
+          product.appliedPrice = product.price; // 적용금액도 함께 업데이트
+        } else {
+          // 횟수가 비어있거나 0 이하인 경우 가격을 0으로 설정
+          product.price = 0;
+          product.appliedPrice = 0;
+        }
       }
     } else if (field === 'startDate') {
       product.startDate = value;
@@ -406,10 +412,11 @@ const PaymentInfoStep: React.FC<StepProps> = ({ formData, onUpdate }) => {
                         </label>
                         <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
                           <NumberTextField
-                            value={product.sessions || (product.baseSessions || 10)}
-                            onChange={(value) => handleProductEdit(index, 'sessions', value || 1)}
+                            value={product.sessions}
+                            onChange={(value) => handleProductEdit(index, 'sessions', value)}
                             width="100px"
                             placeholder="횟수"
+                            allowEmpty={true}
                           />
                           <span style={{ fontSize: '13px', color: '#666', fontWeight: '500' }}>회</span>
                         </div>
@@ -478,11 +485,12 @@ const PaymentInfoStep: React.FC<StepProps> = ({ formData, onUpdate }) => {
                       적용금액:
                     </label>
                     <NumberTextField
-                      value={product.appliedPrice || product.price}
-                      onChange={(value) => handleProductEdit(index, 'appliedPrice', value || 0)}
+                      value={product.appliedPrice}
+                      onChange={(value) => handleProductEdit(index, 'appliedPrice', value)}
                       step={1000}
                       width="120px"
                       placeholder="금액"
+                      allowEmpty={true}
                       style={{
                         fontWeight: 'bold',
                         color: '#0066cc'
@@ -556,7 +564,7 @@ const PaymentInfoStep: React.FC<StepProps> = ({ formData, onUpdate }) => {
               </div>
               <div style={{ display: 'flex', gap: '8px', alignItems: 'center' }}>
                 <NumberTextField
-                  value={formData.paymentInfo.receivedAmount !== undefined ? formData.paymentInfo.receivedAmount : totalAmount}
+                  value={formData.paymentInfo.receivedAmount}
                   onChange={(value) => {
                     onUpdate({
                       paymentInfo: {

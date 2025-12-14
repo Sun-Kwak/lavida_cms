@@ -7,6 +7,7 @@ import { dbManager, type CourseEnrollment } from '../../../utils/indexedDB';
 import { getCompletedSessions } from '../../../utils/db/ReservationHelper';
 import { SearchArea, type PeriodOption } from '../../../components/SearchArea';
 import UnpaidFilter from '../../../components/SearchArea/UnpaidFilterButton';
+import ExpiredFilter from '../../../components/SearchArea/ExpiredFilterButton';
 import Modal from '../../../components/Modal';
 import CustomDropdown from '../../../components/CustomDropdown';
 import DataTable, { type TableColumn } from '../../../components/DataTable';
@@ -158,7 +159,83 @@ const MemberNameContainer = styled.div`
   gap: 2px;
 `;
 
-const CourseHistory: React.FC = () => {
+const ExpiredModalContent = styled.div`
+  text-align: left;
+`;
+
+const ExpiredListContainer = styled.div`
+  max-height: 400px;
+  overflow-y: auto;
+  border: 1px solid ${AppColors.borderLight};
+  border-radius: 8px;
+  margin: 16px 0;
+`;
+
+const ExpiredItem = styled.div<{ $selected: boolean }>`
+  display: flex;
+  align-items: center;
+  padding: 12px;
+  border-bottom: 1px solid ${AppColors.borderLight};
+  background: ${props => props.$selected ? '#f0f9ff' : 'transparent'};
+  cursor: pointer;
+  transition: all 0.2s;
+  
+  &:hover {
+    background: ${props => props.$selected ? '#e0f2fe' : '#f8fafc'};
+  }
+  
+  &:last-child {
+    border-bottom: none;
+  }
+`;
+
+const CheckboxInput = styled.input`
+  margin-right: 12px;
+  cursor: pointer;
+`;
+
+const ExpiredItemInfo = styled.div`
+  flex: 1;
+`;
+
+const ExpiredItemName = styled.div`
+  font-weight: 600;
+  color: ${AppColors.onBackground};
+  margin-bottom: 4px;
+`;
+
+const ExpiredItemDetail = styled.div`
+  font-size: 12px;
+  color: ${AppColors.onInput1};
+`;
+
+const SelectAllContainer = styled.div`
+  display: flex;
+  align-items: center;
+  padding: 12px;
+  background: #f8fafc;
+  border-bottom: 1px solid ${AppColors.borderLight};
+  font-weight: 600;
+`;
+
+const ExpiredCount = styled.span`
+  color: #d97706;
+  font-weight: 600;
+`;
+
+interface CourseHistoryProps {
+  preselectedMemberId?: string;
+  showUnpaidOnly?: boolean;
+  onUnpaidComplete?: () => void;
+  isModal?: boolean;
+}
+
+const CourseHistory: React.FC<CourseHistoryProps> = ({ 
+  preselectedMemberId, 
+  showUnpaidOnly = false, 
+  onUnpaidComplete,
+  isModal = false 
+}) => {
   const [searchQuery, setSearchQuery] = useState<string>('');
   const [courseEnrollments, setCourseEnrollments] = useState<CourseEnrollment[]>([]);
   const [filteredEnrollments, setFilteredEnrollments] = useState<CourseEnrollment[]>([]);
@@ -170,11 +247,19 @@ const CourseHistory: React.FC = () => {
   const [customEndDate, setCustomEndDate] = useState<string>('');
   
   // 미수 필터 관련 상태
-  const [showUnpaidOnly, setShowUnpaidOnly] = useState<boolean>(false);
+  const [showUnpaidOnlyState, setShowUnpaidOnlyState] = useState<boolean>(showUnpaidOnly);
   const [unpaidMetaInfo, setUnpaidMetaInfo] = useState<{ unpaidCourseCount: number; totalUnpaidAmount: number }>({
     unpaidCourseCount: 0,
     totalUnpaidAmount: 0
   });
+  
+  // 만료 관련 상태
+  const [expiredMetaInfo, setExpiredMetaInfo] = useState<{ expiredCourseCount: number }>({
+    expiredCourseCount: 0
+  });
+  const [showExpiredModal, setShowExpiredModal] = useState<boolean>(false);
+  const [expiredEnrollments, setExpiredEnrollments] = useState<CourseEnrollment[]>([]);
+  const [selectedExpiredEnrollments, setSelectedExpiredEnrollments] = useState<string[]>([]);
   
   // 완료 처리 모달 관련 상태
   const [showCompleteModal, setShowCompleteModal] = useState<boolean>(false);
@@ -234,6 +319,67 @@ const CourseHistory: React.FC = () => {
     }, 100);
   };
 
+  // 만료된 수강권 선택/해제
+  const handleExpiredSelection = (enrollmentId: string) => {
+    setSelectedExpiredEnrollments(prev => {
+      if (prev.includes(enrollmentId)) {
+        return prev.filter(id => id !== enrollmentId);
+      } else {
+        return [...prev, enrollmentId];
+      }
+    });
+  };
+
+  // 전체 선택/해제
+  const handleSelectAllExpired = () => {
+    if (selectedExpiredEnrollments.length === expiredEnrollments.length) {
+      setSelectedExpiredEnrollments([]);
+    } else {
+      setSelectedExpiredEnrollments(expiredEnrollments.map(e => e.id!));
+    }
+  };
+
+  // 만료 처리 실행
+  const handleProcessExpired = async () => {
+    if (selectedExpiredEnrollments.length === 0) {
+      toast.error('처리할 수강권을 선택해주세요.');
+      return;
+    }
+
+    try {
+      setIsProcessing(true);
+      
+      // 선택된 수강권들을 completed로 업데이트
+      for (const enrollmentId of selectedExpiredEnrollments) {
+        await dbManager.updateCourseEnrollment(enrollmentId, {
+          enrollmentStatus: 'completed'
+        });
+      }
+      
+      toast.success(`${selectedExpiredEnrollments.length}건의 만료 수강권이 완료 처리되었습니다.`);
+      
+      // 상태 초기화 및 데이터 새로고침
+      setShowExpiredModal(false);
+      setSelectedExpiredEnrollments([]);
+      setExpiredEnrollments([]);
+      
+      // 데이터 새로고침
+      await loadCourseEnrollments();
+      
+    } catch (error) {
+      console.error('만료 처리 실패:', error);
+      toast.error('만료 처리 중 오류가 발생했습니다.');
+    } finally {
+      setIsProcessing(false);
+    }
+  };
+
+  // 만료 처리 모달 닫기
+  const handleCloseExpiredModal = () => {
+    setShowExpiredModal(false);
+    setSelectedExpiredEnrollments([]);
+  };
+
   // 미수 메타정보 로드
   const loadUnpaidMetaInfo = useCallback(async () => {
     try {
@@ -248,28 +394,87 @@ const CourseHistory: React.FC = () => {
     }
   }, []);
 
+  // 만료 메타정보 로드 및 만료 감지
+  const loadExpiredMetaInfo = useCallback(async () => {
+    try {
+      const allEnrollments = await dbManager.getAllCourseEnrollments();
+      const today = new Date();
+      today.setHours(0, 0, 0, 0);
+      
+      const expiredEnrollments = allEnrollments.filter(enrollment => {
+        // active 또는 unpaid 상태인 경우만 만료 체크 (completed는 이미 처리된 것이므로 제외)
+        if (!['active', 'unpaid'].includes(enrollment.enrollmentStatus)) {
+          return false;
+        }
+        
+        // 기간제와 횟수제 모두 유효기간 체크
+        if (enrollment.endDate && new Date(enrollment.endDate) < today) {
+          return true;
+        }
+        
+        return false;
+      });
+      
+      setExpiredMetaInfo({ expiredCourseCount: expiredEnrollments.length });
+      
+      // 만료된 수강권이 있고 모달이 아닌 경우에만 팝업 표시
+      if (expiredEnrollments.length > 0 && !isModal && !showExpiredModal) {
+        setExpiredEnrollments(expiredEnrollments);
+        setShowExpiredModal(true);
+      }
+    } catch (error) {
+      console.error('만료 메타정보 로드 실패:', error);
+    }
+  }, [isModal, showExpiredModal]);
+
   // 진행상황 계산 함수
   const getProgressInfo = useCallback(async (enrollment: CourseEnrollment): Promise<string> => {
+    let progressText = '';
+    let isExpired = false;
+    
     if (enrollment.programType === '횟수제' && enrollment.sessionCount) {
       // 이벤트 소싱: 실시간 완료 횟수 계산
       const completedSessions = await getCompletedSessions(enrollment.id);
       const remaining = enrollment.sessionCount - completedSessions;
-      return `${remaining}/${enrollment.sessionCount}회 남음`;
+      progressText = `${remaining}/${enrollment.sessionCount}회 남음`;
+      
+      // 횟수제도 유효기간 체크
+      if (enrollment.endDate) {
+        const today = new Date();
+        const endDate = new Date(enrollment.endDate);
+        today.setHours(0, 0, 0, 0);
+        endDate.setHours(0, 0, 0, 0);
+        if (endDate < today) {
+          isExpired = true;
+        }
+      }
     } else if (enrollment.programType === '기간제' && enrollment.endDate) {
       const today = new Date();
       const endDate = new Date(enrollment.endDate);
+      today.setHours(0, 0, 0, 0);
+      endDate.setHours(0, 0, 0, 0);
       const timeDiff = endDate.getTime() - today.getTime();
       const daysDiff = Math.ceil(timeDiff / (1000 * 3600 * 24));
       
       if (daysDiff > 0) {
-        return `${daysDiff}일 남음`;
+        progressText = `${daysDiff}일 남음`;
       } else if (daysDiff === 0) {
-        return '오늘 종료';
+        progressText = '오늘 종료';
+        isExpired = true;
       } else {
-        return `${Math.abs(daysDiff)}일 경과`;
+        progressText = `${Math.abs(daysDiff)}일 경과`;
+        isExpired = true;
       }
+    } else {
+      progressText = '진행률 미설정';
     }
-    return '진행률 미설정';
+    
+    // 기간만료 시 추가 표시
+    if (isExpired) {
+      progressText += ' [기간만료]';
+    }
+    
+    return progressText;
   }, []);
 
   // 기간별 검색 범위 계산
@@ -324,8 +529,24 @@ const CourseHistory: React.FC = () => {
       // 미수 메타정보 로드
       await loadUnpaidMetaInfo();
       
+      // 만료 메타정보 로드
+      await loadExpiredMetaInfo();
+      
       const allEnrollments = await dbManager.getAllCourseEnrollments();
       console.log('전체 수강 이력 수:', allEnrollments.length);
+      
+      // 기본 데이터 로드 (자동 만료 처리 제거)
+      const updatedEnrollments = allEnrollments;
+      
+      console.log('=== 데이터 로드 디버깅 ===');
+      console.log('전체 수강 이력:', updatedEnrollments.length);
+      console.log('수강 이력 상세:', updatedEnrollments.map(e => ({
+        memberName: e.memberName,
+        productName: e.productName,
+        enrollmentStatus: e.enrollmentStatus,
+        programType: e.programType,
+        endDate: e.endDate
+      })));
       
       // 기간별 필터링 (등록일 기준) - 매개변수가 있으면 사용, 없으면 현재 상태 사용
       const currentPeriod = period ?? selectedPeriod;
@@ -366,12 +587,20 @@ const CourseHistory: React.FC = () => {
           dateRange = { start: rangeStartDate, end: today };
       }
       
-      const filteredByDate = allEnrollments.filter(enrollment => {
+      let filteredByDate = updatedEnrollments.filter(enrollment => {
         const enrollmentDate = new Date(enrollment.createdAt);
         return enrollmentDate >= dateRange.start && enrollmentDate <= dateRange.end;
       });
       
-      console.log(`${currentPeriod} 기간 내 수강 이력:`, filteredByDate.length);
+      // 특정 회원 ID가 지정된 경우 해당 회원의 수강 이력만 필터링
+      if (preselectedMemberId) {
+        filteredByDate = filteredByDate.filter(enrollment => 
+          enrollment.memberId === preselectedMemberId
+        );
+        console.log(`회원 ID ${preselectedMemberId}의 수강 이력:`, filteredByDate.length);
+      } else {
+        console.log(`${currentPeriod} 기간 내 수강 이력:`, filteredByDate.length);
+      }
       
       // 최근 등록순으로 정렬 (createdAt 내림차순)
       const sortedEnrollments = filteredByDate.sort((a, b) => 
@@ -411,7 +640,7 @@ const CourseHistory: React.FC = () => {
     } finally {
       setLoading(false);
     }
-  }, [loadUnpaidMetaInfo, selectedPeriod, customStartDate, customEndDate, getProgressInfo]);
+  }, [loadUnpaidMetaInfo, loadExpiredMetaInfo, selectedPeriod, customStartDate, customEndDate, getProgressInfo, preselectedMemberId]);
 
   // 컴포넌트 마운트 시 초기 데이터 로드 (1개월 기준)
   useEffect(() => {
@@ -426,7 +655,7 @@ const CourseHistory: React.FC = () => {
     let filtered = courseEnrollments;
     
     // 미수 필터 적용
-    if (showUnpaidOnly) {
+    if (showUnpaidOnlyState) {
       filtered = filtered.filter(enrollment => enrollment.enrollmentStatus === 'unpaid');
     }
     
@@ -443,7 +672,7 @@ const CourseHistory: React.FC = () => {
     }
     
     setFilteredEnrollments(filtered);
-  }, [courseEnrollments, showUnpaidOnly, searchQuery]);
+  }, [courseEnrollments, showUnpaidOnlyState, searchQuery]);
 
   // 데이터나 필터 조건이 변경될 때마다 필터 적용
   useEffect(() => {
@@ -469,10 +698,28 @@ const CourseHistory: React.FC = () => {
     try {
       setIsProcessing(true);
 
-      // 1. 수강 이력의 상태를 'completed'로 변경하고 미수금액을 0으로 설정
+      // 1. 미수 완료 후 상태 결정 로직
+      let newEnrollmentStatus: 'active' | 'completed' = 'active'; // 기본적으로 활성 상태
+      
+      // 수강 완료 조건 체크
+      if (selectedEnrollment.programType === '횟수제' && selectedEnrollment.sessionCount) {
+        // 횟수제: 완료 횟수가 총 횟수와 같거나 많으면 완료
+        const completedSessions = selectedEnrollment.completedSessions || 0;
+        if (completedSessions >= selectedEnrollment.sessionCount) {
+          newEnrollmentStatus = 'completed';
+        }
+      } else if (selectedEnrollment.programType === '기간제' && selectedEnrollment.endDate) {
+        // 기간제: 종료일이 지났으면 완료
+        const today = new Date();
+        const endDate = new Date(selectedEnrollment.endDate);
+        if (endDate <= today) {
+          newEnrollmentStatus = 'completed';
+        }
+      }
+
       const updatedEnrollment: CourseEnrollment = {
         ...selectedEnrollment,
-        enrollmentStatus: 'completed',
+        enrollmentStatus: newEnrollmentStatus, // 조건에 따라 active 또는 completed
         paidAmount: selectedEnrollment.productPrice, // 상품 전체 금액으로 설정
         unpaidAmount: 0
       };
@@ -532,6 +779,11 @@ const CourseHistory: React.FC = () => {
       // 5. 모달 닫기
       setShowCompleteModal(false);
       setSelectedEnrollment(null);
+      
+      // 6. 부모 컴포넌트에 완료 알림
+      if (onUnpaidComplete) {
+        onUnpaidComplete();
+      }
       
     } catch (error) {
       console.error('완료 처리 실패:', error);
@@ -770,7 +1022,10 @@ const CourseHistory: React.FC = () => {
         <StatusBadge 
           $status={record.enrollmentStatus}
           $clickable={record.enrollmentStatus === 'unpaid'}
-          onClick={record.enrollmentStatus === 'unpaid' ? () => handleUnpaidClick(record) : undefined}
+          onClick={record.enrollmentStatus === 'unpaid' ? (e) => {
+            e.stopPropagation(); // row 클릭 이벤트 차단
+            handleUnpaidClick(record);
+          } : undefined}
           title={record.enrollmentStatus === 'unpaid' ? '클릭하여 완료 처리' : ''}
         >
           {(() => {
@@ -792,7 +1047,7 @@ const CourseHistory: React.FC = () => {
   // 결과 카운트 정보 컴포넌트
   const resultCountInfo = (
     <>
-      {showUnpaidOnly ? '미수 수강: ' : ''}{filteredEnrollments.length}건 
+      {showUnpaidOnlyState ? '미수 수강: ' : ''}{filteredEnrollments.length}건 
       (완료: {filteredEnrollments.filter(e => e.enrollmentStatus === 'completed').length}건, 
       미수: {filteredEnrollments.filter(e => e.enrollmentStatus === 'unpaid').length}건)
       <br />
@@ -817,18 +1072,23 @@ const CourseHistory: React.FC = () => {
 
   return (
     <PageContainer>
-      {/* 새로운 SearchArea 컴포넌트 사용 */}
-      <SearchArea
+      {/* SearchArea는 모달이 아닐 때만 표시 */}
+      {!isModal && (
+        <SearchArea
         leftContent={
           <div style={{ display: 'flex', gap: '12px', alignItems: 'center', flexWrap: 'wrap' }}>
             <Button onClick={handleOpenRegistrationModal}>
               + 새 수강 등록
             </Button>
             <UnpaidFilter
-              active={showUnpaidOnly}
+              active={showUnpaidOnlyState}
               unpaidCount={unpaidMetaInfo.unpaidCourseCount}
               totalAmount={unpaidMetaInfo.totalUnpaidAmount}
-              onClick={() => setShowUnpaidOnly(!showUnpaidOnly)}
+              onClick={() => setShowUnpaidOnlyState(!showUnpaidOnlyState)}
+            />
+            <ExpiredFilter
+              expiredCount={expiredMetaInfo.expiredCourseCount}
+              onClick={() => setShowExpiredModal(true)}
             />
           </div>
         }
@@ -845,6 +1105,7 @@ const CourseHistory: React.FC = () => {
         searchPlaceholder="회원명, 상품명, 프로그램명, 지점명, 코치명으로 검색..."
         autoSearchOnDateChange={false}
       />
+      )}
 
       <DataTable
         title="수강 이력"
@@ -939,7 +1200,8 @@ const CourseHistory: React.FC = () => {
                 color: '#1e40af',
                 marginTop: '16px'
               }}>
-                💡 완료 처리 시 해당 금액이 결제 내역에 자동으로 등록되며, 수강 상태가 '완료'로 변경됩니다.
+                💡 완료 처리 시 해당 금액이 결제 내역에 자동으로 등록됩니다.<br/>
+                수강 상태는 남은 기간/횟수에 따라 '수강중' 또는 '완료'로 자동 변경됩니다.
               </div>
             </ModalContent>
           }
@@ -956,13 +1218,100 @@ const CourseHistory: React.FC = () => {
         />
       )}
 
-      {/* 새 수강 등록 모달 */}
+      {/* 수강권 관리 모달 */}
       <CourseManagementModal
         isOpen={showTransferModal}
         onClose={handleCloseTransferModal}
         onSuccess={handleTransferSuccess}
         courseEnrollment={selectedForTransfer}
       />
+
+      {/* 만료 처리 모달 */}
+      {showExpiredModal && (
+        <Modal 
+          isOpen={showExpiredModal}
+          onClose={handleCloseExpiredModal}
+          width="min(95vw, 600px)"
+          header={`만료된 수강권 처리 (${expiredEnrollments.length}건)`}
+          body={
+            <ExpiredModalContent>
+              <WarningText>
+                ⚠️ 기간이 만료된 수강권들이 있습니다. 완료 처리하시겠습니까?
+              </WarningText>
+
+              <ExpiredListContainer>
+                <SelectAllContainer>
+                  <CheckboxInput
+                    type="checkbox"
+                    checked={selectedExpiredEnrollments.length === expiredEnrollments.length && expiredEnrollments.length > 0}
+                    onChange={handleSelectAllExpired}
+                  />
+                  전체 선택 ({selectedExpiredEnrollments.length}/{expiredEnrollments.length})
+                </SelectAllContainer>
+                
+                {expiredEnrollments.map((enrollment) => (
+                  <ExpiredItem
+                    key={enrollment.id}
+                    $selected={selectedExpiredEnrollments.includes(enrollment.id!)}
+                    onClick={() => handleExpiredSelection(enrollment.id!)}
+                  >
+                    <CheckboxInput
+                      type="checkbox"
+                      checked={selectedExpiredEnrollments.includes(enrollment.id!)}
+                      onChange={() => handleExpiredSelection(enrollment.id!)}
+                    />
+                    <ExpiredItemInfo>
+                      <ExpiredItemName>
+                        {enrollment.memberName} - {enrollment.productName}
+                      </ExpiredItemName>
+                      <ExpiredItemDetail>
+                        프로그램: {enrollment.programName} ({enrollment.programType}) | 
+                        지점: {enrollment.branchName} | 
+                        담당코치: {enrollment.coachName}
+                      </ExpiredItemDetail>
+                      <ExpiredItemDetail style={{ marginTop: '2px', color: '#d97706' }}>
+                        종료일: {formatDate(enrollment.endDate)} 
+                        {enrollment.endDate && ` (${Math.abs(Math.ceil((new Date().getTime() - new Date(enrollment.endDate).getTime()) / (1000 * 3600 * 24)))}일 경과)`}
+                      </ExpiredItemDetail>
+                    </ExpiredItemInfo>
+                  </ExpiredItem>
+                ))}
+              </ExpiredListContainer>
+              
+              <div style={{ 
+                padding: '12px', 
+                backgroundColor: '#f0f9ff', 
+                border: '1px solid #93c5fd', 
+                borderRadius: '8px',
+                fontSize: '14px',
+                color: '#1e40af',
+                marginTop: '16px'
+              }}>
+                💡 선택된 수강권들이 '완료' 상태로 변경됩니다.<br/>
+                이 작업은 되돌릴 수 있으며, 필요시 수강권 관리에서 상태를 다시 변경할 수 있습니다.
+              </div>
+            </ExpiredModalContent>
+          }
+          footer={
+            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', width: '100%' }}>
+              <ExpiredCount>
+                선택됨: {selectedExpiredEnrollments.length}건
+              </ExpiredCount>
+              <div style={{ display: 'flex', gap: '12px' }}>
+                <Button variant="secondary" onClick={handleCloseExpiredModal} disabled={isProcessing}>
+                  나중에 처리
+                </Button>
+                <Button 
+                  onClick={handleProcessExpired} 
+                  disabled={isProcessing || selectedExpiredEnrollments.length === 0}
+                >
+                  {isProcessing ? '처리 중...' : `${selectedExpiredEnrollments.length}건 완료 처리`}
+                </Button>
+              </div>
+            </div>
+          }
+        />
+      )}
     </PageContainer>
   );
 };

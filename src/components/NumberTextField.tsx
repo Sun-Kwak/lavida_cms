@@ -3,7 +3,7 @@ import styled from 'styled-components';
 import { AppColors } from '../styles/colors';
 
 interface NumberTextFieldProps {
-  value: number | string;
+  value: number | string | undefined;
   onChange: (value: number | undefined) => void; // undefined도 허용
   placeholder?: string;
   disabled?: boolean;
@@ -100,6 +100,9 @@ const NumberTextField: React.FC<NumberTextFieldProps> = ({
     if (!isNaN(numericValue)) {
       // 실시간 min/max 범위 체크 제거 - 입력 과정에서는 자유롭게 입력 허용
       onChange(numericValue);
+    } else if (allowEmpty) {
+      // allowEmpty가 true이고 유효하지 않은 값인 경우에도 undefined 전달
+      onChange(undefined);
     }
   };
 
@@ -138,9 +141,15 @@ const NumberTextField: React.FC<NumberTextFieldProps> = ({
   const handleBlur = (e: React.FocusEvent<HTMLInputElement>) => {
     const inputValue = e.target.value;
     
-    // 빈 값이고 allowEmpty가 false인 경우 0으로 설정
+    // 빈 값이고 allowEmpty가 false인 경우에만 0으로 설정
     if (!allowEmpty && (inputValue === '' || inputValue === '-')) {
       onChange(0);
+      return;
+    }
+    
+    // allowEmpty가 true인 경우 빈 값을 그대로 유지
+    if (allowEmpty && (inputValue === '' || inputValue === '-')) {
+      onChange(undefined);
       return;
     }
   };
@@ -150,9 +159,8 @@ const NumberTextField: React.FC<NumberTextFieldProps> = ({
     if (value === undefined || value === null) {
       return '';
     }
-    if (value === 0 && allowEmpty) {
-      return '';
-    }
+    // allowEmpty가 true이고 값이 0이 아닌 경우에만 빈 문자열로 표시하지 않음
+    // 0도 유효한 값으로 표시
     return value.toString();
   })();
 

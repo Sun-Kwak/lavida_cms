@@ -3,7 +3,7 @@ import { toast } from 'react-toastify';
 import { StepContent, StepTitle, FormGrid, FormField, Label, CheckboxLabel, Checkbox } from './StyledComponents';
 import { JoinInfo, StepProps } from './types';
 import CustomDropdown from '../../../components/CustomDropdown';
-import { AppSearchDropdown, SearchResultItem } from '../../../customComponents/AppSearchDropdown';
+import { AppTableSearchModal, TableSearchItem } from '../../../customComponents/AppTableSearchModal';
 import { AppIdTextField } from '../../../customComponents/AppIdTextField';
 import { AppPwdTextField, PwdFieldType } from '../../../customComponents/AppPwdTextField';
 import { dbManager, type Branch, type Staff, type Member } from '../../../utils/indexedDB';
@@ -12,10 +12,8 @@ const JoinInfoStep: React.FC<StepProps> = ({ formData, onUpdate }) => {
   const [branches, setBranches] = useState<Branch[]>([]);
   const [staff, setStaff] = useState<Staff[]>([]);
   const [members, setMembers] = useState<Member[]>([]);
-  const [staffSearchTerm, setStaffSearchTerm] = useState('');
-  const [staffSearchResults, setStaffSearchResults] = useState<SearchResultItem[]>([]);
-  const [referrerSearchTerm, setReferrerSearchTerm] = useState('');
-  const [referrerSearchResults, setReferrerSearchResults] = useState<SearchResultItem[]>([]);
+  const [staffItems, setStaffItems] = useState<TableSearchItem[]>([]);
+  const [memberItems, setMemberItems] = useState<TableSearchItem[]>([]);
   const [newMemberPoints, setNewMemberPoints] = useState(0); // 신규 회원이 받을 포인트
   const [referrerPoints, setReferrerPoints] = useState(0); // 추천인이 받을 포인트
   const joinPaths = ['지인추천', '당근마켓', '네이버 플레이스', '전화', '워크인', '현수막', '인스타', '광고지', '기타'];
@@ -96,6 +94,16 @@ const JoinInfoStep: React.FC<StepProps> = ({ formData, onUpdate }) => {
       console.log('활성 직원 목록:', activeStaff);
       
       setStaff(activeStaff);
+      
+      // TableSearchItem 형태로 변환
+      const staffTableItems: TableSearchItem[] = activeStaff.map(employee => ({
+        id: employee.id,
+        title: employee.name,
+        subtitle: `${employee.position} | ${employee.role}`,
+        description: `연락처: ${employee.phone} | 권한: ${employee.permission}`,
+        data: employee
+      }));
+      setStaffItems(staffTableItems);
     } catch (error) {
       console.error('직원 데이터 로드 실패:', error);
     }
@@ -114,6 +122,16 @@ const JoinInfoStep: React.FC<StepProps> = ({ formData, onUpdate }) => {
       console.log('활성 회원 목록:', activeMembers);
       
       setMembers(activeMembers);
+      
+      // TableSearchItem 형태로 변환
+      const memberTableItems: TableSearchItem[] = activeMembers.map(member => ({
+        id: member.id,
+        title: member.name,
+        subtitle: `${member.phone} | ${member.branchName || '지점정보없음'}`,
+        description: `이메일: ${member.email || '없음'} | 등록일: ${new Date(member.registrationDate).toLocaleDateString()}`,
+        data: member
+      }));
+      setMemberItems(memberTableItems);
     } catch (error) {
       console.error('회원 데이터 로드 실패:', error);
     }
@@ -128,28 +146,18 @@ const JoinInfoStep: React.FC<StepProps> = ({ formData, onUpdate }) => {
     joinPaths.map(path => ({ value: path, label: path }));
 
   // 직원 검색 함수
-  const handleStaffSearch = (searchTerm: string) => {
-    if (!searchTerm.trim()) {
-      setStaffSearchResults([]);
-      return;
-    }
-
-    // 지점이 선택되지 않은 경우 검색 불가
-    if (!formData.joinInfo.branchId) {
-      setStaffSearchResults([]);
-      return;
+  const handleStaffSearch = (searchTerm: string): TableSearchItem[] => {
+    if (!searchTerm.trim() || !formData.joinInfo.branchId) {
+      return [];
     }
 
     console.log('직원 검색 실행:', searchTerm);
     console.log('선택된 지점 ID:', formData.joinInfo.branchId);
-    console.log('검색 대상 직원 수:', staff.length);
 
     // 선택된 지점에 속한 직원만 먼저 필터링
     const branchStaff = staff.filter(employee => 
       employee.branchId === formData.joinInfo.branchId
     );
-
-    console.log('선택된 지점의 직원 수:', branchStaff.length);
 
     // 그 다음 검색어로 필터링
     const filteredStaff = branchStaff.filter(employee => 
@@ -160,39 +168,30 @@ const JoinInfoStep: React.FC<StepProps> = ({ formData, onUpdate }) => {
       employee.phone.toLowerCase().includes(searchTerm.toLowerCase())
     );
 
-    console.log('검색 결과:', filteredStaff);
-
-    const searchResults: SearchResultItem[] = filteredStaff.map(employee => ({
+    return filteredStaff.map(employee => ({
       id: employee.id,
       title: employee.name,
       subtitle: `${employee.position} | ${employee.role}`,
       description: `연락처: ${employee.phone} | 권한: ${employee.permission}`,
       data: employee
     }));
-
-    setStaffSearchResults(searchResults);
   };
 
   // 직원 선택 함수
-  const handleStaffSelect = (item: SearchResultItem) => {
-    if (typeof item === 'object' && 'data' in item) {
-      const selectedEmployee = item.data as Staff;
-      handleInputChange('coach', selectedEmployee.id);
-    }
+  const handleStaffSelect = (item: TableSearchItem) => {
+    const selectedEmployee = item.data as Staff;
+    handleInputChange('coach', selectedEmployee.id);
   };
 
   // 직원 선택 해제 함수
   const handleStaffClear = () => {
-    setStaffSearchTerm('');
-    setStaffSearchResults([]);
     handleInputChange('coach', '');
   };
 
   // 지인추천인 검색 함수
-  const handleReferrerSearch = (searchTerm: string) => {
+  const handleReferrerSearch = (searchTerm: string): TableSearchItem[] => {
     if (!searchTerm.trim()) {
-      setReferrerSearchResults([]);
-      return;
+      return [];
     }
 
     console.log('지인추천인 검색 실행:', searchTerm);
@@ -207,45 +206,38 @@ const JoinInfoStep: React.FC<StepProps> = ({ formData, onUpdate }) => {
 
     console.log('지인추천인 검색 결과:', filteredMembers);
 
-    const searchResults: SearchResultItem[] = filteredMembers.map(member => ({
+    return filteredMembers.map(member => ({
       id: member.id,
       title: member.name,
       subtitle: `${member.phone} | ${member.branchName || '지점정보없음'}`,
       description: `이메일: ${member.email || '없음'} | 등록일: ${new Date(member.registrationDate).toLocaleDateString()}`,
       data: member
     }));
-
-    setReferrerSearchResults(searchResults);
   };
 
   // 지인추천인 선택 함수
-  const handleReferrerSelect = (item: SearchResultItem) => {
-    if (typeof item === 'object' && 'data' in item) {
-      const selectedMember = item.data as Member;
-      console.log('지인추천인 선택됨:', selectedMember);
-      console.log('선택된 회원 ID:', selectedMember.id);
-      console.log('선택된 회원 이름:', selectedMember.name);
-      
-      // 한 번에 두 필드를 모두 업데이트
-      const updatedJoinInfo = {
-        ...formData.joinInfo,
-        referrerId: selectedMember.id,
-        referrerName: selectedMember.name
-      };
-      
-      console.log('한번에 업데이트할 joinInfo:', updatedJoinInfo);
-      
-      onUpdate({
-        joinInfo: updatedJoinInfo
-      });
-    }
+  const handleReferrerSelect = (item: TableSearchItem) => {
+    const selectedMember = item.data as Member;
+    console.log('지인추천인 선택됨:', selectedMember);
+    console.log('선택된 회원 ID:', selectedMember.id);
+    console.log('선택된 회원 이름:', selectedMember.name);
+    
+    // 한 번에 두 필드를 모두 업데이트
+    const updatedJoinInfo = {
+      ...formData.joinInfo,
+      referrerId: selectedMember.id,
+      referrerName: selectedMember.name
+    };
+    
+    console.log('한번에 업데이트할 joinInfo:', updatedJoinInfo);
+    
+    onUpdate({
+      joinInfo: updatedJoinInfo
+    });
   };
 
   // 지인추천인 선택 해제 함수
   const handleReferrerClear = () => {
-    setReferrerSearchTerm('');
-    setReferrerSearchResults([]);
-    
     // 한 번에 두 필드를 모두 해제
     const updatedJoinInfo = {
       ...formData.joinInfo,
@@ -307,10 +299,6 @@ const JoinInfoStep: React.FC<StepProps> = ({ formData, onUpdate }) => {
                 coach: '' // 직원 선택 초기화
               };
               
-              // 검색 상태도 초기화
-              setStaffSearchTerm('');
-              setStaffSearchResults([]);
-              
               onUpdate({
                 joinInfo: updatedJoinInfo
               });
@@ -323,21 +311,22 @@ const JoinInfoStep: React.FC<StepProps> = ({ formData, onUpdate }) => {
 
         <FormField>
           <Label>담당 직원 *</Label>
-          <AppSearchDropdown
+          <AppTableSearchModal
             selectedValue={getSelectedStaffName()}
-            searchTerm={staffSearchTerm}
-            onSearchTermChange={setStaffSearchTerm}
-            onSearch={handleStaffSearch}
             onSelectItem={handleStaffSelect}
             onClear={handleStaffClear}
-            results={staffSearchResults}
+            items={formData.joinInfo.branchId ? staffItems.filter(item => 
+              (item.data as Staff).branchId === formData.joinInfo.branchId
+            ) : []}
+            onSearch={handleStaffSearch}
             placeholder={
               formData.joinInfo.branchId 
                 ? "직원 이름, 전화번호, 로그인ID, 직급, 직책으로 검색하세요" 
                 : "먼저 지점을 선택해주세요"
             }
-            header="직원 검색"
-            disabled={!formData.joinInfo.branchId} // 지점이 선택되지 않으면 비활성화
+            header="직원 선택"
+            tableHeader="담당 직원 목록"
+            disabled={!formData.joinInfo.branchId}
           />
         </FormField>
 
@@ -413,50 +402,16 @@ const JoinInfoStep: React.FC<StepProps> = ({ formData, onUpdate }) => {
         {formData.joinInfo.joinPath === '지인추천' && (
           <FormField>
             <Label>지인추천인 *</Label>
-            {formData.joinInfo.referrerName ? (
-              <div style={{
-                height: '48px',
-                padding: '0 16px',
-                border: '1px solid #ddd',
-                borderRadius: '12px',
-                backgroundColor: '#f8f9fa',
-                display: 'flex',
-                justifyContent: 'space-between',
-                alignItems: 'center',
-                boxSizing: 'border-box'
-              }}>
-                <span>{formData.joinInfo.referrerName}</span>
-                <button
-                  type="button"
-                  onClick={handleReferrerClear}
-                  style={{
-                    background: 'none',
-                    border: 'none',
-                    cursor: 'pointer',
-                    color: '#dc3545',
-                    fontSize: '16px',
-                    padding: '4px',
-                    display: 'flex',
-                    alignItems: 'center',
-                    justifyContent: 'center'
-                  }}
-                >
-                  ✕
-                </button>
-              </div>
-            ) : (
-              <AppSearchDropdown
-                selectedValue={getSelectedReferrerName()}
-                searchTerm={referrerSearchTerm}
-                onSearchTermChange={setReferrerSearchTerm}
-                onSearch={handleReferrerSearch}
-                onSelectItem={handleReferrerSelect}
-                onClear={handleReferrerClear}
-                results={referrerSearchResults}
-                placeholder="추천인 이름, 연락처, 이메일, 로그인ID로 검색하세요"
-                header="지인추천인 검색"
-              />
-            )}
+            <AppTableSearchModal
+              selectedValue={getSelectedReferrerName()}
+              onSelectItem={handleReferrerSelect}
+              onClear={handleReferrerClear}
+              items={memberItems}
+              onSearch={handleReferrerSearch}
+              placeholder="추천인 이름, 연락처, 이메일, 로그인ID로 검색하세요"
+              header="지인추천인 선택"
+              tableHeader="지인추천인 목록"
+            />
           </FormField>
         )}
 
