@@ -34,6 +34,7 @@ import Contract from './Terms/Contract';
 
 // 자산 페이지들
 import LockerManagement from './Assets/LockerManagement';
+import ShoesManagement from './Assets/ShoesManagement';
 
 // 설정 페이지
 import SettingsPage from './Settings';
@@ -114,6 +115,7 @@ const CMSRoutes: React.FC = () => {
         
         {/* 자산 */}
         <Route path="/assets/locker" element={<LockerManagement />} />
+        <Route path="/assets/shoes" element={<ShoesManagement />} />
         
         {/* 운동처방 */}
         <Route path="/exercise/assessment" element={<ExerciseAssessmentPage />} />

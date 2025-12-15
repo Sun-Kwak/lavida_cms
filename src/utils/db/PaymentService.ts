@@ -311,7 +311,7 @@ export class OrderService extends BaseDBManager {
             paymentStatus: 'completed',
             paymentMethod: payment.method,
             paymentDate: new Date(),
-            paymentType: 'course',
+            paymentType: orderData.orderType === 'asset_assignment' ? 'asset' : 'course',
             amount: payment.amount,
             memo: `${orderData.orderType} - ${payment.method} 결제`
           });

@@ -19,11 +19,12 @@ interface CustomDropdownProps {
   error?: boolean;
   required?: boolean;
   inModal?: boolean; // 모달 내부에서 사용되는지 여부
+  width?: string; // width 속성 추가
 }
 
-const DropdownContainer = styled.div`
+const DropdownContainer = styled.div<{ $width?: string }>`
   position: relative;
-  width: 100%;
+  width: ${props => props.$width || '100%'};
   /* 모달 내부에서 overflow visible 유지 */
   overflow: visible;
 `;
@@ -162,7 +163,8 @@ const CustomDropdown: React.FC<CustomDropdownProps> = ({
   disabled = false,
   error = false,
   required = false,
-  inModal = false
+  inModal = false,
+  width = "100%"
 }) => {
   const [isOpen, setIsOpen] = useState(false);
   const [dropdownPosition, setDropdownPosition] = useState({ top: 0, left: 0, width: 0, openUpward: false });
@@ -308,7 +310,7 @@ const CustomDropdown: React.FC<CustomDropdownProps> = ({
   };
 
   return (
-    <DropdownContainer ref={dropdownRef}>
+    <DropdownContainer ref={dropdownRef} $width={width}>
       <DropdownButton
         ref={buttonRef}
         type="button"

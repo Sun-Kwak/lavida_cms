@@ -3,7 +3,7 @@
     "activeCommit": 0,
     "commits": [
         {
-            "activePatchIndex": 17,
+            "activePatchIndex": 18,
             "patches": [
                 {
                     "date": 1757827860837,
@@ -76,6 +76,10 @@
                 {
                     "date": 1762429155144,
                     "content": "Index: \n===================================================================\n--- \n+++ \n@@ -15,9 +15,8 @@\n import MemberCourseHistory from './Member/CourseHistory';\n import MemberPaymentHistory from './Member/MemberPaymentHistory';\n import MemberPointHistory from './Member/MemberPointHistory';\n import MemberExercisePrescriptionHistory from './Member/MemberExercisePrescriptionHistory';\n-import MemberExercisePrescriptionDetail from './MemberExercisePrescriptionDetail';\n \n // 프로그램 페이지들\n import ProgramManagement from './Program/ProgramManagement';\n import ProductManagement from './Program/ProductManagement';\n@@ -90,9 +89,8 @@\n         <Route path=\"/member/course-history\" element={<MemberCourseHistory />} />\n         <Route path=\"/member/payment-history\" element={<MemberPaymentHistory />} />\n         <Route path=\"/member/point-history\" element={<MemberPointHistory />} />\n         <Route path=\"/member/exercise-prescription-history\" element={<MemberExercisePrescriptionHistory />} />\n-        <Route path=\"/member/exercise-prescription/:prescriptionId\" element={<MemberExercisePrescriptionDetail />} />\n         \n         {/* 프로그램 */}\n         <Route path=\"/program/management\" element={<ProgramManagement />} />\n         <Route path=\"/program/product\" element={<ProductManagement />} />\n"
+                },
+                {
+                    "date": 1765795312277,
+                    "content": "Index: \n===================================================================\n--- \n+++ \n@@ -33,8 +33,9 @@\n import Contract from './Terms/Contract';\n \n // 자산 페이지들\n import LockerManagement from './Assets/LockerManagement';\n+import ShoesManagement from './Assets/ShoesManagement';\n \n // 설정 페이지\n import SettingsPage from './Settings';\n \n@@ -113,8 +114,9 @@\n         <Route path=\"/terms/contract\" element={<Contract />} />\n         \n         {/* 자산 */}\n         <Route path=\"/assets/locker\" element={<LockerManagement />} />\n+        <Route path=\"/assets/shoes\" element={<ShoesManagement />} />\n         \n         {/* 운동처방 */}\n         <Route path=\"/exercise/assessment\" element={<ExerciseAssessmentPage />} />\n         <Route path=\"/exercise/body-analysis\" element={<ExerciseBodyAnalysisPage />} />\n"
                 }
             ],
             "date": 1757827860837,

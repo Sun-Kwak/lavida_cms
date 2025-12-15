@@ -66,6 +66,7 @@ const staticMenuCategories: MenuCategoryType[] = [
     title: '자산',
     subMenus: [
       { id: 'assets-locker', title: '락커', path: '/cms/assets/locker' },
+      { id: 'assets-shoes', title: '신발', path: '/cms/assets/shoes' },
     ],
   },
   // {
@@ -593,7 +594,7 @@ const CMSAppBar: React.FC<CMSAppBarProps> = React.memo(({ currentPath, onMenuCli
               <UserName>{adminName}</UserName>
               <span>님</span>
             </UserNameSection>
-            <AppVersion>v1.0.9</AppVersion>
+            <AppVersion>v1.0.10</AppVersion>
           </UserInfo>
           
           <LogoutButton onClick={handleLogout}>

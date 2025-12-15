@@ -3,7 +3,7 @@
     "activeCommit": 0,
     "commits": [
         {
-            "activePatchIndex": 9,
+            "activePatchIndex": 10,
             "patches": [
                 {
                     "date": 1759901894700,
@@ -44,6 +44,10 @@
                 {
                     "date": 1762342025635,
                     "content": "Index: \n===================================================================\n--- \n+++ \n@@ -30,9 +30,9 @@\n \n const DropdownButton = styled.button<{ $isOpen: boolean; $hasValue: boolean; $error?: boolean }>`\n   width: 100%;\n   min-height: 48px;\n-  padding: 14px 16px 14px 16px;\n+  padding: 12px 16px;\n   border: 1px solid ${props => props.$error ? AppColors.error : AppColors.borderLight};\n   border-radius: 12px;\n   background: ${AppColors.surface};\n   color: ${props => props.$hasValue ? AppColors.onSurface : AppColors.onInput1};\n"
+                },
+                {
+                    "date": 1765796013782,
+                    "content": "Index: \n===================================================================\n--- \n+++ \n@@ -18,13 +18,14 @@\n   disabled?: boolean;\n   error?: boolean;\n   required?: boolean;\n   inModal?: boolean; // 모달 내부에서 사용되는지 여부\n+  width?: string; // width 속성 추가\n }\n \n-const DropdownContainer = styled.div`\n+const DropdownContainer = styled.div<{ $width?: string }>`\n   position: relative;\n-  width: 100%;\n+  width: ${props => props.$width || '100%'};\n   /* 모달 내부에서 overflow visible 유지 */\n   overflow: visible;\n `;\n \n@@ -161,9 +162,10 @@\n   placeholder = \"선택하세요\",\n   disabled = false,\n   error = false,\n   required = false,\n-  inModal = false\n+  inModal = false,\n+  width = \"100%\"\n }) => {\n   const [isOpen, setIsOpen] = useState(false);\n   const [dropdownPosition, setDropdownPosition] = useState({ top: 0, left: 0, width: 0, openUpward: false });\n   const [hasPosition, setHasPosition] = useState(false);\n@@ -307,9 +309,9 @@\n     return dropdownContent;\n   };\n \n   return (\n-    <DropdownContainer ref={dropdownRef}>\n+    <DropdownContainer ref={dropdownRef} $width={width}>\n       <DropdownButton\n         ref={buttonRef}\n         type=\"button\"\n         $isOpen={isOpen}\n"
                 }
             ],
             "date": 1759901894700,
