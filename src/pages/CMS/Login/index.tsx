@@ -37,7 +37,7 @@ const LogoContainer = styled.div`
 `;
 
 const Logo = styled.img`
-  width: 120px;
+  width: 200px;
   height: auto;
 `;
 
@@ -181,7 +181,7 @@ const CMSLogin: React.FC = () => {
     <Container className="cms-layout">
       <LoginFormContainer>
         <LogoContainer>
-          <Logo src={`${process.env.PUBLIC_URL}/logo192.png`} alt="Lavida Logo" />
+          <Logo src={`${process.env.PUBLIC_URL}/logo.png`} alt="Lavida Logo" />
         </LogoContainer>
         
         <FormTitle>로그인</FormTitle>

@@ -129,12 +129,9 @@ const LeftSection = styled.div`
   flex-shrink: 0; /* 좌측 섹션이 축소되지 않도록 */
 `;
 
-const Logo = styled.div`
-  display: flex;
-  align-items: center;
-  font-weight: 700;
-  font-size: ${AppTextStyles.title2.fontSize};
-  color: ${AppColors.primary};
+const Logo = styled.img`
+  height: 24px;
+  width: auto;
   cursor: pointer;
   user-select: none;
 `;
@@ -569,11 +566,11 @@ const CMSAppBar: React.FC<CMSAppBarProps> = React.memo(({ currentPath, onMenuCli
       <TopBar>
         <LeftSection>
           <Logo 
+            src={`${process.env.PUBLIC_URL}/logo.png`}
+            alt="LAVIDA CMS"
             onClick={handleLogoClick}
             onDoubleClick={handleLogoDoubleClick}
-          >
-            LAVIDA CMS
-          </Logo>
+          />
           
           <MenuSection>
             {menuCategories.map((category: MenuCategoryType) => (
@@ -594,7 +591,7 @@ const CMSAppBar: React.FC<CMSAppBarProps> = React.memo(({ currentPath, onMenuCli
               <UserName>{adminName}</UserName>
               <span>님</span>
             </UserNameSection>
-            <AppVersion>v1.0.10</AppVersion>
+            <AppVersion>v1.0.11</AppVersion>
           </UserInfo>
           
           <LogoutButton onClick={handleLogout}>
