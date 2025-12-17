@@ -1,9 +1,9 @@
 import React, { useEffect } from 'react';
 import { BrowserRouter as Router, Routes, Route } from 'react-router-dom';
 import { ToastContainer } from 'react-toastify';
-import UserPage from './pages/UserPage';
 import CMSRoutes from './pages/CMS';
 import ExercisePrescriptionPage from './pages/ExercisePrescriptionPage';
+import PaymentPR from './pages/PaymentPR';
 import { AdminAuthProvider } from './context/AdminAuthContext';
 import { DeviceProvider } from './context/DeviceContext';
 import { autoInitializeSystem } from './utils/systemInit';
@@ -72,8 +72,8 @@ function App() {
         <Router basename="/lavida_cms">
           <div className="App">
             <Routes>
-              {/* 루트 경로: 사용자 화면 */}
-              <Route path="/" element={<UserPage />} />
+              {/* 루트 경로: PG 심사용 결제 페이지 */}
+              <Route path="/" element={<PaymentPR />} />
               
               {/* 운동처방 페이지 */}
               <Route path="/exercise-prescription" element={<ExercisePrescriptionPage />} />
