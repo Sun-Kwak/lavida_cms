@@ -1,46 +1,125 @@
-# Getting Started with Create React App
+# LaVida CMS - 통합 관리 시스템
 
-This project was bootstrapped with [Create React App](https://github.com/facebook/create-react-app).
+라비다 스포츠 센터를 위한 통합 관리 플랫폼입니다. 관리자용 웹 애플리케이션과 사용자용 모바일 앱을 하나의 저장소에서 관리하는 모노레포 구조로 구성되어 있습니다.
 
-## Available Scripts
+## 🏗️ 프로젝트 구조
 
-In the project directory, you can run:
+```
+lavida_cms/
+├── admin/          # 관리자 웹 애플리케이션 (React)
+├── mobile/         # 사용자 모바일 앱 (Flutter)  
+├── server/         # 백엔드 서버 (Node.js)
+└── shared/         # 공통 리소스 및 문서
+```
 
-### `npm start`
+## 🚀 시작하기
 
-Runs the app in the development mode.\
-Open [http://localhost:3000](http://localhost:3000) to view it in the browser.
+### 관리자 웹 애플리케이션 (React)
 
-The page will reload if you make edits.\
-You will also see any lint errors in the console.
+```bash
+cd admin
+npm install
+npm start
+```
 
-### `npm test`
+- 개발 서버: http://localhost:3000
+- 프로덕션 빌드: `npm run build`
+- 테스트: `npm test`
 
-Launches the test runner in the interactive watch mode.\
-See the section about [running tests](https://facebook.github.io/create-react-app/docs/running-tests) for more information.
+### 사용자 모바일 앱 (Flutter)
 
-### `npm run build`
+```bash
+cd mobile
+flutter pub get
+flutter run
+```
 
-Builds the app for production to the `build` folder.\
-It correctly bundles React in production mode and optimizes the build for the best performance.
+- iOS/Android 시뮬레이터에서 실행
+- 웹 버전: `flutter run -d chrome`
 
-The build is minified and the filenames include the hashes.\
-Your app is ready to be deployed!
+### 백엔드 서버
 
-See the section about [deployment](https://facebook.github.io/create-react-app/docs/deployment) for more information.
+```bash
+cd server
+npm install
+npm start
+```
 
-### `npm run eject`
+## 📱 애플리케이션 소개
 
-**Note: this is a one-way operation. Once you `eject`, you can’t go back!**
+### 관리자 웹 (React)
+- 회원 관리
+- 예약 시스템 관리
+- 결제 관리
+- 운동 처방전 작성
+- 통계 및 분석
 
-If you aren’t satisfied with the build tool and configuration choices, you can `eject` at any time. This command will remove the single build dependency from your project.
+### 사용자 모바일 앱 (Flutter)
+- 시설 예약
+- 운동 프로그램 조회
+- 개인 운동 기록
+- 알림 서비스
 
-Instead, it will copy all the configuration files and the transitive dependencies (webpack, Babel, ESLint, etc) right into your project so you have full control over them. All of the commands except `eject` will still work, but they will point to the copied scripts so you can tweak them. At this point you’re on your own.
+## 🛠️ 기술 스택
 
-You don’t have to ever use `eject`. The curated feature set is suitable for small and middle deployments, and you shouldn’t feel obligated to use this feature. However we understand that this tool wouldn’t be useful if you couldn’t customize it when you are ready for it.
+- **Frontend (Admin)**: React, TypeScript, Material-UI
+- **Mobile**: Flutter, Dart
+- **Backend**: Node.js, Express
+- **Database**: MongoDB
+- **Authentication**: JWT
 
-## Learn More
+## 📦 배포
 
-You can learn more in the [Create React App documentation](https://facebook.github.io/create-react-app/docs/getting-started).
+### 관리자 웹 배포
+GitHub Pages를 통해 자동 배포됩니다.
+- URL: https://sun-kwak.github.io/lavida_cms
 
-To learn React, check out the [React documentation](https://reactjs.org/).
+### 모바일 앱 배포
+- Android: Google Play Store
+- iOS: Apple App Store
+
+## 🤝 개발 가이드
+
+각 프로젝트별 상세한 개발 가이드는 해당 폴더의 README.md를 참조하세요.
+
+- [관리자 웹 개발 가이드](./admin/README.md)
+- [모바일 앱 개발 가이드](./mobile/README.md)
+- [서버 개발 가이드](./server/README.md)
+
+## 📝 개발 환경 설정
+
+### 필요한 도구
+- Node.js (v16 이상)
+- Flutter SDK (v3.0 이상)
+- Git
+
+### 프로젝트 클론 및 설정
+
+```bash
+git clone https://github.com/Sun-Kwak/lavida_cms.git
+cd lavida_cms
+
+# 관리자 웹 설정
+cd admin
+npm install
+
+# 모바일 앱 설정
+cd ../mobile
+flutter pub get
+
+# 서버 설정
+cd ../server
+npm install
+```
+
+## 🔄 GitHub Actions
+
+이 프로젝트는 GitHub Actions를 통한 자동 배포가 설정되어 있습니다:
+
+- **admin 폴더**: GitHub Pages 자동 배포
+- **mobile 폴더**: 빌드 테스트
+- **server 폴더**: 테스트 및 린트
+
+## 📞 문의
+
+프로젝트 관련 문의사항이 있으시면 이슈를 생성해 주세요.
